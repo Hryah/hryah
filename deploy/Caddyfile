@@ -1,0 +1,52 @@
+# /etc/caddy/Caddyfile — hryah на Raspberry Pi
+# Статика з атомарних релізів: /srv/hryah/{main,experimental} — симлінки на releases/<channel>/<rel>.
+# Caddy резолвить симлінк на кожен запит, тож перемикання релізу не потребує reload.
+#
+# :80   — гра. Саме цей порт публікує `tailscale funnel` для суддів.
+# :8087 — екран статусу (назви PR із приватного репо). Funnel його НЕ публікує: лише tailnet/localhost.
+#         8086 зайнятий omnihub.
+
+:80 {
+	encode zstd gzip
+
+	# experimental: /experimental/*  (збирається з --base=/experimental/)
+	redir /experimental /experimental/ 308
+	handle_path /experimental/* {
+		root * /srv/hryah/experimental
+		try_files {path} /index.html
+		file_server
+	}
+
+	# main: все інше
+	handle {
+		root * /srv/hryah/main
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Vite кладе хешовані файли в /assets — їх можна кешувати назавжди.
+	@hashed path /assets/* /experimental/assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	@html path / /index.html /experimental/ /experimental/index.html
+	header @html Cache-Control "no-cache"
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/hryah.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+	}
+}
+
+:8087 {
+	root * /srv/hryah-status
+	header Cache-Control "no-store"
+	file_server
+}

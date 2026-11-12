@@ -1,0 +1,81 @@
+# AI-рев'ю кожного PR → липкий коментар у PR + зведення тімліду в Telegram.
+#
+# БЕЗПЕКА. Цей job іде на Pi-runner, де лежить Google-логін agy. Тому:
+#  - pull_request_target: workflow і scripts/ai-review.mjs беруться з ЦІЛЬОВОЇ гілки
+#    (experimental/main), а не з PR. PR не може підмінити код, що виконується.
+#  - код PR лежить у pr/ лише як дані: його ніхто не збирає й не запускає.
+#  - рев'ю тільки для PR з гілок цього ж репо, не з форків.
+#  - agy працює в режимі plan (лише читає).
+# НЕ додавай цей чек у required: він порадчий. Червоний лише на BLOCKER.
+#
+# Secrets: GEMINI_API_KEY, GROQ_API_KEY (запасні), TG_BOT_TOKEN, TG_CHAT_ID
+# Variables (необов'язково): AGY_MODELS, AGY_HOMES, GEMINI_API_MODELS, REVIEW_MODELS
+
+name: ai-review
+
+on:
+  pull_request_target:
+    branches: [main, experimental]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+  checks: read
+
+jobs:
+  review:
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, hryah-pi]
+    timeout-minutes: 8
+    steps:
+      # 1) Довірений код: цільова гілка (дефолт для pull_request_target).
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # 2) Код PR — тільки як дані.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          AGY_MODELS: ${{ vars.AGY_MODELS }}
+          AGY_HOMES: ${{ vars.AGY_HOMES }}
+          GEMINI_API_MODELS: ${{ vars.GEMINI_API_MODELS }}
+          REVIEW_MODELS: ${{ vars.REVIEW_MODELS }}
+          PR_DIR: pr
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: node scripts/ai-review.mjs
+
+      - name: status for the kiosk screen
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/write-status.py

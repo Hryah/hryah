@@ -1,0 +1,171 @@
+# hryah — CI/CD
+#
+#   feature/*  ─ PR ─► experimental ─ PR ─► main
+#
+#   PR у experimental/main  → check (на серверах GitHub)
+#   push у experimental     → check → деплой на Pi у /experimental/ → Telegram
+#   push у main             → check → деплой на Pi у /               → Telegram
+#   push у feature/*        → нічого (перевірка починається з PR; draft PR теж ганяє check)
+#
+# Збірка й тести йдуть на GitHub-hosted runner (диск Pi майже повний).
+# Pi-runner (label hryah-pi) лише забирає готовий dist і перемикає симлінк.
+#
+# Secrets (необов'язкові): TG_BOT_TOKEN, TG_CHAT_ID
+# Variables: PUBLIC_URL (https://<pi>.<tailnet>.ts.net, без / в кінці)
+
+name: ci-cd
+
+on:
+  pull_request:
+    branches: [main, experimental]
+  push:
+    branches: [main, experimental]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  check:
+    name: check & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # Правило чистого ядра: src/core не знає про UI, DOM, рендер і недетермінізм.
+      - name: core purity
+        run: |
+          set -e
+          [ -d src/core ] || { echo "src/core ще немає — пропускаю"; exit 0; }
+          bad=$(grep -rnE \
+            "from ['\"](react|react-dom|three|@react-three/[^'\"]+|pixi\.js|zustand)['\"]|\b(window|document|localStorage|requestAnimationFrame)\b|Math\.random\(|Date\.now\(|performance\.now\(" \
+            src/core --include='*.ts' --include='*.tsx' --exclude='*.test.ts' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::src/core порушує правило чистого ядра:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "core чисте"
+
+      - name: typecheck
+        run: npm run typecheck --if-present
+
+      - name: lint
+        run: npm run lint --if-present
+
+      - name: tests
+        run: npm test --if-present
+
+      # experimental збирається під /experimental/, main — під корінь.
+      - name: build
+        env:
+          BASE: ${{ (github.ref_name == 'experimental' || github.base_ref == 'experimental') && '/experimental/' || '/' }}
+        run: npx vite build --base="$BASE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  deploy:
+    name: deploy → pi (${{ github.ref_name }})
+    needs: check
+    # Лише із захищених гілок. Ручний запуск з feature/* нічого не деплоїть.
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/experimental')
+    runs-on: [self-hosted, hryah-pi]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      issues: read
+      pull-requests: read
+    env:
+      CHANNEL: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      # Новий реліз у свою теку, потім атомарне перемикання симлінка.
+      - name: activate
+        run: |
+          set -euo pipefail
+          REL="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          dest="/srv/hryah/releases/$CHANNEL/$REL"
+          mkdir -p "$dest"
+          cp -a dist/. "$dest/"
+          hryah-activate "$CHANNEL" "$REL"
+
+      - name: smoke test
+        run: |
+          [ "$CHANNEL" = main ] && path="/" || path="/experimental/"
+          code=000
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1$path" || true)
+            [ "$code" = 200 ] && exit 0
+            sleep 2
+          done
+          echo "::error::smoke test: HTTP $code"; exit 1
+
+      - name: status for the kiosk screen
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/write-status.py
+
+  notify:
+    name: telegram
+    needs: [check, deploy]
+    if: always() && github.event_name != 'pull_request' && needs.check.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: send
+        env:
+          TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          CHAT: ${{ secrets.TG_CHAT_ID }}
+          CHECK: ${{ needs.check.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          MSG: ${{ github.event.head_commit.message }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          URL: ${{ vars.PUBLIC_URL }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "TG не налаштовано"; exit 0; }
+          if [ "$DEPLOY" = success ]; then icon="🟩"; status="задеплоєно"
+          elif [ "$DEPLOY" = skipped ] && [ "$CHECK" = success ]; then icon="🟦"; status="перевірено (без деплою)"
+          else icon="🟥"; status="впало (check: $CHECK, deploy: $DEPLOY)"; fi
+          [ "$BRANCH" = main ] && path="/" || path="/experimental/"
+          text="$icon <b>$BRANCH</b> — $status
+          👤 $ACTOR
+          💬 $(printf '%s' "$MSG" | head -n1 | sed 's/&/\&amp;/g;s/</\&lt;/g;s/>/\&gt;/g')
+          🔗 <a href=\"$RUN\">run</a>${URL:+ · <a href=\"$URL$path\">гра</a>}"
+          curl -sS -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
+            -d chat_id="$CHAT" -d parse_mode=HTML -d disable_web_page_preview=true \
+            --data-urlencode text="$text" > /dev/null

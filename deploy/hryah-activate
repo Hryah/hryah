@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# hryah-activate <channel> <release>   — атомарно перемикає канал на реліз
+# hryah-activate <channel> --rollback  — повертає попередній реліз
+# hryah-activate <channel> --list      — показує релізи (* = активний)
+#
+# channel: main | experimental. Встановлюється в /usr/local/bin/ скриптом pi-bootstrap.sh.
+set -euo pipefail
+
+ROOT=${HRYAH_ROOT:-/srv/hryah}
+KEEP=${KEEP:-5}
+
+channel=${1:?channel: main|experimental}
+arg=${2:?release name | --rollback | --list}
+
+case "$channel" in main|experimental) ;; *) echo "unknown channel: $channel" >&2; exit 2;; esac
+
+rel_dir="$ROOT/releases/$channel"
+link="$ROOT/$channel"
+current=$(basename "$(readlink -f "$link" 2>/dev/null || true)" 2>/dev/null || true)
+
+switch_to() {
+  local target="$rel_dir/$1"
+  [ -f "$target/index.html" ] || { echo "немає $target/index.html — відмова" >&2; exit 1; }
+  ln -sfn "$target" "$link.tmp"
+  mv -Tf "$link.tmp" "$link"          # rename(2) — атомарно
+  echo "$channel → $1"
+}
+
+case "$arg" in
+  --list)
+    ls -1 "$rel_dir" | sort | while read -r r; do
+      [ "$r" = "$current" ] && echo "* $r" || echo "  $r"
+    done
+    ;;
+  --rollback)
+    prev=$(ls -1 "$rel_dir" | sort | grep -B1 -x "$current" | head -n1)
+    if [ -z "$prev" ] || [ "$prev" = "$current" ]; then
+      echo "попереднього релізу немає" >&2; exit 1
+    fi
+    switch_to "$prev"
+    ;;
+  *)
+    [[ "$arg" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "погане ім'я релізу" >&2; exit 2; }
+    switch_to "$arg"
+    # прибираємо старі релізи, але ніколи не активний
+    ls -1 "$rel_dir" | sort | head -n -"$KEEP" | while read -r old; do
+      [ "$old" = "$arg" ] || rm -rf -- "${rel_dir:?}/$old"
+    done
+    ;;
+esac

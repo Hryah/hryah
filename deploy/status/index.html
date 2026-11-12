@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hryah · статус</title>
+<style>
+  :root { --bg:#0b0d17; --card:#141829; --fg:#e8eaf3; --dim:#8a90a8; --ok:#3ddc84; --warn:#ffc83d; --bad:#ff5c5c; --run:#5ca8ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2vmin 3vmin; background:var(--bg); color:var(--fg); font:2.2vmin/1.35 system-ui,sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2vmin; }
+  h1 { margin:0; font-size:4vmin; } .dim { color:var(--dim); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:2vmin; }
+  .card { background:var(--card); border-radius:1.5vmin; padding:2vmin 2.5vmin; }
+  .card h2 { margin:0 0 1.2vmin; font-size:2.4vmin; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:.1em; }
+  .big { font-size:3.2vmin; font-weight:700; word-break:break-all; }
+  .row { display:flex; gap:1.2vmin; align-items:baseline; padding:.7vmin 0; border-top:1px solid #20253c; }
+  .row:first-of-type { border-top:0; }
+  .grow { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill { padding:.2vmin 1vmin; border-radius:99px; font-size:1.9vmin; font-weight:600; background:#20253c; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); } .run { color:var(--run); }
+  .wide { grid-column:1 / -1; }
+</style>
+</head>
+<body>
+<header><h1>🚀 hryah</h1><div class="dim" id="upd">…</div></header>
+<div class="grid">
+  <div class="card"><h2>main · прод</h2><div class="big" id="rel-main">—</div></div>
+  <div class="card"><h2>experimental</h2><div class="big" id="rel-experimental">—</div></div>
+  <div class="card wide"><h2>Відкриті PR</h2><div id="prs"></div></div>
+  <div class="card wide"><h2>Останні запуски</h2><div id="runs"></div></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const cls = (v) => ({ success:"ok", OK:"ok", failure:"bad", BLOCKER:"bad", cancelled:"warn", ISSUES:"warn", in_progress:"run", queued:"run" }[v] || "dim");
+const sym = (v) => ({ success:"✓", OK:"✓", failure:"✗", BLOCKER:"✗", cancelled:"–", ISSUES:"!", in_progress:"…", queued:"…" }[v] || "·");
+
+function row(parts) {
+  const d = document.createElement("div"); d.className = "row";
+  for (const p of parts) {
+    const s = document.createElement("span");
+    s.textContent = p.t; s.className = [p.cls || "", p.grow ? "grow" : "", p.pill ? "pill" : ""].join(" ");
+    d.appendChild(s);
+  }
+  return d;
+}
+
+async function tick() {
+  try {
+    const d = await (await fetch("status.json", { cache: "no-store" })).json();
+    const age = Math.max(0, Math.round(Date.now() / 1000 - d.updated));
+    $("upd").textContent = `${d.repo} · оновлено ${age < 90 ? age + " с" : Math.round(age / 60) + " хв"} тому`;
+    for (const c of ["main", "experimental"]) $("rel-" + c).textContent = d.channels[c] || "—";
+    $("prs").replaceChildren(...(d.prs.length ? d.prs.map((p) => row([
+      { t: "#" + p.number, cls: "dim" },
+      { t: p.title + (p.draft ? " (draft)" : ""), grow: true },
+      { t: p.author, cls: "dim" },
+      { t: "→ " + p.base, cls: "dim" },
+      { t: sym(p.check) + " check", cls: cls(p.check), pill: true },
+      { t: p.review ? sym(p.review) + " AI " + p.review : "AI …", cls: p.review ? cls(p.review) : "dim", pill: true },
+    ])) : [row([{ t: "немає", cls: "dim" }])]));
+    $("runs").replaceChildren(...d.runs.map((r) => row([
+      { t: sym(r.conclusion || r.status), cls: cls(r.conclusion || r.status) },
+      { t: r.title || r.name, grow: true },
+      { t: r.branch, cls: "dim" },
+      { t: r.actor || "", cls: "dim" },
+    ])));
+  } catch (e) {
+    $("upd").textContent = "немає даних";
+  }
+}
+tick(); setInterval(tick, 10000);
+</script>
+</body>
+</html>
