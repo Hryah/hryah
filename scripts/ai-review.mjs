@@ -12,7 +12,7 @@
 // Запускається ЗІ ЗБІРКИ ЦІЛЬОВОЇ ГІЛКИ (pull_request_target). Код PR лежить у PR_DIR як дані.
 //
 // Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, BASE_REF, PR_TITLE, PR_AUTHOR, PR_URL,
-//      PR_DIR (default "."), [TG_BOT_TOKEN, TG_CHAT_ID], [GEMINI_API_KEY], [GROQ_API_KEY],
+//      PR_DIR (default "."), [TG_BOT_TOKEN, TG_CHAT_ID, TG_THREAD_ID], [GEMINI_API_KEY], [GROQ_API_KEY],
 //      [AGY_BIN, AGY_MODELS, AGY_HOMES, AGY_TIMEOUT_S, GEMINI_API_MODELS, REVIEW_MODELS]
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -178,7 +178,10 @@ async function telegram(text) {
   await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text, parse_mode: "HTML", disable_web_page_preview: true }),
+    body: JSON.stringify({
+      chat_id: env.TG_CHAT_ID, text, parse_mode: "HTML", disable_web_page_preview: true,
+      ...(env.TG_THREAD_ID ? { message_thread_id: Number(env.TG_THREAD_ID) } : {}), // тема форум-групи
+    }),
   }).catch((e) => console.warn("TG:", e));
 }
 
