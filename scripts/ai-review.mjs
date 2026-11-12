@@ -182,7 +182,8 @@ async function telegram(text) {
       chat_id: env.TG_CHAT_ID, text, parse_mode: "HTML", disable_web_page_preview: true,
       ...(env.TG_THREAD_ID ? { message_thread_id: Number(env.TG_THREAD_ID) } : {}), // тема форум-групи
     }),
-  }).catch((e) => console.warn("TG:", e));
+  }).then(async (r) => { if (!r.ok) console.warn("TG:", r.status, (await r.text()).slice(0, 200)); })
+    .catch((e) => console.warn("TG:", e));
 }
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
