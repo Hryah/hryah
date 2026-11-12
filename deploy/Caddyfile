@@ -3,7 +3,8 @@
 # Caddy резолвить симлінк на кожен запит, тож перемикання релізу не потребує reload.
 #
 # :80   — гра. Саме цей порт публікує `tailscale funnel` для суддів.
-# :8087 — екран статусу (назви PR із приватного репо). Funnel його НЕ публікує: лише tailnet/localhost.
+# :8087 — повний дашборд (назви PR, автори). Funnel його НЕ публікує: лише tailnet/localhost.
+# :8088 — публічний дашборд без назв PR і логінів. Його публікує `tailscale funnel --https=8443`.
 #         8086 зайнятий omnihub.
 
 :80 {
@@ -48,5 +49,12 @@
 :8087 {
 	root * /srv/hryah-status
 	header Cache-Control "no-store"
+	file_server
+}
+
+:8088 {
+	root * /srv/hryah-status-public
+	header Cache-Control "no-store"
+	header X-Content-Type-Options nosniff
 	file_server
 }

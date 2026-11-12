@@ -14,6 +14,7 @@ import urllib.request
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 OUT = os.environ.get("STATUS_FILE", "/srv/hryah-status/status.json")
+PUBLIC_OUT = os.environ.get("STATUS_PUBLIC_FILE", "/srv/hryah-status-public/status.json")
 ROOT = os.environ.get("HRYAH_ROOT", "/srv/hryah")
 MARKER = "<!-- hryah-ai-review -->"
 
@@ -62,6 +63,41 @@ def pr_info(pr):
     }
 
 
+def write(path, data):
+    d = os.path.dirname(path)
+    if not os.path.isdir(d):
+        return
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def write_public(data):
+    """Версія для публічного дашборду (Funnel): без назв PR, логінів і назв особистих гілок."""
+    keep = ("main", "experimental")
+    pub = {
+        "updated": data["updated"],
+        "repo": "hryah",
+        "channels": data["channels"],
+        "prs": [
+            {k: p[k] for k in ("number", "base", "draft", "check", "review")}
+            for p in data["prs"]
+        ],
+        "runs": [
+            {
+                "name": r["name"],
+                "branch": r["branch"] if r["branch"] in keep else "feature/*",
+                "status": r["status"],
+                "conclusion": r["conclusion"],
+                "at": r["at"],
+            }
+            for r in data["runs"]
+        ],
+    }
+    write(PUBLIC_OUT, pub)
+
+
 def main():
     prs = [pr_info(p) for p in (api("/pulls?state=open&per_page=15") or [])]
     runs = (api("/actions/runs?per_page=8") or {}).get("workflow_runs", [])
@@ -84,10 +120,8 @@ def main():
             for r in runs
         ],
     }
-    tmp = OUT + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, OUT)
+    write(OUT, data)
+    write_public(data)
     print(f"status → {OUT}: {len(prs)} PR, {len(runs)} runs")
 
 
