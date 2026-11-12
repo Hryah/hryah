@@ -11,3 +11,4 @@ npm run dev        # локально
 npm test           # тести
 npm run typecheck  # типи
 ```
+
