@@ -53,8 +53,8 @@ async function tick() {
     for (const c of ["main", "experimental"]) $("rel-" + c).textContent = d.channels[c] || "—";
     $("prs").replaceChildren(...(d.prs.length ? d.prs.map((p) => row([
       { t: "#" + p.number, cls: "dim" },
-      { t: p.title + (p.draft ? " (draft)" : ""), grow: true },
-      { t: p.author, cls: "dim" },
+      { t: (p.title || "PR #" + p.number) + (p.draft ? " (draft)" : ""), grow: true },
+      { t: p.author || "", cls: "dim" },
       { t: "→ " + p.base, cls: "dim" },
       { t: sym(p.check) + " check", cls: cls(p.check), pill: true },
       { t: p.review ? sym(p.review) + " AI " + p.review : "AI …", cls: p.review ? cls(p.review) : "dim", pill: true },

@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Одноразове налаштування Raspberry Pi під hryah. Запускається від root.
 #
-#   sudo REPO=owner/hryah RUNNER_URL=<arm64 tarball> RUNNER_TOKEN=<reg token> bash pi-bootstrap.sh
+#   sudo REPO=owner/hryah [RUNNER_URL=<arm64 tarball> RUNNER_TOKEN=<reg token>] [INSTALL_AGY=1] bash pi-bootstrap.sh
 #
 # Що робить:
-#   1. ставить Caddy (гра на :80, екран статусу на :8087)
+#   1. ставить Caddy (гра :80, повний дашборд :8087, публічний дашборд :8088) і бібліотеки для екрана
 #   2. створює користувача hryah (без sudo, без пароля)
 #   3. готує /srv/hryah/{releases,main,experimental}, /srv/hryah-status
 #   4. ставить hryah-activate у /usr/local/bin
-#   5. реєструє GitHub self-hosted runner (label hryah-pi) як systemd-сервіс під hryah
+#   5. сервіс hryah-screen: статус на SPI-екрані 240x320 (/dev/fb0)
+#   6. (якщо задано токен) реєструє GitHub runner з labels hryah-pi,hryah-review під hryah
+#   7. (INSTALL_AGY=1) ставить Antigravity CLI для користувача hryah
 #
 # Чого НЕ чіпає: K3s і под tgbot, omnihub (:8086), runner репозиторію tenzo, порти не з цього списку.
 set -euo pipefail
@@ -18,7 +20,7 @@ cd "$(dirname "$0")"
 : "${REPO:?REPO=owner/name}"
 
 echo "==> перевірка зайнятих портів"
-for p in 80 8087; do
+for p in 80 8087 8088; do
   if ss -ltnH "sport = :$p" | grep -q .; then
     if ! ss -ltnpH "sport = :$p" | grep -q caddy; then
       echo "порт $p зайнятий не Caddy — зупиняюсь" >&2; ss -ltnpH "sport = :$p" >&2; exit 1
@@ -28,7 +30,7 @@ done
 
 echo "==> пакети"
 apt-get update -qq
-apt-get install -y -qq caddy rsync curl >/dev/null
+apt-get install -y -qq caddy rsync curl python3-pil fonts-dejavu-core >/dev/null
 
 echo "==> користувач hryah"
 if ! id hryah &>/dev/null; then
@@ -37,7 +39,7 @@ if ! id hryah &>/dev/null; then
 fi
 
 echo "==> /srv/hryah"
-install -d -o hryah -g hryah /srv/hryah /srv/hryah/releases/main /srv/hryah/releases/experimental /srv/hryah-status
+install -d -o hryah -g hryah /srv/hryah /srv/hryah/releases/main /srv/hryah/releases/experimental /srv/hryah-status /srv/hryah-status-public
 for ch in main experimental; do
   if [ ! -e "/srv/hryah/$ch" ]; then
     d="/srv/hryah/releases/$ch/000-placeholder"
@@ -51,8 +53,10 @@ EOF
     sudo -u hryah ln -sfn "$d" "/srv/hryah/$ch"
   fi
 done
-install -m 644 -o hryah -g hryah status/index.html /srv/hryah-status/index.html
-[ -f /srv/hryah-status/status.json ] || echo '{"updated":0,"repo":"","channels":{},"prs":[],"runs":[]}' | install -m 644 -o hryah -g hryah /dev/stdin /srv/hryah-status/status.json
+for d in /srv/hryah-status /srv/hryah-status-public; do
+  install -m 644 -o hryah -g hryah status/index.html "$d/index.html"
+  [ -f "$d/status.json" ] || echo '{"updated":0,"repo":"","channels":{},"prs":[],"runs":[]}' | install -m 644 -o hryah -g hryah /dev/stdin "$d/status.json"
+done
 
 echo "==> hryah-activate"
 install -m 755 hryah-activate /usr/local/bin/hryah-activate
@@ -65,6 +69,22 @@ caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 systemctl enable --now caddy
 systemctl reload caddy
 
+echo "==> екран (hryah-screen)"
+install -d /opt/hryah
+install -m 755 status/fb-status.py /opt/hryah/fb-status.py
+install -m 644 status/hryah-screen.service /etc/systemd/system/hryah-screen.service
+if [ -e /dev/fb0 ]; then
+  systemctl daemon-reload
+  systemctl enable --now hryah-screen
+else
+  echo "/dev/fb0 немає — сервіс екрана не запущено"
+fi
+
+if [ "${INSTALL_AGY:-0}" = 1 ] && ! sudo -u hryah test -x /home/hryah/.local/bin/agy; then
+  echo "==> Antigravity CLI (для hryah)"
+  sudo -u hryah -H bash -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash'
+fi
+
 if [ -n "${RUNNER_TOKEN:-}" ] && [ -n "${RUNNER_URL:-}" ]; then
   echo "==> GitHub runner (hryah-pi)"
   RDIR=/home/hryah/actions-runner
@@ -75,7 +95,7 @@ if [ -n "${RUNNER_TOKEN:-}" ] && [ -n "${RUNNER_URL:-}" ]; then
   if [ ! -f "$RDIR/.runner" ]; then
     sudo -u hryah "$RDIR/config.sh" --unattended --replace \
       --url "https://github.com/$REPO" --token "$RUNNER_TOKEN" \
-      --name pi4-hryah --labels hryah-pi --work _work
+      --name pi4-hryah --labels "${RUNNER_LABELS:-hryah-pi,hryah-review}" --work _work
   fi
   (cd "$RDIR" && ./svc.sh install hryah && ./svc.sh start) || (cd "$RDIR" && ./svc.sh status)
 else
@@ -86,6 +106,8 @@ echo "==> перевірка"
 curl -fsS -o /dev/null -w "main:         %{http_code}\n" http://127.0.0.1/
 curl -fsS -o /dev/null -w "experimental: %{http_code}\n" http://127.0.0.1/experimental/
 curl -fsS -o /dev/null -w "status:       %{http_code}\n" http://127.0.0.1:8087/
+curl -fsS -o /dev/null -w "public:       %{http_code}\n" http://127.0.0.1:8088/
+systemctl is-active hryah-screen 2>/dev/null | sed 's/^/screen:       /' || true
 echo "--- чужі сервіси (мають бути як були)"
 systemctl is-active k3s omnihub 2>/dev/null | paste -sd' '
 echo "ok"
