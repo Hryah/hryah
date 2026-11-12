@@ -97,7 +97,10 @@ if [ -n "${RUNNER_TOKEN:-}" ] && [ -n "${RUNNER_URL:-}" ]; then
       --url "https://github.com/$REPO" --token "$RUNNER_TOKEN" \
       --name pi4-hryah --labels "${RUNNER_LABELS:-hryah-pi,hryah-review}" --work _work
   fi
-  (cd "$RDIR" && ./svc.sh install hryah && ./svc.sh start) || (cd "$RDIR" && ./svc.sh status)
+  (cd "$RDIR" && ./svc.sh install hryah) || true
+  # Node (з самого runner-а) і agy мають бути в PATH завдань.
+  echo "$RDIR/externals/node24/bin:/home/hryah/.local/bin:$(cat "$RDIR/.path" 2>/dev/null || echo "$PATH")" | sudo -u hryah tee "$RDIR/.path" >/dev/null
+  (cd "$RDIR" && ./svc.sh start) || (cd "$RDIR" && ./svc.sh status)
 else
   echo "==> RUNNER_TOKEN/RUNNER_URL не задано — runner пропущено"
 fi
