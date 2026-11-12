@@ -75,6 +75,7 @@ jobs:
       - name: build
         env:
           BASE: ${{ (github.ref_name == 'experimental' || github.base_ref == 'experimental') && '/experimental/' || '/' }}
+          VITE_COMMIT: ${{ github.sha }}
         run: npx vite build --base="$BASE"
 
       - uses: actions/upload-artifact@v4
