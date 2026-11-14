@@ -42,6 +42,16 @@ export interface OrbitForecast {
   powerFailure: boolean;
 }
 
+const STORM_POWER_FACTOR = 0.5;
+const STORM_LINK_FACTOR = 0.5;
+const SOFT_DATA_MULTIPLIER = 2;
+const EXTRA_DATA_DIVISOR = 500;
+const OVERFLOW_PENALTY_DIVISOR = 500;
+const RESOLUTION_SCORE_WEIGHT = 52;
+const BUDGET_SCORE_WEIGHT = 1.8;
+const COMMS_MARGIN_BONUS = 14;
+const FAIL_DATA_DIVISOR = 200;
+
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const damage = (input: OrbitInput, system: SystemId) =>
   Math.max(0, ...input.flight.damage.filter((d) => d.system === system).map((d) => clamp(d.severity, 0, 1)));
@@ -100,14 +110,35 @@ function addEntry(state: OrbitState, messageKey: string, kind: CauseEntry['kind'
     ...(causedBy.length > 0 ? { causedBy } : {}) });
 }
 
+function missionScore(state: OrbitState, caps: ReturnType<typeof capabilities>, success: boolean): number {
+  if (!success) return Math.round(state.deliveredMb / FAIL_DATA_DIVISOR);
+  const { mission, spec } = state.input;
+  const softTargetMb = Math.max(100, mission.requiredDataMb * SOFT_DATA_MULTIPLIER);
+  const baseMb = Math.min(state.deliveredMb, softTargetMb);
+  const extraMb = Math.max(0, state.deliveredMb - softTargetMb);
+  const dataPoints = baseMb / 100 + extraMb / EXTRA_DATA_DIVISOR;
+  const wastePenalty = state.lostMb / OVERFLOW_PENALTY_DIVISOR;
+  const resolutionPoints = caps.resolutionM > 0 && caps.resolutionOk
+    ? (mission.requiredResolutionM / Math.max(0.25, caps.resolutionM)) * RESOLUTION_SCORE_WEIGHT
+    : 0;
+  const budgetPoints = Math.max(0, mission.budgetMUsd - spec.costMUsd) * BUDGET_SCORE_WEIGHT;
+  const zeroBacklog = state.lostMb <= 0.000001
+    && state.history.length > 0
+    && state.history.every((h) => h.bufferMb <= 0.000001);
+  const stormFlushHeadroom = caps.downlinkMbps * STORM_LINK_FACTOR * caps.passS >= spec.bufferMb;
+  const commsPoints = zeroBacklog && stormFlushHeadroom ? COMMS_MARGIN_BONUS : 0;
+  return Math.max(0, Math.round(dataPoints - wastePenalty + resolutionPoints + budgetPoints + commsPoints));
+}
+
 function outcome(state: OrbitState): MissionOutcome {
   const caps = capabilities(state);
+  const success = state.status === 'complete' && state.completedOrbits >= state.input.mission.durationOrbits
+    && state.deliveredMb >= state.input.mission.requiredDataMb && caps.resolutionOk && caps.orbitOk;
   return {
-    success: state.status === 'complete' && state.completedOrbits >= state.input.mission.durationOrbits
-      && state.deliveredMb >= state.input.mission.requiredDataMb && caps.resolutionOk && caps.orbitOk,
+    success,
     deliveredMb: state.deliveredMb,
     survivedOrbits: state.completedOrbits,
-    score: Math.round(state.deliveredMb / 100),
+    score: missionScore(state, caps, success),
   };
 }
 
@@ -144,9 +175,8 @@ function advanceOrbit(previous: OrbitState): OrbitState {
   const { spec } = state.input;
   const orbit = state.completedOrbits + 1;
   const storm = state.stormOrbit === orbit;
-  const stormFactor = storm ? 0.5 : 1;
-  const generationW = caps.panelPowerW * stormFactor;
-  const linkMbps = caps.downlinkMbps * stormFactor;
+  const generationW = caps.panelPowerW * (storm ? STORM_POWER_FACTOR : 1);
+  const linkMbps = caps.downlinkMbps * (storm ? STORM_LINK_FACTOR : 1);
 
   if (storm) {
     addEntry(state, 'orbit.proto.storm', 'event', 'power', { orbit });
