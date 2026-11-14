@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "id": "nikita-drawn-astronaut",
+  "status": "static-textures",
+  "runtimeReady": true,
+  "animationReady": false,
+  "canvas": {
+    "widthPx": 1024,
+    "heightPx": 1024
+  },
+  "pivot": {
+    "x": 0.5,
+    "y": 0.92
+  },
+  "visibleHeightPx": 840,
+  "directions": {
+    "front": {
+      "direction": "front",
+      "states": {
+        "idle": {
+          "frames": [
+            "assets/astronaut/front.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        },
+        "move": {
+          "frames": [
+            "assets/astronaut/front.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        }
+      }
+    },
+    "back": {
+      "direction": "back",
+      "states": {
+        "idle": {
+          "frames": [
+            "assets/astronaut/back.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        },
+        "move": {
+          "frames": [
+            "assets/astronaut/back.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        }
+      }
+    },
+    "left": {
+      "direction": "left",
+      "states": {
+        "idle": {
+          "frames": [
+            "assets/astronaut/left.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        },
+        "move": {
+          "frames": [
+            "assets/astronaut/left.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        }
+      }
+    },
+    "right": {
+      "direction": "right",
+      "states": {
+        "idle": {
+          "frames": [
+            "assets/astronaut/right.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        },
+        "move": {
+          "frames": [
+            "assets/astronaut/right.svg"
+          ],
+          "fps": 0,
+          "loop": true,
+          "staticPose": true
+        }
+      }
+    }
+  },
+  "preparation": {
+    "generator": "scripts/astronaut/prepare.mjs",
+    "sourceManifest": "art/astronaut/source-manifest.json",
+    "method": "Remove the single verified full-canvas background path; retain every character path; fit exact cubic bounds with a uniform transform.",
+    "assets": [
+      {
+        "direction": "front",
+        "source": "art/astronaut/source/front.svg",
+        "sourceSha256": "316a79b9ced6cf5fdd23f2f55bbd4b997383ace659327be2c60e17c43c02fbcd",
+        "output": "assets/astronaut/front.svg",
+        "outputSha256": "1b05ab25afa0f2c6cf3566637b2caf158d53f724fc88970a0b553bc49fe8db5d",
+        "removedBackground": {
+          "pathIndex": 0,
+          "fill": "#678194",
+          "pathSha256": "c5c2e39fa301dc07c2f5ff48bbd8d4416f3a080abd0544f286e48f0b63a2261f"
+        },
+        "preservedPathCount": 261,
+        "sourceBounds": {
+          "minX": 52.582875094,
+          "minY": 13.704619002,
+          "maxX": 1152.430207534,
+          "maxY": 1270.314069112
+        },
+        "normalizedBounds": {
+          "minX": 144.395029669,
+          "minY": 102.08,
+          "maxX": 879.604970331,
+          "maxY": 942.08
+        },
+        "transform": {
+          "translateX": 109.245194472,
+          "translateY": 92.918935709,
+          "scale": 0.668465449
+        }
+      },
+      {
+        "direction": "back",
+        "source": "art/astronaut/source/back.svg",
+        "sourceSha256": "05b31ddfa56dac9b42016d238b39b851ddd769ba0bf2a9cd67e48d125da5a911",
+        "output": "assets/astronaut/back.svg",
+        "outputSha256": "7ec661a718bc43f28d65db735fbc4b234f993da9555bbe3f6d8b9f583955ffc5",
+        "removedBackground": {
+          "pathIndex": 0,
+          "fill": "#678093",
+          "pathSha256": "a55434a130ff87df9cc915483e60b11965abf8b4758dc93f255b8adfd2f0fc2d"
+        },
+        "preservedPathCount": 165,
+        "sourceBounds": {
+          "minX": 52.497628773,
+          "minY": 30.687001111,
+          "maxX": 1137.252284045,
+          "maxY": 1265.525551467
+        },
+        "normalizedBounds": {
+          "minX": 143.047350212,
+          "minY": 102.08,
+          "maxX": 880.952649788,
+          "maxY": 942.08
+        },
+        "transform": {
+          "translateX": 107.335792489,
+          "translateY": 81.205140752,
+          "scale": 0.680250871
+        }
+      },
+      {
+        "direction": "left",
+        "source": "art/astronaut/source/left.svg",
+        "sourceSha256": "f629358030bfd0e7e28800c81756b7afb0d2910acbdba66601cf82a02f62e4e8",
+        "output": "assets/astronaut/left.svg",
+        "outputSha256": "a234121a40f5750f7c52e1104524f56ebe09e866c8b6651df8e93e60cf80456c",
+        "removedBackground": {
+          "pathIndex": 0,
+          "fill": "#678193",
+          "pathSha256": "032db9fcb162f2529771d6ceb3aa45ea83d98c4a64fdf900bbf2a95267c3160e"
+        },
+        "preservedPathCount": 211,
+        "sourceBounds": {
+          "minX": 65.369831591,
+          "minY": 47.39791675,
+          "maxX": 532.316480167,
+          "maxY": 963.46474679
+        },
+        "normalizedBounds": {
+          "minX": 297.913444336,
+          "minY": 102.08,
+          "maxX": 726.086555664,
+          "maxY": 942.08
+        },
+        "transform": {
+          "translateX": 237.971683827,
+          "translateY": 58.617832433,
+          "scale": 0.916963667
+        }
+      },
+      {
+        "direction": "right",
+        "source": "art/astronaut/source/right.svg",
+        "sourceSha256": "419adac5f05a0eda8df4f711b93c80c60df3ad94fea25de463288c9219455407",
+        "output": "assets/astronaut/right.svg",
+        "outputSha256": "a17a6e01c61bdcfa99fa631f35425b1c4cc49cb16de74e870a8c142448e7d1a7",
+        "removedBackground": {
+          "pathIndex": 0,
+          "fill": "#678193",
+          "pathSha256": "355d87a2c0cb5b2790d551b651b9c76c60ff23b38d5b2bdcde9b02e9914beb26"
+        },
+        "preservedPathCount": 181,
+        "sourceBounds": {
+          "minX": 106.641037776,
+          "minY": 46.753452014,
+          "maxX": 573.492124416,
+          "maxY": 952.355034819
+        },
+        "normalizedBounds": {
+          "minX": 295.483752555,
+          "minY": 102.08,
+          "maxX": 728.516247445,
+          "maxY": 942.08
+        },
+        "transform": {
+          "translateX": 196.567768492,
+          "translateY": 58.713357938,
+          "scale": 0.927560216
+        }
+      }
+    ]
+  }
+}

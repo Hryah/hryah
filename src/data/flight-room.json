@@ -1,0 +1,25 @@
+{
+  "id": "solar-training-room",
+  "bounds": { "minXM": -5, "maxXM": 5, "minZM": -4, "maxZM": 4 },
+  "player": {
+    "radiusM": 0.25,
+    "speedMs": 2.6,
+    "spawn": { "xM": -2.8, "zM": 2.2 },
+    "maxMoveDtS": 1,
+    "maxStepDistanceM": 0.1
+  },
+  "obstacles": [
+    { "id": "solar-console", "kind": "console", "xM": 0, "zM": -2.7, "widthM": 1.8, "depthM": 0.8, "heightM": 1.2 },
+    { "id": "cargo-left", "kind": "cargo", "xM": -2.5, "zM": -0.5, "widthM": 1.4, "depthM": 1.4, "heightM": 1 },
+    { "id": "cargo-right", "kind": "cargo", "xM": 2.6, "zM": 0.9, "widthM": 1.2, "depthM": 1.5, "heightM": 0.9 }
+  ],
+  "console": {
+    "id": "solar-console",
+    "interaction": { "xM": 0, "zM": -1.65, "radiusM": 1 },
+    "initialAngleDeg": -45,
+    "targetAngleDeg": 35,
+    "minAngleDeg": -90,
+    "maxAngleDeg": 90,
+    "toleranceDeg": 5
+  }
+}

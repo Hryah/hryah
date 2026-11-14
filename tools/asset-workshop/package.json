@@ -1,0 +1,30 @@
+{
+  "name": "hryah-asset-workshop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Standalone 2.5D/3D GLB asset workshop, procedural generator, clean-scene validator, and import adapter for hryah",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5179",
+    "build": "node scripts/build.mjs",
+    "preview": "vite preview --port 4179",
+    "generate": "tsx scripts/generate-all.ts",
+    "validate": "tsx scripts/validate-all.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --pool=forks --maxWorkers=1 && node --test scripts/package.test.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run validate",
+    "snapshot": "node scripts/snapshot.mjs",
+    "reproduce": "node scripts/reproduce.mjs"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

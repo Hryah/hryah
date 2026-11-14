@@ -24,4 +24,6 @@ export default defineConfig({
   plugins: [react(), roomsServer()],
   // Локально сервер кімнат: `npm run rooms` (порт 8090).
   server: { proxy: { "/api": "http://127.0.0.1:8090" } },
+  // Nested standalone HTML belongs to the separately installed workshop package.
+  optimizeDeps: { entries: ['index.html'] },
 });
