@@ -8,6 +8,7 @@ import {
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
 import { MissionRunner } from "../campaign/MissionRunner";
 import { ResearchPanel } from "../campaign/ResearchPanel";
+import { FactoryPanel } from "../campaign/FactoryPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -241,7 +242,10 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
         <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
       {mine && entry && entry.account && (
-        <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+        <>
+          <FactoryPanel key={entry.agency.id} entry={entry} turn={consortium.turn} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+          <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+        </>
       )}
     </div>
   );

@@ -1,0 +1,601 @@
+{
+  "workshops": {
+    "furnace": {
+      "nameKey": "factory.workshop.furnace",
+      "industry": "metallurgy"
+    },
+    "chem": {
+      "nameKey": "factory.workshop.chem",
+      "industry": "chemistry"
+    },
+    "clean": {
+      "nameKey": "factory.workshop.clean",
+      "industry": "electronics"
+    }
+  },
+  "flawPenalty": 0.25,
+  "depositsPerAgency": 2,
+  "analyzeCostMUsd": 0.5,
+  "lines": {
+    "alloy": {
+      "slot": "engine",
+      "nameKey": "factory.line.alloy",
+      "flaws": {
+        "iron": {
+          "nameKey": "factory.flaw.alloy.iron"
+        },
+        "silica": {
+          "nameKey": "factory.flaw.alloy.silica"
+        },
+        "copper": {
+          "nameKey": "factory.flaw.alloy.copper"
+        }
+      },
+      "deposits": {
+        "bauxite-red": {
+          "nameKey": "factory.deposit.alloy.bauxite-red",
+          "visible": [
+            "iron"
+          ],
+          "hidden": [
+            "silica"
+          ],
+          "costMUsd": 0.6
+        },
+        "bauxite-white": {
+          "nameKey": "factory.deposit.alloy.bauxite-white",
+          "visible": [
+            "silica"
+          ],
+          "hidden": [
+            "copper"
+          ],
+          "costMUsd": 0.8
+        },
+        "scrap": {
+          "nameKey": "factory.deposit.alloy.scrap",
+          "visible": [
+            "copper"
+          ],
+          "hidden": [
+            "iron"
+          ],
+          "costMUsd": 0.5
+        },
+        "import": {
+          "nameKey": "factory.deposit.alloy.import",
+          "visible": [],
+          "hidden": [],
+          "costMUsd": 2.0
+        }
+      },
+      "stages": [
+        {
+          "bayer": {
+            "nameKey": "factory.step.alloy.bayer",
+            "hintKey": "factory.hint.alloy.bayer",
+            "cures": [
+              "iron"
+            ],
+            "turns": 1,
+            "costMUsd": 0.4,
+            "workshop": "chem"
+          },
+          "sinter": {
+            "nameKey": "factory.step.alloy.sinter",
+            "hintKey": "factory.hint.alloy.sinter",
+            "cures": [
+              "silica"
+            ],
+            "turns": 2,
+            "costMUsd": 0.5,
+            "workshop": "furnace"
+          },
+          "direct": {
+            "nameKey": "factory.step.alloy.direct",
+            "hintKey": "factory.hint.alloy.direct",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "furnace"
+          }
+        },
+        {
+          "var": {
+            "nameKey": "factory.step.alloy.var",
+            "hintKey": "factory.hint.alloy.var",
+            "cures": [
+              "copper"
+            ],
+            "turns": 2,
+            "costMUsd": 0.6,
+            "workshop": "furnace"
+          },
+          "flux": {
+            "nameKey": "factory.step.alloy.flux",
+            "hintKey": "factory.hint.alloy.flux",
+            "cures": [
+              "copper",
+              "silica"
+            ],
+            "turns": 2,
+            "costMUsd": 0.7,
+            "workshop": "chem"
+          },
+          "cast": {
+            "nameKey": "factory.step.alloy.cast",
+            "hintKey": "factory.hint.alloy.cast",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "furnace"
+          }
+        }
+      ]
+    },
+    "semi": {
+      "slot": "solar",
+      "nameKey": "factory.line.semi",
+      "flaws": {
+        "boron": {
+          "nameKey": "factory.flaw.semi.boron"
+        },
+        "iron": {
+          "nameKey": "factory.flaw.semi.iron"
+        },
+        "oxygen": {
+          "nameKey": "factory.flaw.semi.oxygen"
+        }
+      },
+      "deposits": {
+        "quartz-vein": {
+          "nameKey": "factory.deposit.semi.quartz-vein",
+          "visible": [
+            "iron"
+          ],
+          "hidden": [
+            "boron"
+          ],
+          "costMUsd": 0.5
+        },
+        "sand-dune": {
+          "nameKey": "factory.deposit.semi.sand-dune",
+          "visible": [
+            "boron"
+          ],
+          "hidden": [
+            "oxygen"
+          ],
+          "costMUsd": 0.3
+        },
+        "quartzite": {
+          "nameKey": "factory.deposit.semi.quartzite",
+          "visible": [
+            "oxygen"
+          ],
+          "hidden": [
+            "iron"
+          ],
+          "costMUsd": 0.6
+        },
+        "import": {
+          "nameKey": "factory.deposit.semi.import",
+          "visible": [],
+          "hidden": [],
+          "costMUsd": 2.2
+        }
+      },
+      "stages": [
+        {
+          "siemens": {
+            "nameKey": "factory.step.semi.siemens",
+            "hintKey": "factory.hint.semi.siemens",
+            "cures": [
+              "boron",
+              "iron"
+            ],
+            "turns": 2,
+            "costMUsd": 0.8,
+            "workshop": "chem"
+          },
+          "acid-leach": {
+            "nameKey": "factory.step.semi.acid-leach",
+            "hintKey": "factory.hint.semi.acid-leach",
+            "cures": [
+              "iron"
+            ],
+            "turns": 1,
+            "costMUsd": 0.3,
+            "workshop": "chem"
+          },
+          "arc": {
+            "nameKey": "factory.step.semi.arc",
+            "hintKey": "factory.hint.semi.arc",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "furnace"
+          }
+        },
+        {
+          "fz": {
+            "nameKey": "factory.step.semi.fz",
+            "hintKey": "factory.hint.semi.fz",
+            "cures": [
+              "oxygen",
+              "boron"
+            ],
+            "turns": 2,
+            "costMUsd": 0.9,
+            "workshop": "clean"
+          },
+          "cz": {
+            "nameKey": "factory.step.semi.cz",
+            "hintKey": "factory.hint.semi.cz",
+            "cures": [],
+            "turns": 1,
+            "costMUsd": 0.4,
+            "workshop": "clean"
+          },
+          "anneal": {
+            "nameKey": "factory.step.semi.anneal",
+            "hintKey": "factory.hint.semi.anneal",
+            "cures": [
+              "oxygen"
+            ],
+            "turns": 1,
+            "costMUsd": 0.3,
+            "workshop": "furnace"
+          }
+        }
+      ]
+    },
+    "cells": {
+      "slot": "battery",
+      "nameKey": "factory.line.cells",
+      "flaws": {
+        "sodium": {
+          "nameKey": "factory.flaw.cells.sodium"
+        },
+        "magnesium": {
+          "nameKey": "factory.flaw.cells.magnesium"
+        },
+        "moisture": {
+          "nameKey": "factory.flaw.cells.moisture"
+        }
+      },
+      "deposits": {
+        "brine": {
+          "nameKey": "factory.deposit.cells.brine",
+          "visible": [
+            "magnesium"
+          ],
+          "hidden": [
+            "sodium"
+          ],
+          "costMUsd": 0.4
+        },
+        "spodumene": {
+          "nameKey": "factory.deposit.cells.spodumene",
+          "visible": [
+            "sodium"
+          ],
+          "hidden": [
+            "moisture"
+          ],
+          "costMUsd": 0.7
+        },
+        "clay": {
+          "nameKey": "factory.deposit.cells.clay",
+          "visible": [
+            "moisture"
+          ],
+          "hidden": [
+            "magnesium"
+          ],
+          "costMUsd": 0.5
+        },
+        "import": {
+          "nameKey": "factory.deposit.cells.import",
+          "visible": [],
+          "hidden": [],
+          "costMUsd": 1.8
+        }
+      },
+      "stages": [
+        {
+          "lime": {
+            "nameKey": "factory.step.cells.lime",
+            "hintKey": "factory.hint.cells.lime",
+            "cures": [
+              "magnesium"
+            ],
+            "turns": 1,
+            "costMUsd": 0.3,
+            "workshop": "chem"
+          },
+          "ion-ex": {
+            "nameKey": "factory.step.cells.ion-ex",
+            "hintKey": "factory.hint.cells.ion-ex",
+            "cures": [
+              "sodium"
+            ],
+            "turns": 2,
+            "costMUsd": 0.5,
+            "workshop": "chem"
+          },
+          "evap": {
+            "nameKey": "factory.step.cells.evap",
+            "hintKey": "factory.hint.cells.evap",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "chem"
+          }
+        },
+        {
+          "dry": {
+            "nameKey": "factory.step.cells.dry",
+            "hintKey": "factory.hint.cells.dry",
+            "cures": [
+              "moisture"
+            ],
+            "turns": 1,
+            "costMUsd": 0.4,
+            "workshop": "clean"
+          },
+          "recryst": {
+            "nameKey": "factory.step.cells.recryst",
+            "hintKey": "factory.hint.cells.recryst",
+            "cures": [
+              "sodium"
+            ],
+            "turns": 2,
+            "costMUsd": 0.5,
+            "workshop": "chem"
+          },
+          "open": {
+            "nameKey": "factory.step.cells.open",
+            "hintKey": "factory.hint.cells.open",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "clean"
+          }
+        }
+      ]
+    },
+    "rf": {
+      "slot": "antenna",
+      "nameKey": "factory.line.rf",
+      "flaws": {
+        "sulfur": {
+          "nameKey": "factory.flaw.rf.sulfur"
+        },
+        "oxygen": {
+          "nameKey": "factory.flaw.rf.oxygen"
+        },
+        "thorium": {
+          "nameKey": "factory.flaw.rf.thorium"
+        }
+      },
+      "deposits": {
+        "porphyry": {
+          "nameKey": "factory.deposit.rf.porphyry",
+          "visible": [
+            "sulfur"
+          ],
+          "hidden": [
+            "oxygen"
+          ],
+          "costMUsd": 0.5
+        },
+        "monazite": {
+          "nameKey": "factory.deposit.rf.monazite",
+          "visible": [
+            "thorium"
+          ],
+          "hidden": [
+            "sulfur"
+          ],
+          "costMUsd": 0.7
+        },
+        "ion-clay": {
+          "nameKey": "factory.deposit.rf.ion-clay",
+          "visible": [
+            "oxygen"
+          ],
+          "hidden": [
+            "thorium"
+          ],
+          "costMUsd": 0.8
+        },
+        "import": {
+          "nameKey": "factory.deposit.rf.import",
+          "visible": [],
+          "hidden": [],
+          "costMUsd": 2.0
+        }
+      },
+      "stages": [
+        {
+          "flash": {
+            "nameKey": "factory.step.rf.flash",
+            "hintKey": "factory.hint.rf.flash",
+            "cures": [
+              "sulfur"
+            ],
+            "turns": 1,
+            "costMUsd": 0.4,
+            "workshop": "furnace"
+          },
+          "solvent": {
+            "nameKey": "factory.step.rf.solvent",
+            "hintKey": "factory.hint.rf.solvent",
+            "cures": [
+              "thorium"
+            ],
+            "turns": 2,
+            "costMUsd": 0.6,
+            "workshop": "chem"
+          },
+          "roast": {
+            "nameKey": "factory.step.rf.roast",
+            "hintKey": "factory.hint.rf.roast",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "furnace"
+          }
+        },
+        {
+          "ofhc": {
+            "nameKey": "factory.step.rf.ofhc",
+            "hintKey": "factory.hint.rf.ofhc",
+            "cures": [
+              "oxygen"
+            ],
+            "turns": 1,
+            "costMUsd": 0.5,
+            "workshop": "furnace"
+          },
+          "zone": {
+            "nameKey": "factory.step.rf.zone",
+            "hintKey": "factory.hint.rf.zone",
+            "cures": [
+              "sulfur",
+              "oxygen"
+            ],
+            "turns": 2,
+            "costMUsd": 0.7,
+            "workshop": "clean"
+          },
+          "plain": {
+            "nameKey": "factory.step.rf.plain",
+            "hintKey": "factory.hint.rf.plain",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "clean"
+          }
+        }
+      ]
+    },
+    "glass": {
+      "slot": "instrument",
+      "nameKey": "factory.line.glass",
+      "flaws": {
+        "iron": {
+          "nameKey": "factory.flaw.glass.iron"
+        },
+        "bubbles": {
+          "nameKey": "factory.flaw.glass.bubbles"
+        },
+        "stress": {
+          "nameKey": "factory.flaw.glass.stress"
+        }
+      },
+      "deposits": {
+        "sand-coastal": {
+          "nameKey": "factory.deposit.glass.sand-coastal",
+          "visible": [
+            "iron"
+          ],
+          "hidden": [
+            "bubbles"
+          ],
+          "costMUsd": 0.4
+        },
+        "quartz-crystal": {
+          "nameKey": "factory.deposit.glass.quartz-crystal",
+          "visible": [
+            "bubbles"
+          ],
+          "hidden": [
+            "stress"
+          ],
+          "costMUsd": 0.8
+        },
+        "silica-fume": {
+          "nameKey": "factory.deposit.glass.silica-fume",
+          "visible": [
+            "stress"
+          ],
+          "hidden": [
+            "iron"
+          ],
+          "costMUsd": 0.6
+        },
+        "import": {
+          "nameKey": "factory.deposit.glass.import",
+          "visible": [],
+          "hidden": [],
+          "costMUsd": 2.5
+        }
+      },
+      "stages": [
+        {
+          "magnetic": {
+            "nameKey": "factory.step.glass.magnetic",
+            "hintKey": "factory.hint.glass.magnetic",
+            "cures": [
+              "iron"
+            ],
+            "turns": 1,
+            "costMUsd": 0.3,
+            "workshop": "chem"
+          },
+          "fine": {
+            "nameKey": "factory.step.glass.fine",
+            "hintKey": "factory.hint.glass.fine",
+            "cures": [
+              "bubbles"
+            ],
+            "turns": 2,
+            "costMUsd": 0.5,
+            "workshop": "furnace"
+          },
+          "quick": {
+            "nameKey": "factory.step.glass.quick",
+            "hintKey": "factory.hint.glass.quick",
+            "cures": [],
+            "turns": 0,
+            "costMUsd": 0.1,
+            "workshop": "furnace"
+          }
+        },
+        {
+          "anneal": {
+            "nameKey": "factory.step.glass.anneal",
+            "hintKey": "factory.hint.glass.anneal",
+            "cures": [
+              "stress"
+            ],
+            "turns": 2,
+            "costMUsd": 0.5,
+            "workshop": "furnace"
+          },
+          "polish": {
+            "nameKey": "factory.step.glass.polish",
+            "hintKey": "factory.hint.glass.polish",
+            "cures": [],
+            "turns": 1,
+            "costMUsd": 0.4,
+            "workshop": "clean"
+          },
+          "hip": {
+            "nameKey": "factory.step.glass.hip",
+            "hintKey": "factory.hint.glass.hip",
+            "cures": [
+              "bubbles",
+              "stress"
+            ],
+            "turns": 3,
+            "costMUsd": 0.8,
+            "workshop": "furnace"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -127,3 +127,11 @@ describe('завантаження спрайтів', () => {
     sprite.dispose();
   });
 });
+
+describe('спрайт модуля власного виробництва', () => {
+  it('fab-<id>-<агенція>-<n> бере спрайт базового модуля', () => {
+    const manifest = { 'cam-m': { file: 'modules/cam-m.png', widthUnits: 1, anchor: [0, 0.5] as [number, number] } };
+    expect(resolveSprite('fab-cam-m-borealis-2', manifest).file).toBe('modules/cam-m.png');
+    expect(resolveSprite('fab-unknown-borealis-1', manifest).file).toBeNull();
+  });
+});

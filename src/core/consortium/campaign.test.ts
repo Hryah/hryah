@@ -253,3 +253,22 @@ describe("звіт: межі й зайві поля", () => {
     expect(isMissionReport({ ...report, flight: { ...report.flight, orbit: noPeriod } })).toBe(false);
   });
 });
+
+describe("фабрика в кімнаті", () => {
+  const me = (s: RoomState) => (s as PlayState).consortium.agencies.find((e) => e.agency.id === "borealis")!;
+  it("партія списує гроші й дію, модуль з'являється в каталозі, коли готовий; аналіз відкриває ваду", () => {
+    const s = soloRoom();
+    const funds = me(s).account!.fundsMUsd;
+    const order = { line: "glass", depositId: "import", steps: ["quick", "polish"] as [string, string], baseModuleId: "cam-m" };
+    const next = send(s, "me", { type: "play", action: { type: "factory", order } });
+    const batch = me(next).factory!.batches[0]!;
+    expect(batch).toBeDefined();
+    expect(me(next).account!.fundsMUsd).toBeCloseTo(funds - batch.costMUsd, 2);
+    expect(me(next).actionsLeft).toBe(me(s).actionsLeft - 1);
+    expect(me(next).design.input.catalog.modules.some((m) => m.id === batch.id)).toBe(false);
+    expect(isRoomAction({ type: "play", action: { type: "factory", order: { ...order, steps: ["quick"] } } })).toBe(false);
+    const analyzed = send(next, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } });
+    expect(me(analyzed).factory!.analyzed).toContain("glass:import");
+    expect(send(analyzed, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } })).toBe(analyzed);
+  });
+});

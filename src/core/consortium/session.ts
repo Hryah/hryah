@@ -21,6 +21,9 @@ import { applyDamage } from './damage';
 import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder, type DevProject } from './develop';
 import { applyMarket, checkMarket, type Market } from './market';
 import { applyResearch, RESEARCH } from './research';
+import {
+  depositsOf, emptyFactory, glassDefectFactor, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
+} from '../factory';
 import { runValueMUsd, settleRewards, type AgencyRun, type Settlement } from './reward';
 
 // Скільки різних елементів керування (слот, пальне, висота, носій) агенція може чіпати за хід.
@@ -53,6 +56,7 @@ export interface AgencyEntry {
   projects: DevProject[];  // замовлена власна розробка: гроші списані одразу, модуль з'являється, коли готовий
   launch: Launch | null;
   account?: Account;       // лише в кампанії
+  factory?: FactoryState;  // лише в кампанії: партії власного виробництва
   report?: MissionReport;  // звіт гравця про політ і орбіту цього вікна
 }
 
@@ -99,7 +103,9 @@ export type ConsortiumAction =
   | { type: 'develop'; order: DevOrder }
   | { type: 'launch' }
   | { type: 'wait' }
-  | { type: 'research'; nodeId: string };
+  | { type: 'research'; nodeId: string }
+  | { type: 'factory'; order: FactoryOrder }
+  | { type: 'analyze'; line: string; depositId: string };
 
 export interface ConsortiumOptions {
   campaign?: CampaignConfig;
@@ -131,7 +137,7 @@ export function knownMission(state: Pick<ConsortiumState, 'base' | 'campaign'>, 
 // Вхід частини 1 з урахуванням кампанії: бюджет — це рахунок агенції (розробки вже списані з нього).
 function entryInput(
   state: Pick<ConsortiumState, 'base' | 'market' | 'campaign'>, agency: AgencyProfile, turn: number,
-  projects: DevProject[], account: Account | undefined,
+  projects: DevProject[], account: Account | undefined, factory?: FactoryState,
 ): DesignInput {
   if (!state.campaign || !account) return inputFor(state.base, state.market, agency, turn, projects);
   const mission = knownMission(state, { account });
@@ -139,7 +145,7 @@ function entryInput(
   const ready = projects.filter((p) => isReady(p, turn)).map((p) => p.module);
   return {
     mission: { ...input.mission, budgetMUsd: money(account.fundsMUsd) },
-    catalog: { modules: [...input.catalog.modules, ...ready] },
+    catalog: { modules: [...input.catalog.modules, ...ready, ...readyModules(factory, turn)] },
   };
 }
 
@@ -166,7 +172,7 @@ export function newConsortium(
       touched: [],
       projects: [],
       launch: null,
-      ...(account ? { account } : {}),
+      ...(account ? { account, factory: emptyFactory() } : {}),
     };
   });
   return {
@@ -197,7 +203,7 @@ function startTurn(state: ConsortiumState, turn: number): ConsortiumState {
     agencies: state.agencies.map((e) =>
       e.launch
         ? e
-        : { ...e, actionsLeft: ACTIONS_PER_TURN, touched: [], design: { ...e.design, input: entryInput(state, e.agency, turn, e.projects, e.account) } },
+        : { ...e, actionsLeft: ACTIONS_PER_TURN, touched: [], design: { ...e.design, input: entryInput(state, e.agency, turn, e.projects, e.account, e.factory) } },
     ),
   };
 }
@@ -316,7 +322,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
         launch: null,
         actionsLeft: ACTIONS_PER_TURN,
         touched: [],
-        design: { ...e.design, confirmed: false, input: entryInput(head, e.agency, turn, e.projects, e.account) },
+        design: { ...e.design, confirmed: false, input: entryInput(head, e.agency, turn, e.projects, e.account, e.factory) },
       };
     }),
   };
@@ -393,7 +399,10 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       if (entry.projects.some((p) => p.slot === action.order.slot)) return state;
       let project: DevProject;
       try {
-        project = startDevelopment(entry.agency, action.order, state.turn, state.seed);
+        // Скло з власної фабрики впливає на брак дзеркала.
+        const glass = glassDefectFactor(entry.factory, state.turn);
+        const maker = glass === 1 ? entry.agency : { ...entry.agency, defectFactor: (entry.agency.defectFactor ?? 1) * glass };
+        project = startDevelopment(maker, action.order, state.turn, state.seed);
       } catch {
         return state;
       }
@@ -401,7 +410,7 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
         ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - project.developmentCostMUsd) }
         : undefined;
       const projects = [...entry.projects, project];
-      const input = entryInput(state, entry.agency, state.turn, projects, account);
+      const input = entryInput(state, entry.agency, state.turn, projects, account, entry.factory);
       if (input.mission.budgetMUsd <= 0) return state;
       return replaceAt(state, state.active, {
         ...entry,
@@ -427,6 +436,9 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
     }
     case 'wait':
       return endAgencyTurn(state);
+    case 'factory':
+    case 'analyze':
+      return stepFactory(state, entry, action);
     case 'research': {
       // Дослідження не забирає дій ходу: лише очки.
       const node = RESEARCH[action.nodeId];
@@ -441,10 +453,33 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       };
       return replaceAt(state, state.active, {
         ...entry, agency, account: next,
-        design: { ...entry.design, input: entryInput(state, agency, state.turn, entry.projects, next) },
+        design: { ...entry.design, input: entryInput(state, agency, state.turn, entry.projects, next, entry.factory) },
       });
     }
   }
+}
+
+function stepFactory(state: ConsortiumState, entry: AgencyEntry, action: Extract<ConsortiumAction, { type: 'factory' | 'analyze' }>): ConsortiumState {
+  const { account, factory } = entry;
+  if (!account || !factory || entry.actionsLeft <= 0) return state;
+  if (action.type === 'analyze') {
+    const key = `${action.line}:${action.depositId}`;
+    if (factory.analyzed.includes(key) || !depositsOf(entry.agency.id, action.line).includes(action.depositId)) return state;
+    if (account.fundsMUsd < MATERIALS.analyzeCostMUsd) return state;
+    const nextAccount = { ...account, fundsMUsd: money(account.fundsMUsd - MATERIALS.analyzeCostMUsd) };
+    return replaceAt(state, state.active, {
+      ...entry, account: nextAccount, factory: { ...factory, analyzed: [...factory.analyzed, key] }, actionsLeft: entry.actionsLeft - 1,
+      design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, nextAccount, entry.factory) },
+    });
+  }
+  const plan = planBatch(entry.agency, factory, action.order, state.turn, state.base.catalog.modules);
+  if (!plan.batch || account.fundsMUsd <= plan.batch.costMUsd) return state;
+  const nextAccount = { ...account, fundsMUsd: money(account.fundsMUsd - plan.batch.costMUsd) };
+  const nextFactory = { ...factory, batches: [...factory.batches, plan.batch] };
+  return replaceAt(state, state.active, {
+    ...entry, account: nextAccount, factory: nextFactory, actionsLeft: entry.actionsLeft - 1,
+    design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, nextAccount, nextFactory) },
+  });
 }
 
 function sameDesign(a: Design | undefined, b: Design): boolean {
