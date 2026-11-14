@@ -122,5 +122,17 @@
   "custom.instrument": "Custom camera",
   "design.developed": "Developed a custom camera with a {apertureM} m aperture for {costMUsd} M$ over {turns} turns.",
   "design.defect": "Production defect: the camera is {blurPercent}% blurrier than designed. It was launched without an inspection, and the risk of a defect was {chancePercent}%.",
-  "design.defectInspected": "Production defect: the camera is {blurPercent}% blurrier than designed, even though it was inspected. The risk of a defect was {chancePercent}%."
+  "design.defectInspected": "Production defect: the camera is {blurPercent}% blurrier than designed, even though it was inspected. The risk of a defect was {chancePercent}%.",
+  "ui.play.stage.design": "Design",
+  "ui.play.stage.flight": "Flight",
+  "ui.play.stage.orbit": "Orbit",
+  "ui.play.stage.debrief": "Debrief",
+  "ui.play.flightHint": "Fix the station terminals before the timers run out. Drag to sling off the handles, E opens a terminal.",
+  "ui.play.skipFlight": "Finish the flight and deploy the satellite",
+  "ui.play.orbitTitle": "Orbit operations",
+  "ui.play.orbitHint": "The playable orbit screen is still a prototype (see the Orbit tab). Here the orbit is simulated for the spacecraft you built.",
+  "ui.play.success": "Mission accomplished",
+  "ui.play.failure": "Mission failed",
+  "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}.",
+  "ui.nav.play": "Play"
 }
