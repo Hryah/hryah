@@ -5,10 +5,17 @@ import type { DesignInput } from "../contracts";
 import { summarize, sweepDesigns } from "../sim";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../stubs";
 import { applyAgency, type AgencyProfile } from "./agency";
+import { buyPriceFactor, capability, checkIndustryData } from "./industry";
 import { designPhase } from "./phase";
 
 const agencies = Object.values(agenciesData) as AgencyProfile[];
 const base: DesignInput = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
+
+const neutral = { metallurgy: 0.5, electronics: 0.5, software: 0.5, chemistry: 0.5, optics: 0.5, manufacturing: 0.5 };
+const profile = (over: Partial<AgencyProfile> = {}): AgencyProfile => ({
+  id: "t", nameKey: "", descriptionKey: "", budgetFactor: 1, launcherCostFactor: 1, devCostFactor: 1, devSpeedFactor: 1,
+  industries: neutral, ...over,
+});
 
 describe("агенції: застосування профілю", () => {
   it("не змінює вхідні дані", () => {
@@ -17,31 +24,67 @@ describe("агенції: застосування профілю", () => {
     expect(JSON.stringify(base)).toBe(before);
   });
 
-  it("множить бюджет, ціни носіїв і модулів", () => {
-    const { mission, catalog } = applyAgency(base, {
-      id: "t", nameKey: "", descriptionKey: "", budgetFactor: 2, launcherCostFactor: 0.5, moduleCostFactor: { engine: 0.5 },
-    });
+  it("нейтральна країна (рівні 0,5) нічого не змінює в цінах модулів", () => {
+    const { catalog } = applyAgency(base, profile());
+    expect(catalog.modules.map((m) => m.costMUsd)).toEqual(SAMPLE_CATALOG.modules.map((m) => m.costMUsd));
+  });
+
+  it("множить бюджет і ціни носіїв", () => {
+    const { mission } = applyAgency(base, profile({ budgetFactor: 2, launcherCostFactor: 0.5 }));
     expect(mission.budgetMUsd).toBe(SAMPLE_MISSION.budgetMUsd * 2);
     expect(mission.launchers.map((l) => l.costMUsd)).toEqual(SAMPLE_MISSION.launchers.map((l) => l.costMUsd * 0.5));
-    const engine = catalog.modules.find((m) => m.id === "eng-chem");
-    expect(engine?.costMUsd).toBe(1.5);
-    const solar = catalog.modules.find((m) => m.id === "sol-m");
-    expect(solar?.costMUsd).toBe(2);
+  });
+
+  it("сильна індустрія слота дешевше купує готове, слабка платить націнку за імпорт", () => {
+    const strong = applyAgency(base, profile({ industries: { ...neutral, optics: 1, electronics: 1, software: 1 } }));
+    const weak = applyAgency(base, profile({ industries: { ...neutral, optics: 0, electronics: 0, software: 0 } }));
+    const cost = (c: DesignInput["catalog"], id: string) => c.modules.find((m) => m.id === id)?.costMUsd ?? 0;
+    expect(cost(strong.catalog, "cam-m")).toBe(7.5);
+    expect(cost(weak.catalog, "cam-m")).toBe(12.5);
+    expect(cost(strong.catalog, "eng-chem")).toBe(3); // двигуни від камер не залежать
+  });
+
+  it("санкції прибирають модулі з каталогу", () => {
+    const { catalog } = applyAgency(base, profile({ blockedModules: ["cam-l", "ant-l"] }));
+    expect(catalog.modules.some((m) => m.id === "cam-l" || m.id === "ant-l")).toBe(false);
+    expect(catalog.modules.some((m) => m.id === "cam-m")).toBe(true);
   });
 
   it("обмежує носії списком launcherIds", () => {
-    const { mission } = applyAgency(base, {
-      id: "t", nameKey: "", descriptionKey: "", budgetFactor: 1, launcherCostFactor: 1, launcherIds: ["small"],
-    });
+    const { mission } = applyAgency(base, profile({ launcherIds: ["small"] }));
     expect(mission.launchers.map((l) => l.id)).toEqual(["small"]);
   });
 
-  it("відхиляє некоректні множники й порожній набір носіїв", () => {
-    const ok = { id: "t", nameKey: "", descriptionKey: "", budgetFactor: 1, launcherCostFactor: 1 };
-    expect(() => applyAgency(base, { ...ok, budgetFactor: 0 })).toThrow(/budgetFactor/);
-    expect(() => applyAgency(base, { ...ok, launcherCostFactor: NaN })).toThrow(/launcherCostFactor/);
-    expect(() => applyAgency(base, { ...ok, moduleCostFactor: { solar: -1 } })).toThrow(/solar/);
-    expect(() => applyAgency(base, { ...ok, launcherIds: ["nope"] })).toThrow(/носія/);
+  it("відхиляє некоректні множники, рівні індустрій і порожній набір носіїв", () => {
+    expect(() => applyAgency(base, profile({ budgetFactor: 0 }))).toThrow(/budgetFactor/);
+    expect(() => applyAgency(base, profile({ launcherCostFactor: NaN }))).toThrow(/launcherCostFactor/);
+    expect(() => applyAgency(base, profile({ devSpeedFactor: -1 }))).toThrow(/devSpeedFactor/);
+    expect(() => applyAgency(base, profile({ industries: { ...neutral, optics: 1.5 } }))).toThrow(/optics/);
+    expect(() => applyAgency(base, profile({ launcherIds: ["nope"] }))).toThrow(/носія/);
+  });
+});
+
+describe("індустрії", () => {
+  it("дані індустрій коректні: ваги слотів дають 1", () => expect(() => checkIndustryData()).not.toThrow());
+
+  it("здібність у слоті зважує рівні індустрій", () => {
+    const us = (agenciesData as unknown as Record<string, AgencyProfile>).usa!.industries;
+    expect(capability(us, "instrument")).toBeCloseTo(0.5 * 0.85 + 0.3 * 0.9 + 0.2 * 0.95);
+    expect(capability(neutral, "engine")).toBeCloseTo(0.5);
+  });
+
+  it("множник ціни імпорту: 0,5 дає 1, 1 дає знижку, 0 дає націнку, без стрибків", () => {
+    const at = (c: number) => buyPriceFactor({ ...neutral, chemistry: c, electronics: c, metallurgy: c, manufacturing: c, software: c, optics: c }, "engine");
+    expect(at(0.5)).toBeCloseTo(1);
+    expect(at(1)).toBeCloseTo(0.75);
+    expect(at(0)).toBeCloseTo(1.25);
+    expect(Math.abs(at(0.501) - at(0.499))).toBeLessThan(0.01);
+  });
+
+  it("країни мають різні сильні сторони: США не мають металургії, Китай має електроніку слабшу", () => {
+    const by = agenciesData as unknown as Record<string, AgencyProfile>;
+    expect(capability(by.usa!.industries, "instrument")).toBeGreaterThan(capability(by.china!.industries, "instrument"));
+    expect(capability(by.china!.industries, "engine")).toBeGreaterThan(capability(by.usa!.industries, "engine"));
   });
 });
 
