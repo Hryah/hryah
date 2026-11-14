@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { availableActions, newGame, step, type GameAction, type GameState } from "../../core/game";
 import { causeChains } from "../../core/debrief";
 import { launchBlockers } from "../../core/design";
@@ -20,11 +20,16 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 15,
 } as const;
 
+const overlay = {
+  position: "fixed", right: 16, top: 16, zIndex: 1100, maxWidth: 360, gap: 8,
+  background: "rgba(20, 24, 41, 0.92)", border: `1px solid ${C.line}`, borderRadius: 12, padding: 12,
+} as const;
+
 export const startPlay = (): GameState => newGame(SAMPLE_MISSION, SAMPLE_CATALOG, Math.floor(Math.random() * 2 ** 31));
 
 interface Props {
   game: GameState;
-  setGame: (update: (g: GameState) => GameState) => void;
+  setGame: Dispatch<SetStateAction<GameState>>;
   active: boolean; // канвас польоту й клавіатура живі лише коли екран видно
 }
 
@@ -68,27 +73,31 @@ export function PlayScreen({ game, setGame, active }: Props) {
     }
     case "flight":
       body = (
-        <Panel stepper={stepper}>
+        <>
           {active && <FlightScreen state={game.flight} dispatch={(action) => dispatch({ phase: "flight", action })} />}
-          <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.flightHint")}</div>
-          <div>
-            <button style={button} onClick={() => dispatch({ phase: "flight", action: { type: "complete_phase" } })}>
-              {t("ui.play.skipFlight")}
-            </button>
+          {/* Екран польоту займає весь вікно (fixed, z-index 1000), тож наша панель лежить над ним. */}
+          <div data-testid="flight-overlay" style={{ ...overlay, display: active ? "grid" : "none" }}>
+            {stepper}
+            <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.flightHint")}</div>
+            <div>
+              <button style={button} onClick={() => dispatch({ phase: "flight", action: { type: "complete_phase" } })}>
+                {t("ui.play.skipFlight")}
+              </button>
+            </div>
           </div>
-        </Panel>
+        </>
       );
       break;
     case "orbit": {
-      const actions = availableActions(game);
+      // Остання дія в списку частини завжди «відпрацювати до кінця»: на цьому тримаються боти в game.test.ts.
+      // Решту дебаг-дій справжньої орбіти гравцеві не показуємо.
+      const finish = availableActions(game).at(-1);
       body = (
         <Panel stepper={stepper}>
           <h2 style={{ margin: 0 }}>{t("ui.play.orbitTitle")}</h2>
           <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {actions.map((a, i) => (
-              <button key={i} style={button} onClick={() => dispatch(a.action)}>{a.label}</button>
-            ))}
+            {finish && <button style={button} onClick={() => dispatch(finish.action)}>{t("ui.play.runOrbit")}</button>}
           </div>
         </Panel>
       );

@@ -3,7 +3,6 @@ import { channel, channelStyle, commit } from "./build-info";
 import { DebugScreen } from "./ui/debug/DebugScreen";
 import { ConsortiumScreen } from "./ui/design/ConsortiumScreen";
 import { PlayScreen, startPlay } from "./ui/play/PlayScreen";
-import { t } from "./ui/text";
 import type { GameState } from "./core/game";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
@@ -45,12 +44,12 @@ export function App() {
         <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
           <h1 style={{ margin: "0 0 8px" }}>🚀 hryah</h1>
           <nav style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>{t("ui.nav.play")}</a>
+            <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>Гра</a>
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
             <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
           </nav>
-          <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={(update) => setGame(update)} active={view === "play"} /></div>
+          <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
           <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
         </main>
