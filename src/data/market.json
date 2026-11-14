@@ -1,0 +1,8 @@
+{
+  "cam-m": { "fromTurn": 0, "startFactor": 1.3, "settleTurn": 6 },
+  "sol-l": { "fromTurn": 2, "startFactor": 1.6, "settleTurn": 8 },
+  "bat-l": { "fromTurn": 2, "startFactor": 1.6, "settleTurn": 8 },
+  "eng-ion": { "fromTurn": 3, "startFactor": 1.7, "settleTurn": 9 },
+  "ant-l": { "fromTurn": 3, "startFactor": 1.6, "settleTurn": 9 },
+  "cam-l": { "fromTurn": 4, "startFactor": 1.8, "settleTurn": 10 }
+}
