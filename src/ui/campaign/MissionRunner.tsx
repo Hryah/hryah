@@ -51,8 +51,8 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
   useEffect(() => {
     if (stage.kind !== "flight" || !flightPhase.isDone(flight)) return;
     const result = sanitizeFlight(mission, spec, flightPhase.finish(flight).result);
-    if (result.deploymentStatus === "lost") reportRef.current({ flight: result, orbitActions: [] });
-    else setStage({ kind: "orbit", flight: result });
+    // Втрата апарата: звіт іде кнопкою (можна повторити, якщо мережа підвела), а не автоматично.
+    if (result.deploymentStatus !== "lost") setStage({ kind: "orbit", flight: result });
   }, [flight, stage.kind, mission, spec]);
 
   if (stage.kind === "flight") {
@@ -71,7 +71,11 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
           <div>
             <button
               style={button}
-              onClick={() => setFlight((s) => flightPhase.step(s, { type: "complete_phase" }))}
+              onClick={() => {
+                if (lost && flightPhase.isDone(flight)) {
+                  reportRef.current({ flight: sanitizeFlight(mission, spec, flightPhase.finish(flight).result), orbitActions: [] });
+                } else setFlight((s) => flightPhase.step(s, { type: "complete_phase" }));
+              }}
             >
               {t(lost ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
             </button>
