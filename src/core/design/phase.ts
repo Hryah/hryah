@@ -1,6 +1,6 @@
 // Частина 1: проєктування. Гравець збирає апарат, а запаси (dv, energy, link, science, mass, budget)
-// перераховуються після кожної дії. Формули апарата лежать у stubs.ts (stubDesign): їх читають
-// частини 2 і 3 та перебір балансу, тож рахуємо тут тим самим кодом, щоб цифри не розійшлись.
+// перераховуються після кожної дії. Формули апарата лежать у model/ (buildSpec): їх читають частини 2 і 3
+// та перебір балансу, тож рахуємо тим самим кодом, щоб цифри не розійшлись.
 //
 // Правила, які тримає ця частина:
 //   - mass і budget жорсткі: з червоним запасом запуск неможливий (так само рахує sim.ts, поле launchable);
@@ -10,7 +10,7 @@
 import type {
   CauseEntry, DebugAction, Design, DesignInput, DesignPhase, MarginId, ModuleDef, SlotId, SystemId,
 } from '../contracts';
-import { stubDesign } from '../stubs';
+import { buildSpec } from '../model';
 
 export interface DesignState {
   input: DesignInput;
@@ -81,7 +81,7 @@ export function startDesign(input: DesignInput): Design {
 
 // Які запаси зараз червоні й заважають запуску. Порожній список означає, що запускати можна.
 export function launchBlockers(state: DesignState): MarginId[] {
-  return stubDesign(state.input, state.design).result.margins
+  return buildSpec(state.input, state.design).result.margins
     .filter((m) => !m.ok && HARD_MARGINS.includes(m.id))
     .map((m) => m.id);
 }
@@ -125,7 +125,7 @@ export const designPhase: DesignPhase<DesignState, DesignAction> = {
 
   // finish чиста, тож її можна викликати будь-коли як попередній перегляд запасів.
   finish(state) {
-    const { result, log } = stubDesign(state.input, state.design);
+    const { result, log } = buildSpec(state.input, state.design);
     const { design } = state;
 
     // Рішення, які заглушка не записує: пальне, висота, носій.
