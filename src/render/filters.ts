@@ -39,8 +39,27 @@ interface Pass {
   material: THREE.ShaderMaterial;
 }
 
+function createTargets(renderer: THREE.WebGLRenderer, width: number, height: number) {
+  // WebGL2 гарантує RGBA8; HDR використовуємо лише з підтримкою рендеру у float-буфер.
+  const type = renderer.extensions.has('EXT_color_buffer_float') ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const colorFormat = type === THREE.HalfFloatType ? gl.RGBA16F : gl.RGBA8;
+  const colorSamples = gl.getInternalformatParameter(gl.RENDERBUFFER, colorFormat, gl.SAMPLES) as Int32Array;
+  const depthSamples = gl.getInternalformatParameter(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, gl.SAMPLES) as Int32Array;
+  // Ліміт MSAA залежить і від формату кольору, і від формату глибини; нуль вимикає MSAA.
+  const samples = Math.max(0, ...Array.from(colorSamples).filter((n) =>
+    n <= 4 && n <= renderer.capabilities.maxSamples && depthSamples.includes(n)));
+  return {
+    scene: new THREE.WebGLRenderTarget(width, height, { samples, type }),
+    swap: [
+      new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, type }),
+      new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, type }),
+    ],
+  };
+}
+
 export interface FilterChain {
-  /** Замінює список фільтрів. Порожній список вимикає постобробку зовсім (кадр іде прямо на екран). */
+  /** Замінює список фільтрів. Ті самі фільтри не перестворює; порожній список вимикає постобробку. */
   set(filters: readonly Filter[]): void;
   isActive(): boolean;
   /** Малює сцену через фільтри. Викликати замість renderer.render, коли isActive(). */
@@ -54,12 +73,8 @@ export function createFilterChain(renderer: THREE.WebGLRenderer): FilterChain {
   let passes: Pass[] = [];
   let width = 1;
   let height = 1;
-  // Сцена малюється в першу ціль (зі згладжуванням), далі фільтри по черзі перекладають кадр між двома.
-  const sceneTarget = new THREE.WebGLRenderTarget(1, 1, { samples: 4, type: THREE.HalfFloatType });
-  const swap = [
-    new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, type: THREE.HalfFloatType }),
-    new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, type: THREE.HalfFloatType }),
-  ] as const;
+  // Буфери потрібні лише після першого ввімкнення фільтрів.
+  let targets: ReturnType<typeof createTargets> | null = null;
   const resolution = new THREE.Vector2(1, 1);
 
   // Один трикутник на весь екран.
@@ -79,7 +94,10 @@ export function createFilterChain(renderer: THREE.WebGLRenderer): FilterChain {
 
   return {
     set(filters) {
+      // StageCanvas синхронізує фільтри і при монтуванні, і при зміні props.
+      if (passes.length === filters.length && passes.every((pass, i) => pass.filter === filters[i])) return;
       disposePasses();
+      if (filters.length > 0) targets ??= createTargets(renderer, width, height);
       passes = filters.map((filter) => ({
         filter,
         material: new THREE.ShaderMaterial({
@@ -98,6 +116,12 @@ export function createFilterChain(renderer: THREE.WebGLRenderer): FilterChain {
     },
     isActive: () => passes.length > 0,
     render(scene, camera, timeS) {
+      if (!targets || passes.length === 0) {
+        renderer.setRenderTarget(null);
+        renderer.render(scene, camera);
+        return;
+      }
+      const { scene: sceneTarget, swap } = targets;
       renderer.setRenderTarget(sceneTarget);
       renderer.render(scene, camera);
       let source: THREE.WebGLRenderTarget = sceneTarget;
@@ -121,13 +145,14 @@ export function createFilterChain(renderer: THREE.WebGLRenderer): FilterChain {
       width = w;
       height = h;
       resolution.set(w, h);
-      sceneTarget.setSize(w, h);
-      for (const target of swap) target.setSize(w, h);
+      targets?.scene.setSize(w, h);
+      for (const target of targets?.swap ?? []) target.setSize(w, h);
     },
     dispose() {
       disposePasses();
-      sceneTarget.dispose();
-      for (const target of swap) target.dispose();
+      targets?.scene.dispose();
+      for (const target of targets?.swap ?? []) target.dispose();
+      targets = null;
       geometry.dispose();
     },
   };

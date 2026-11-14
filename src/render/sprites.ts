@@ -83,13 +83,15 @@ export interface SpriteFactoryOptions {
   manifest: SpriteManifest;
   /** Корінь файлів спрайтів, напр. `${import.meta.env.BASE_URL}assets/sprites/`. */
   baseUrl: string;
+  /** Наявні файли відносно baseUrl. Якщо передано, відсутні PNG лишаються заглушками без запиту. */
+  availableFiles?: readonly string[] | (() => Promise<readonly string[]>);
 }
 
 /**
  * Створює спрайт за id із ядра. Одразу повертає заглушку; якщо файл є, він підміняє її після завантаження.
  * Викликати лише в Scene.mount, не в update.
  */
-export function createSprite(id: string, { manifest, baseUrl }: SpriteFactoryOptions): SpriteHandle {
+export function createSprite(id: string, { manifest, baseUrl, availableFiles }: SpriteFactoryOptions): SpriteHandle {
   const def = resolveSprite(id, manifest);
   let texture: THREE.Texture = placeholderTexture(id);
   let placeholder = true;
@@ -107,7 +109,8 @@ export function createSprite(id: string, { manifest, baseUrl }: SpriteFactoryOpt
   };
   applyScale();
 
-  if (def.file !== null) {
+  const loadFile = (): void => {
+    if (disposed || def.file === null) return;
     new THREE.TextureLoader().load(
       `${baseUrl}${def.file}`,
       (loaded) => {
@@ -125,6 +128,16 @@ export function createSprite(id: string, { manifest, baseUrl }: SpriteFactoryOpt
       undefined,
       () => { /* файла ще немає: лишається заглушка */ },
     );
+  };
+
+  if (def.file !== null) {
+    if (typeof availableFiles === 'function') {
+      void availableFiles().then((files) => {
+        if (def.file !== null && files.includes(def.file)) loadFile();
+      }).catch(() => { /* список недоступний: лишається заглушка */ });
+    } else if (availableFiles === undefined || availableFiles.includes(def.file)) {
+      loadFile();
+    }
   }
 
   return {
