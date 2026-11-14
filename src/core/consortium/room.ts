@@ -7,7 +7,11 @@ import type { DesignInput } from '../contracts';
 import type { AgencyProfile } from '../design/agency';
 import type { Market } from './market';
 import { rolls } from './seed';
-import { newConsortium, stepConsortium, activeAgency, type ConsortiumAction, type ConsortiumState } from './session';
+import { botAction } from './bot';
+import { isMissionReport, type CampaignConfig, type MissionReport } from './campaign';
+import {
+  activeAgency, applyReport, forfeitReport, newConsortium, stepConsortium, type ConsortiumAction, type ConsortiumState,
+} from './session';
 
 export const MAX_PLAYERS = 4;
 
@@ -16,6 +20,7 @@ export interface Player {
   name: string;
   wish: string | null; // бажана агенція; null: байдуже, дістанеться вільна
   ready: boolean;
+  bot?: boolean;      // місце займає бот: ходить сам, звіту про політ не надсилає
 }
 
 export interface Assignment {
@@ -40,6 +45,7 @@ export interface PlayState {
   assignments: Assignment[];  // порядок збігається з порядком агенцій у consortium
   playerNames: Record<string, string>; // імена, щоб екран показував, чий хід
   left: string[];             // хто вийшов під час гри: їхні агенції більше не ходять (лише «чекати»)
+  bots?: string[];            // id гравців-ботів
   consortium: ConsortiumState;
 }
 
@@ -51,7 +57,10 @@ export type RoomAction =
   | { type: 'wish'; agencyId: string | null }
   | { type: 'ready'; ready: boolean }
   | { type: 'start' }
-  | { type: 'play'; action: ConsortiumAction };
+  | { type: 'addBot' }
+  | { type: 'removeBot'; playerId: string }
+  | { type: 'play'; action: ConsortiumAction }
+  | { type: 'report'; report: MissionReport };
 
 // Чи має значення вигляд дії кімнати. Сервер публічний, тому перевіряємо не лише тип, а й поля, включно з вкладеними
 // діями гравця: чужий JSON не повинен потрапити в step. Лише форма (типи); сенс (чи є такий модуль) лишається за step.
@@ -89,8 +98,10 @@ export function isRoomAction(a: unknown): a is RoomAction {
     case 'join': return typeof a.name === 'string';
     case 'ready': return typeof a.ready === 'boolean';
     case 'wish': return a.agencyId === null || isStr(a.agencyId);
-    case 'start': case 'leave': return true;
+    case 'start': case 'leave': case 'addBot': return true;
+    case 'removeBot': return isStr(a.playerId);
     case 'play': return isConsortiumAction(a.action);
+    case 'report': return isMissionReport(a.report);
     default: return false;
   }
 }
@@ -100,6 +111,7 @@ export interface RoomSetup {
   market: Market;
   agencies: AgencyProfile[];
   deadlineTurn?: number;
+  campaign?: CampaignConfig;   // є: кімната грає кампанію з кількох вікон запуску
 }
 
 export function newRoom(hostId: string, hostName: string, agencyIds: string[], seed = 1, minPlayers = 1): LobbyState {
@@ -144,33 +156,54 @@ export function startBlockers(lobby: LobbyState, knownAgencyIds?: string[]): str
   if (lobby.players.length < lobby.minPlayers) out.push('lobby.tooFew');
   if (lobby.players.length > lobby.agencyIds.length) out.push('lobby.tooMany');
   if (lobby.players.some((p) => !p.ready && p.id !== lobby.hostId)) out.push('lobby.notReady');
+  if (!lobby.players.some((p) => !p.bot)) out.push('lobby.onlyBots');
   return out;
 }
 
 // Агенції тих, хто вийшов, пропускають хід автоматично, інакше решта чекала б на них до кінця гри.
-function skipLeft(state: PlayState): PlayState {
+// Агенції ботів ходять самі: та сама дія від того самого стану, тож за одним екраном і онлайн результат однаковий.
+function autoPlay(state: PlayState, bots: string[]): PlayState {
   let consortium = state.consortium;
-  for (let guard = 0; guard < 1000 && !consortium.result; guard++) {
+  for (let guard = 0; guard < 2000 && !consortium.result && !consortium.awaiting; guard++) {
     const entry = activeAgency(consortium);
     const owner = state.assignments.find((a) => a.agencyId === entry?.agency.id);
-    if (!owner || !state.left.includes(owner.playerId)) break;
-    consortium = stepConsortium(consortium, { type: 'wait' });
+    if (!owner) break;
+    let next: ConsortiumState;
+    if (state.left.includes(owner.playerId)) next = stepConsortium(consortium, { type: 'wait' });
+    else if (bots.includes(owner.playerId)) {
+      next = stepConsortium(consortium, botAction(consortium));
+      // Дія бота нічого не змінила (наприклад, крок уже впирається в межу): хід бота закінчується, щоб не зациклитись.
+      if (next === consortium) next = stepConsortium(consortium, { type: 'launch' });
+      if (next === consortium) next = stepConsortium(consortium, { type: 'wait' });
+    } else break;
+    if (next === consortium) break;
+    consortium = next;
   }
   return consortium === state.consortium ? state : { ...state, consortium };
 }
 
+const botsOf = (state: PlayState): string[] => state.bots ?? [];
+
 export function stepRoom(state: RoomState, playerId: string, action: RoomAction, setup: RoomSetup): RoomState {
   if (state.phase === 'play') {
+    const mine = state.assignments.find((a) => a.playerId === playerId);
     if (action.type === 'leave') {
-      if (!state.assignments.some((a) => a.playerId === playerId) || state.left.includes(playerId)) return state;
-      return skipLeft({ ...state, left: [...state.left, playerId] });
+      if (!mine || state.left.includes(playerId)) return state;
+      // Від того, хто пішов, звіту про політ уже не буде: його запуск рахуємо заглушками.
+      const consortium = forfeitReport(state.consortium, mine.agencyId);
+      return autoPlay({ ...state, left: [...state.left, playerId], consortium }, botsOf(state));
+    }
+    if (action.type === 'report') {
+      if (!mine || state.left.includes(playerId)) return state;
+      const consortium = applyReport(state.consortium, mine.agencyId, action.report);
+      return consortium === state.consortium ? state : autoPlay({ ...state, consortium }, botsOf(state));
     }
     if (action.type !== 'play') return state;
     const entry = activeAgency(state.consortium);
     const owner = state.assignments.find((a) => a.agencyId === entry?.agency.id);
     if (!owner || owner.playerId !== playerId) return state; // ходить лише власник активної агенції
     const consortium = stepConsortium(state.consortium, action.action);
-    return consortium === state.consortium ? state : skipLeft({ ...state, consortium });
+    return consortium === state.consortium ? state : autoPlay({ ...state, consortium }, botsOf(state));
   }
 
   const me = state.players.find((p) => p.id === playerId);
@@ -182,10 +215,21 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       return { ...state, players: [...state.players, { id: playerId, name, wish: null, ready: false }] };
     }
     case 'leave': {
-      if (!me) return state;
+      if (!me || me.bot) return state;
       const players = state.players.filter((p) => p.id !== playerId);
-      if (players.length === 0) return state; // порожню кімнату закриває той, хто її тримає
-      return { ...state, players, hostId: state.hostId === playerId ? players[0]!.id : state.hostId };
+      const humans = players.filter((p) => !p.bot);
+      if (humans.length === 0) return state; // порожню кімнату (лише боти) закриває той, хто її тримає
+      return { ...state, players, hostId: state.hostId === playerId ? humans[0]!.id : state.hostId };
+    }
+    case 'addBot': {
+      if (playerId !== state.hostId || state.players.length >= Math.min(MAX_PLAYERS, state.agencyIds.length)) return state;
+      let n = 1;
+      while (state.players.some((p) => p.id === `bot-${n}`)) n++;
+      return { ...state, players: [...state.players, { id: `bot-${n}`, name: `Bot ${n}`, wish: null, ready: true, bot: true }] };
+    }
+    case 'removeBot': {
+      if (playerId !== state.hostId || !state.players.some((p) => p.id === action.playerId && p.bot)) return state;
+      return { ...state, players: state.players.filter((p) => p.id !== action.playerId) };
     }
     case 'wish': {
       if (!me) return state;
@@ -203,11 +247,17 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       const byId = new Map(setup.agencies.map((a) => [a.id, a]));
       const agencies = assignments.map((a) => byId.get(a.agencyId)).filter((a): a is AgencyProfile => a !== undefined);
       if (agencies.length !== assignments.length) return state;
-      const consortium = newConsortium(setup.base, setup.market, agencies, setup.deadlineTurn, state.seed);
+      const bots = state.players.filter((p) => p.bot).map((p) => p.id);
+      // Звіт про політ чекаємо лише в кампанії й лише від людей: боти й одиночна гра без кампанії рахуються заглушками.
+      const reportsFrom = setup.campaign ? assignments.filter((a) => !bots.includes(a.playerId)).map((a) => a.agencyId) : [];
+      const consortium = newConsortium(setup.base, setup.market, agencies, setup.deadlineTurn, state.seed, {
+        ...(setup.campaign ? { campaign: setup.campaign } : {}), reportsFrom,
+      });
       const playerNames = Object.fromEntries(state.players.map((p) => [p.id, p.name]));
-      return skipLeft({ phase: 'play', seed: state.seed, assignments, playerNames, left: [], consortium });
+      return autoPlay({ phase: 'play', seed: state.seed, assignments, playerNames, left: [], ...(bots.length ? { bots } : {}), consortium }, bots);
     }
     case 'play':
+    case 'report':
       return state;
   }
 }
