@@ -57,6 +57,23 @@ describe("лобі консорціуму", () => {
     expect(new Set(a.map((x) => x.agencyId)).size).toBe(4);
   });
 
+  it("newRoom відхиляє дублікати агенцій і хибний minPlayers", () => {
+    expect(() => newRoom("a", "A", [ids[0]!, ids[0]!])).toThrow();
+    expect(() => newRoom("a", "A", ids, 1, 99)).toThrow();
+    expect(() => newRoom("a", "A", ids, 1, 0)).toThrow();
+  });
+
+  it("призначення впорядковані за порядком агенцій кімнати, а не за порядком входу", () => {
+    const l = lobby([ids[3]!, ids[0]!, ids[2]!]);
+    expect(assignAgencies(l).map((a) => a.agencyId)).toEqual([ids[0], ids[2], ids[3]]);
+  });
+
+  it("старт з невідомою агенцією заблокований із причиною, а не мовчки", () => {
+    const l = newRoom("a", "A", ["nope", ids[0]!]);
+    expect(startBlockers(l, ids)).toContain("lobby.unknownAgency");
+    expect(send(l, "a", { type: "start" })).toBe(l);
+  });
+
   it("старт лише від господаря й коли всі готові", () => {
     let s: RoomState = lobby([ids[0]!, ids[1]!]);
     expect(startBlockers(s as LobbyState)).toContain("lobby.notReady");
@@ -67,11 +84,13 @@ describe("лобі консорціуму", () => {
     expect(started.phase).toBe("play");
   });
 
-  it("зміна бажання скидає готовність; невідома агенція ігнорується", () => {
+  it("зміна бажання скидає готовність усіх; те саме бажання нічого не міняє; невідома агенція ігнорується", () => {
     let s: RoomState = lobby([ids[0]!, ids[1]!]);
     s = send(s, "p1", { type: "ready", ready: true });
-    s = send(s, "p1", { type: "wish", agencyId: ids[2]! });
-    expect((s as LobbyState).players[1]!.ready).toBe(false);
+    s = send(s, "p0", { type: "ready", ready: true });
+    expect(send(s, "p1", { type: "wish", agencyId: ids[1]! })).toBe(s);
+    s = send(s, "p0", { type: "wish", agencyId: ids[1]! });
+    expect((s as LobbyState).players.every((p) => !p.ready)).toBe(true);
     expect(send(s, "p1", { type: "wish", agencyId: "nope" })).toBe(s);
   });
 
