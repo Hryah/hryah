@@ -305,7 +305,11 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   const total = agencies.reduce((sum, e) => sum + (e.account?.programPts ?? 0), 0);
   const nextCampaign: CampaignState = { ...campaign, rounds: [...campaign.rounds, summary] };
   const done = campaign.round + 1 >= config.rounds || total >= config.programGoal;
-  if (done) return { ...state, agencies, campaign: nextCampaign, result: { runs, settlement } };
+  if (done) {
+    // Сирі звіти (до 400 дій орбіти на гравця) після підсумку не потрібні: не тягнемо їх у фінальний стан.
+    const clean = agencies.map((e) => { const { report: _r, ...rest } = e; return rest; });
+    return { ...state, agencies: clean, campaign: nextCampaign, result: { runs, settlement } };
+  }
 
   // Нове вікно: календар іде далі, проєкт агенції лишається (друге коло коротше), звіти скидаються.
   const turn = state.turn + 1;

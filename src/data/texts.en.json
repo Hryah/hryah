@@ -394,5 +394,6 @@
   "ui.factory.order": "Start the batch (1 action)",
   "ui.factory.quality": "quality {q}%",
   "ui.factory.left": "left in: {flaws}",
-  "ui.factory.inTurns": "ready in {n} turn(s)"
+  "ui.factory.inTurns": "ready in {n} turn(s)",
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
 }
