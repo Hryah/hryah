@@ -1,21 +1,51 @@
 import type { FlightAction, FlightState } from "../../core/flight";
+import { SoundEngine } from "./audio/SoundEngine";
 import { Camera2D } from "./Camera2D";
 import { DockingGame } from "./minigames/DockingGame";
 import { LifeSupportGame } from "./minigames/LifeSupportGame";
 import { SolarGame } from "./minigames/SolarGame";
 import { DiegeticHUD } from "./render/DiegeticHUD";
+import { ParticleSystem } from "./render/ParticleSystem";
 import { StationRenderer } from "./render/StationRenderer";
 
 export class GameLoop {
   public readonly camera = new Camera2D();
   public readonly stationRenderer = new StationRenderer();
   public readonly hudRenderer = new DiegeticHUD();
+  public readonly particles = new ParticleSystem();
+  public readonly sound = new SoundEngine();
   public readonly dockingGame = new DockingGame();
   public readonly solarGame = new SolarGame();
   public readonly lifeSupportGame = new LifeSupportGame();
 
   private rafId: number | null = null;
   private lastTimestampMs = 0;
+  private lastAlarmBeepTimeS = 0;
+  private roamKeysHeld = { w: false, a: false, s: false, d: false };
+
+  public setRoamKey(code: string, held: boolean): boolean {
+    if (code === "KeyW" || code === "ArrowUp") {
+      this.roamKeysHeld.w = held;
+      return true;
+    }
+    if (code === "KeyS" || code === "ArrowDown") {
+      this.roamKeysHeld.s = held;
+      return true;
+    }
+    if (code === "KeyA" || code === "ArrowLeft") {
+      this.roamKeysHeld.a = held;
+      return true;
+    }
+    if (code === "KeyD" || code === "ArrowRight") {
+      this.roamKeysHeld.d = held;
+      return true;
+    }
+    return false;
+  }
+
+  public resetRoamKeys(): void {
+    this.roamKeysHeld = { w: false, a: false, s: false, d: false };
+  }
 
   public start(
     canvas: HTMLCanvasElement,
@@ -38,11 +68,26 @@ export class GameLoop {
       this.lastTimestampMs = nowMs;
       const dtS = Math.max(0.001, Math.min(0.05, rawDtS));
 
-      const currentState = getState();
+      const prevState = getState();
+
+      // Плавне ковзання вздовж поручня клавішами WASD / Стрілками, коли космонавт ANCHORED
       if (
-        !currentState.phaseDone &&
-        currentState.gameMode !== "GAME_OVER" &&
-        currentState.gameMode !== "VICTORY"
+        prevState.gameMode === "STATION_ROAM" &&
+        prevState.astronaut.state === "ANCHORED"
+      ) {
+        const dirX =
+          (this.roamKeysHeld.d ? 1 : 0) - (this.roamKeysHeld.a ? 1 : 0);
+        const dirY =
+          (this.roamKeysHeld.s ? 1 : 0) - (this.roamKeysHeld.w ? 1 : 0);
+        if (dirX !== 0 || dirY !== 0) {
+          dispatch({ type: "slide_along_handle", dirX, dirY, dtS });
+        }
+      }
+
+      if (
+        !prevState.phaseDone &&
+        prevState.gameMode !== "GAME_OVER" &&
+        prevState.gameMode !== "VICTORY"
       ) {
         dispatch({ type: "tick", dtS });
       }
@@ -53,6 +98,10 @@ export class GameLoop {
       const viewportH = Math.max(240, Math.round(rect.height));
 
       const updatedState = getState();
+
+      // Реактивні звукові ефекти та частинки на переходи станів
+      this.processJuiceEvents(prevState, updatedState, dtS);
+
       this.camera.updateFromState(updatedState, dtS, viewportW, viewportH);
 
       if (
@@ -68,16 +117,17 @@ export class GameLoop {
         ctx.save();
         ctx.scale(dpr, dpr);
 
-        // 1. Відмальовка станції та космонавта у World Space
+        // 1. Відмальовка станції, частинок та космонавта у World Space
         this.stationRenderer.render(
           ctx,
           updatedState,
           this.camera,
           viewportW,
           viewportH,
+          this.particles,
         );
 
-        // 2. Дієгетичний HUD та стрілки позаекранних терміналів
+        // 2. Дієгетичний HUD, тактичний радар та стрілки позаекранних терміналів
         this.hudRenderer.render(
           ctx,
           updatedState,
@@ -125,6 +175,105 @@ export class GameLoop {
     };
 
     this.rafId = window.requestAnimationFrame(frame);
+  }
+
+  private processJuiceEvents(
+    prev: FlightState,
+    curr: FlightState,
+    dtS: number,
+  ): void {
+    // 1. Відштовхування від поручня (ANCHORED -> FLYING)
+    if (
+      prev.astronaut.state === "ANCHORED" &&
+      curr.astronaut.state === "FLYING"
+    ) {
+      const speed = Math.hypot(curr.astronaut.vel.vx, curr.astronaut.vel.vy);
+      this.particles.spawnPushOff(
+        prev.astronaut.pos.x,
+        prev.astronaut.pos.y,
+        curr.astronaut.vel.vx,
+        curr.astronaut.vel.vy,
+      );
+      this.sound.playLaunch(Math.min(1, speed / 650));
+    }
+
+    // 2. Захват поручня (FLYING/STUNNED -> ANCHORED)
+    if (
+      prev.astronaut.state !== "ANCHORED" &&
+      curr.astronaut.state === "ANCHORED"
+    ) {
+      this.particles.spawnGrabLatch(
+        curr.astronaut.pos.x,
+        curr.astronaut.pos.y,
+      );
+      this.sound.playGrab();
+    }
+
+    // 3. Рикошет об стіну або колону (різкий стрибок screenShakePx під час польоту)
+    if (
+      curr.gameMode === "STATION_ROAM" &&
+      curr.astronaut.state !== "ANCHORED" &&
+      curr.screenShakePx > prev.screenShakePx + 1.2
+    ) {
+      const stunned = curr.astronaut.state === "STUNNED";
+      const impactSpeed = stunned ? 550 : 280;
+      this.particles.spawnWallImpact(
+        curr.astronaut.pos.x,
+        curr.astronaut.pos.y,
+        impactSpeed,
+      );
+      this.sound.playWallBounce(impactSpeed, stunned);
+    }
+
+    // 4. Постріл аварійного мікро-двигуна (thrusterCharges зменшився)
+    if (curr.astronaut.thrusterCharges < prev.astronaut.thrusterCharges) {
+      this.particles.spawnThrusterPlume(
+        curr.astronaut.pos.x,
+        curr.astronaut.pos.y,
+        Math.cos(curr.astronaut.angle),
+        Math.sin(curr.astronaut.angle),
+      );
+      this.sound.playThrusterBurst();
+    }
+
+    // 5. Відкриття термінала мінігри
+    if (
+      prev.gameMode === "STATION_ROAM" &&
+      curr.gameMode === "MINIGAME_ACTIVE"
+    ) {
+      this.resetRoamKeys();
+      this.sound.playTerminalOpen();
+    }
+
+    // 6. Успішне проходження мінігри або відкриття нового відсіку
+    if (
+      prev.gameMode === "MINIGAME_ACTIVE" &&
+      (curr.gameMode === "MODULE_EXPANSION_CUTSCENE" ||
+        curr.gameMode === "VICTORY" ||
+        (curr.gameMode === "STATION_ROAM" &&
+          prev.activeMinigame.terminalId &&
+          curr.terminals.find((t) => t.id === prev.activeMinigame.terminalId)
+            ?.state === "IDLE"))
+    ) {
+      this.sound.playTerminalSuccess();
+    }
+
+    // 7. Періодичний звуковий сигнал при критичній аварії
+    const hasCritical = curr.terminals.some(
+      (t) =>
+        curr.unlockedModuleIds.includes(t.moduleId) && t.state === "CRITICAL",
+    );
+    if (hasCritical && curr.timeElapsedS - this.lastAlarmBeepTimeS > 1.8) {
+      this.lastAlarmBeepTimeS = curr.timeElapsedS;
+      this.sound.playAlarmPing();
+    }
+
+    this.particles.update(
+      dtS,
+      curr.astronaut.pos,
+      curr.astronaut.vel,
+      curr.astronaut.state !== "ANCHORED",
+    );
   }
 
   public stop(): void {

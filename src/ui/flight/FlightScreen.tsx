@@ -86,7 +86,11 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
 
       // 4. STATION_ROAM — керування космонавтом
       if (s.gameMode === "STATION_ROAM") {
-        if (e.code === "KeyE") {
+        if (loop?.setRoamKey(e.code, true)) {
+          e.preventDefault();
+          return;
+        }
+        if (e.code === "KeyE" || e.code === "Enter") {
           e.preventDefault();
           send({ type: "open_terminal" });
           return;
@@ -116,6 +120,8 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       const s = stateRef.current;
       const send = dispatchRef.current;
       const loop = loopRef.current;
+
+      loop?.setRoamKey(e.code, false);
 
       if (s.gameMode === "MINIGAME_ACTIVE") {
         if (s.activeMinigame.type === "DOCKING" && loop) {
@@ -191,24 +197,28 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
 
     // 4. STATION_ROAM: SlingshotController (якщо ANCHORED) або GrabController (якщо FLYING)
     if (s.gameMode === "STATION_ROAM") {
-      // ПКМ у польоті — аварійний мікро-двигун (thrusterCharges)
-      if (e.button === 2 && s.astronaut.state !== "ANCHORED") {
-        const astroScreen = loop.camera.worldToScreen(
-          s.astronaut.pos.x,
-          s.astronaut.pos.y,
-          w,
-          h,
-        );
-        send({
-          type: "fire_thruster",
-          dirX: sx - astroScreen.x,
-          dirY: sy - astroScreen.y,
-        });
+      // ПКМ у польоті — аварійний мікро-двигун (thrusterCharges), або скасування натягу рогатки
+      if (e.button === 2) {
+        if (s.astronaut.state === "ANCHORED") {
+          send({ type: "slingshot_cancel" });
+        } else {
+          const astroScreen = loop.camera.worldToScreen(
+            s.astronaut.pos.x,
+            s.astronaut.pos.y,
+            w,
+            h,
+          );
+          send({
+            type: "fire_thruster",
+            dirX: sx - astroScreen.x,
+            dirY: sy - astroScreen.y,
+          });
+        }
         return;
       }
 
       if (s.astronaut.state === "ANCHORED") {
-        // Якщо клікнули по іконці взаємодії [E] прямо над персонажем — відкриваємо термінал
+        // Якщо клікнули по іконці [E / КЛІК] над персонажем або по самій консолі поруч — відкриваємо термінал
         if (s.astronaut.anchoredHandleId) {
           const handle = ALL_GRAB_HANDLES.find(
             (h) => h.id === s.astronaut.anchoredHandleId,
@@ -220,10 +230,19 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
               w,
               h,
             );
-            if (
-              Math.abs(sx - badgePos.x) <= 92 &&
-              Math.abs(sy - badgePos.y) <= 22
-            ) {
+            const term = s.terminals.find((t) => t.id === handle.terminalId);
+            const termScreen = term
+              ? loop.camera.worldToScreen(term.pos.x, term.pos.y, w, h)
+              : null;
+
+            const clickedBadge =
+              Math.abs(sx - badgePos.x) <= 98 &&
+              Math.abs(sy - badgePos.y) <= 24;
+            const clickedConsole =
+              termScreen !== null &&
+              Math.hypot(sx - termScreen.x, sy - termScreen.y) <= 58;
+
+            if (clickedBadge || clickedConsole) {
               send({ type: "open_terminal" });
               return;
             }

@@ -206,18 +206,32 @@ export class SolarGame {
     ctx.fillStyle = "#8a99b8";
     ctx.font = "700 10px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("ОСЦИЛОГРАФ ПОТУЖНОСТІ", rightX + 10, oscY + 18);
+    ctx.fillText("ОСЦИЛОГРАФ СИНХРОНІЗАЦІЇ ПОТОКУ", rightX + 10, oscY + 18);
 
-    ctx.strokeStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#5ca8ff";
-    ctx.lineWidth = 2;
+    // Еталонна сонячна синусоїда (пунктирна золота)
+    ctx.strokeStyle = "rgba(255, 224, 102, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    const amp = (mg.powerEfficiencyPct / 100) * 32;
+    for (let px = 0; px <= rightW - 20; px += 4) {
+      const refY = oscY + 64 + Math.sin(px * 0.11 + timeElapsedS * 9) * 26;
+      if (px === 0) ctx.moveTo(rightX + 10 + px, refY);
+      else ctx.lineTo(rightX + 10 + px, refY);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Реальна хвиля генерації панелей
+    const phaseShift = ((100 - mg.powerEfficiencyPct) / 100) * 2.4;
+    ctx.strokeStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#5ca8ff";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    const amp = (mg.powerEfficiencyPct / 100) * 26;
     for (let px = 0; px <= rightW - 20; px += 4) {
       const waveY =
         oscY +
-        68 +
-        Math.sin(px * 0.11 + timeElapsedS * 9) * amp * 0.75 +
-        Math.cos(px * 0.05 - timeElapsedS * 5) * amp * 0.25;
+        64 +
+        Math.sin(px * 0.11 + timeElapsedS * 9 + phaseShift) * amp;
       if (px === 0) ctx.moveTo(rightX + 10 + px, waveY);
       else ctx.lineTo(rightX + 10 + px, waveY);
     }
@@ -226,7 +240,7 @@ export class SolarGame {
     ctx.fillStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#ffe066";
     ctx.font = "700 13px monospace";
     ctx.fillText(
-      `${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} кВт)`,
+      `ККД: ${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} кВт)`,
       rightX + 10,
       oscY + 108,
     );
@@ -308,11 +322,22 @@ export class SolarGame {
 
     ctx.fillStyle = "#08101d";
     ctx.strokeStyle = jammed ? "#ff4766" : "#3b5998";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+
+    // Насічки на ободі маховика (12 зубців)
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI) / 6 + (panelDeg * Math.PI) / 180;
+      ctx.strokeStyle = jammed ? "#ff4766" : "#64748b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4));
+      ctx.lineTo(cx + Math.cos(a) * (r + 4), cy + Math.sin(a) * (r + 4));
+      ctx.stroke();
+    }
 
     // Концентричні кола радара
     ctx.strokeStyle = "rgba(92, 168, 255, 0.16)";

@@ -4,6 +4,7 @@ import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION, stubDesign } from "../st
 import {
   ALL_GRAB_HANDLES,
   buildOctagonWallsFromChamfer,
+  computeBallisticTrajectoryWithBounces,
   computeSlingshotLaunch,
   computeTrajectoryPreview,
   flightPhase,
@@ -313,5 +314,53 @@ describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platfor
       expect(f.causedBy).toBeDefined();
       expect(f.causedBy!.length).toBeGreaterThan(0);
     }
+  });
+
+  it("передбачає рикошетну траєкторію computeBallisticTrajectoryWithBounces, Target Lock на поручні та підтримує ковзання slide_along_handle", () => {
+    const input = makeInput();
+    let state = flightPhase.init(input, 21);
+
+    // Перевіряємо ковзання вздовж поручня H_START (вертикальний поручень x=48, y=190..290)
+    const startY = state.astronaut.pos.y;
+    state = flightPhase.step(state, {
+      type: "slide_along_handle",
+      dirX: 0,
+      dirY: 1,
+      dtS: 0.1,
+    });
+    expect(state.astronaut.pos.y).toBeGreaterThan(startY);
+    expect(state.astronaut.pos.x).toBe(48);
+
+    // Перевіряємо прогноз рикошетної траєкторії та захоплення цільового поручня H_MID_1
+    const activeWalls = getActiveWalls(state.unlockedModuleIds, state.openedSeals);
+    const activeHandles = getActiveHandles(state.unlockedModuleIds);
+    const circleObs = getActiveCircleObstacles(state.unlockedModuleIds);
+
+    // 1. Пряме наведення на верхній поручень H_TOP_1 (x=210..290, y=54)
+    const lockTop = computeBallisticTrajectoryWithBounces(
+      { x: 48, y: 240 },
+      { vx: 300, vy: -275 },
+      state.astronaut.radius,
+      activeWalls,
+      activeHandles,
+      circleObs,
+      "H_START",
+    );
+    expect(lockTop.targetHandleId).toBe("H_TOP_1");
+    expect(lockTop.targetPoint).not.toBeNull();
+    expect(lockTop.requiresActiveGrab).toBe(false);
+
+    // 2. Постріл прямо в центральну колону COL_HAB_CENTER (x=420, y=240) фіксує точку рикошету
+    const bouncePreview = computeBallisticTrajectoryWithBounces(
+      { x: 48, y: 240 },
+      { vx: 380, vy: 0 },
+      state.astronaut.radius,
+      activeWalls,
+      activeHandles,
+      circleObs,
+      "H_START",
+    );
+    expect(bouncePreview.bouncePoints.length).toBeGreaterThan(0);
+    expect(bouncePreview.targetHandleId).toBe("H_START");
   });
 });

@@ -47,7 +47,9 @@ import {
 } from "./StationBlueprint";
 import {
   clamp,
+  closestPointOnSegment,
   computeSlingshotLaunch,
+  sanitizeLaunchVectorAgainstNearbyWalls,
   stepZeroGPhysics,
 } from "./ZeroGPhysics";
 
@@ -114,6 +116,7 @@ export type FlightAction =
   | { type: "slingshot_move"; screenX: number; screenY: number }
   | { type: "slingshot_release" }
   | { type: "slingshot_cancel" }
+  | { type: "slide_along_handle"; dirX: number; dirY: number; dtS: number }
   | { type: "set_active_grab"; held: boolean }
   | { type: "fire_thruster"; dirX: number; dirY: number }
   | { type: "open_terminal"; terminalId?: string }
@@ -413,9 +416,16 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
           return state;
         }
         const dragCurrentScreen = { x: action.screenX, y: action.screenY };
-        const launch = computeSlingshotLaunch(
+        const rawLaunch = computeSlingshotLaunch(
           state.astronaut.slingshot.dragStartScreen,
           dragCurrentScreen,
+        );
+        const activeWalls = getActiveWalls(state.unlockedModuleIds, state.openedSeals);
+        const launch = sanitizeLaunchVectorAgainstNearbyWalls(
+          state.astronaut.pos,
+          rawLaunch,
+          state.astronaut.radius,
+          activeWalls,
         );
         const launchSpeed = Math.hypot(launch.vx, launch.vy);
         const nextAngle =
@@ -431,6 +441,41 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
               dragCurrentScreen,
               launchVector: { vx: launch.vx, vy: launch.vy },
             },
+          },
+        };
+      }
+
+      case "slide_along_handle": {
+        if (
+          state.gameMode !== "STATION_ROAM" ||
+          state.astronaut.state !== "ANCHORED" ||
+          !state.astronaut.anchoredHandleId
+        ) {
+          return state;
+        }
+        const handle = ALL_GRAB_HANDLES.find(
+          (h) => h.id === state.astronaut.anchoredHandleId,
+        );
+        if (!handle) return state;
+
+        const slideSpeedPxS = 165;
+        const dtS = clamp(action.dtS, 0, 0.1);
+        const targetX = state.astronaut.pos.x + action.dirX * slideSpeedPxS * dtS;
+        const targetY = state.astronaut.pos.y + action.dirY * slideSpeedPxS * dtS;
+        const clamped = closestPointOnSegment(
+          targetX,
+          targetY,
+          handle.ax,
+          handle.ay,
+          handle.bx,
+          handle.by,
+        );
+
+        return {
+          ...state,
+          astronaut: {
+            ...state.astronaut,
+            pos: { x: clamped.x, y: clamped.y },
           },
         };
       }

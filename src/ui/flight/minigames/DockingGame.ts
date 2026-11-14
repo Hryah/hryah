@@ -222,11 +222,42 @@ export class DockingGame {
     // Силует стикувального вузла нового модуля, що коливається у точці (offsetXPx, offsetYPx)
     const tx = sightCx + mg.offsetXPx;
     const ty = sightCy + mg.offsetYPx;
-    const scale = 0.65 + ((10 - mg.distanceZM) / 10) * 0.55;
+    const scale = 0.62 + ((10 - mg.distanceZM) / 10) * 0.62;
 
     ctx.save();
     ctx.translate(tx, ty);
     ctx.scale(scale, scale);
+
+    // 3D-каркас корпусу модуля в перспективі позаду стикувального кільця
+    ctx.strokeStyle = "rgba(46, 196, 182, 0.32)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(-48, -34, 96, 68, 12);
+    ctx.stroke();
+
+    // Крила сонячних панелей / радіаторів модуля на задньому плані
+    ctx.beginPath();
+    ctx.moveTo(-48, -8);
+    ctx.lineTo(-92, -8);
+    ctx.lineTo(-92, 8);
+    ctx.lineTo(-48, 8);
+    ctx.moveTo(48, -8);
+    ctx.lineTo(92, -8);
+    ctx.lineTo(92, 8);
+    ctx.lineTo(48, 8);
+    ctx.stroke();
+
+    // Лінії перспективи від корпусу до стикувального вузла АПАС
+    ctx.beginPath();
+    ctx.moveTo(-36, -26);
+    ctx.lineTo(-16, -16);
+    ctx.moveTo(36, -26);
+    ctx.lineTo(16, -16);
+    ctx.moveTo(-36, 26);
+    ctx.lineTo(-16, 16);
+    ctx.moveTo(36, 26);
+    ctx.lineTo(16, 16);
+    ctx.stroke();
 
     ctx.strokeStyle = mg.inLockZone ? "#3ddc84" : "#ffb703";
     ctx.lineWidth = 2.5;
@@ -235,7 +266,16 @@ export class DockingGame {
     ctx.arc(0, 0, 22, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Внутрішнє кільце ущільнювача
+    ctx.strokeStyle = mg.inLockZone ? "rgba(61, 220, 132, 0.65)" : "rgba(255, 183, 3, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.stroke();
+
     // 4 пелюстки стикувального вузла АПАС
+    ctx.strokeStyle = mg.inLockZone ? "#3ddc84" : "#ffb703";
+    ctx.lineWidth = 2.5;
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI) / 2 + Math.PI / 4;
       ctx.beginPath();
@@ -244,7 +284,7 @@ export class DockingGame {
       ctx.stroke();
     }
 
-    // Перехрестя мішені
+    // Перехрестя мішені (ромб + хрест)
     ctx.beginPath();
     ctx.moveTo(-10, 0);
     ctx.lineTo(10, 0);
@@ -252,6 +292,45 @@ export class DockingGame {
     ctx.lineTo(0, 10);
     ctx.stroke();
     ctx.restore();
+
+    // Візуалізація реактивних струменів двигунів орієнтації по краях візира СОІ
+    if (Math.abs(mg.thrustX) > 0.05 || Math.abs(mg.thrustY) > 0.05) {
+      ctx.save();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.lineWidth = 2;
+      if (mg.thrustX > 0.05) {
+        ctx.beginPath();
+        ctx.moveTo(sightCx - sightR + 8, sightCy);
+        ctx.lineTo(sightCx - sightR + 28, sightCy - 9);
+        ctx.lineTo(sightCx - sightR + 28, sightCy + 9);
+        ctx.closePath();
+        ctx.fill();
+      } else if (mg.thrustX < -0.05) {
+        ctx.beginPath();
+        ctx.moveTo(sightCx + sightR - 8, sightCy);
+        ctx.lineTo(sightCx + sightR - 28, sightCy - 9);
+        ctx.lineTo(sightCx + sightR - 28, sightCy + 9);
+        ctx.closePath();
+        ctx.fill();
+      }
+      if (mg.thrustY > 0.05) {
+        ctx.beginPath();
+        ctx.moveTo(sightCx, sightCy - sightR + 8);
+        ctx.lineTo(sightCx - 9, sightCy - sightR + 28);
+        ctx.lineTo(sightCx + 9, sightCy - sightR + 28);
+        ctx.closePath();
+        ctx.fill();
+      } else if (mg.thrustY < -0.05) {
+        ctx.beginPath();
+        ctx.moveTo(sightCx, sightCy + sightR - 8);
+        ctx.lineTo(sightCx - 9, sightCy + sightR - 28);
+        ctx.lineTo(sightCx + 9, sightCy + sightR - 28);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     // Права приладова колонка: Дистанція Z (10м -> 0м), швидкість Vz, похибка R, віртуальний джойстик
     const rightX = rect.x + rect.w * 0.7;

@@ -85,6 +85,184 @@ export function computeTrajectoryPreview(
   return points;
 }
 
+export interface BallisticTrajectoryPreview {
+  points: { x: number; y: number }[];
+  bouncePoints: { x: number; y: number }[];
+  targetHandleId: string | null;
+  targetPoint: { x: number; y: number } | null;
+  impactSpeedPxS: number;
+  requiresActiveGrab: boolean;
+}
+
+/**
+ * Якщо космонавт тримається за поручень біля самої стіни і випадково натягує рогатку
+ * під кутом у стіну позаду себе, автоматично відбиваємо вектор від стіни всередину відсіку.
+ */
+export function sanitizeLaunchVectorAgainstNearbyWalls(
+  pos: { x: number; y: number },
+  launchVector: { vx: number; vy: number },
+  radius: number,
+  activeWalls: readonly WallSegment[],
+): { vx: number; vy: number } {
+  let vx = launchVector.vx;
+  let vy = launchVector.vy;
+  const speed = Math.hypot(vx, vy);
+  if (speed < 5) return { vx, vy };
+
+  for (const wall of activeWalls) {
+    const closest = closestPointOnSegment(
+      pos.x,
+      pos.y,
+      wall.ax,
+      wall.ay,
+      wall.bx,
+      wall.by,
+    );
+    const dx = pos.x - closest.x;
+    const dy = pos.y - closest.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= radius + 42) {
+      const nx = dist > 1e-4 ? dx / dist : wall.normal.nx;
+      const ny = dist > 1e-4 ? dy / dist : wall.normal.ny;
+      const vn = vx * nx + vy * ny;
+      if (vn < -15) {
+        vx = vx - 1.9 * vn * nx;
+        vy = vy - 1.9 * vn * ny;
+      }
+    }
+  }
+  return { vx, vy };
+}
+
+/**
+ * Чесна симуляція балістичної траєкторії з рикошетами від восьмикутних стін,
+ * колон та автоматичним визначенням цільового поручня [LOCK ON].
+ */
+export function computeBallisticTrajectoryWithBounces(
+  startPos: { x: number; y: number },
+  launchVector: { vx: number; vy: number },
+  radius: number,
+  activeWalls: readonly WallSegment[],
+  activeHandles: readonly GrabHandle[],
+  circleObstacles: readonly CircleObstacleWorld[] = [],
+  ignoredHandleId: string | null = null,
+): BallisticTrajectoryPreview {
+  const points: { x: number; y: number }[] = [];
+  const bouncePoints: { x: number; y: number }[] = [];
+
+  let px = startPos.x;
+  let py = startPos.y;
+  let vx = launchVector.vx;
+  let vy = launchVector.vy;
+
+  const totalSteps = 60;
+  const dt = 0.018;
+  let ignoreTimer = PHYSICS_CONSTANTS.ignoreHandleDurationS;
+  let targetHandleId: string | null = null;
+  let targetPoint: { x: number; y: number } | null = null;
+  let impactSpeedPxS = Math.hypot(vx, vy);
+
+  for (let step = 1; step <= totalSteps; step++) {
+    ignoreTimer = Math.max(0, ignoreTimer - dt);
+    px += vx * dt;
+    py += vy * dt;
+
+    const airFactor = Math.max(0, 1 - PHYSICS_CONSTANTS.airDragPerS * dt);
+    vx *= airFactor;
+    vy *= airFactor;
+
+    // 1. Відбиття від восьмикутних стін та вантажних контейнерів
+    for (const wall of activeWalls) {
+      const closest = closestPointOnSegment(px, py, wall.ax, wall.ay, wall.bx, wall.by);
+      const dx = px - closest.x;
+      const dy = py - closest.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < radius) {
+        const nx = dist > 1e-4 ? dx / dist : wall.normal.nx;
+        const ny = dist > 1e-4 ? dy / dist : wall.normal.ny;
+        const overlap = radius - dist + 0.5;
+        px += nx * overlap;
+        py += ny * overlap;
+
+        const vn = vx * nx + vy * ny;
+        if (vn < 0) {
+          const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
+          vx = (vx - 2 * vn * nx) * e;
+          vy = (vy - 2 * vn * ny) * e;
+          if (bouncePoints.length < 4) {
+            bouncePoints.push({ x: closest.x, y: closest.y });
+          }
+        }
+      }
+    }
+
+    // 2. Відбиття від круглих колон
+    for (const col of circleObstacles) {
+      const dx = px - col.wx;
+      const dy = py - col.wy;
+      const dist = Math.hypot(dx, dy);
+      const minDist = radius + col.radius;
+      if (dist < minDist) {
+        const nx = dist > 1e-4 ? dx / dist : 1;
+        const ny = dist > 1e-4 ? dy / dist : 0;
+        const overlap = minDist - dist + 0.5;
+        px += nx * overlap;
+        py += ny * overlap;
+
+        const vn = vx * nx + vy * ny;
+        if (vn < 0) {
+          vx = (vx - 2 * vn * nx) * col.bounciness;
+          vy = (vy - 2 * vn * ny) * col.bounciness;
+          if (bouncePoints.length < 4) {
+            bouncePoints.push({
+              x: col.wx + nx * col.radius,
+              y: col.wy + ny * col.radius,
+            });
+          }
+        }
+      }
+    }
+
+    if (step % 3 === 0) {
+      points.push({ x: px, y: py });
+    }
+
+    // 3. Перевірка перетину з поручнем (Target Lock)
+    for (const handle of activeHandles) {
+      if (handle.id === ignoredHandleId && ignoreTimer > 0) continue;
+      const closestH = closestPointOnSegment(
+        px,
+        py,
+        handle.ax,
+        handle.ay,
+        handle.bx,
+        handle.by,
+      );
+      const distH = Math.hypot(px - closestH.x, py - closestH.y);
+      if (distH <= handle.grabRadius) {
+        targetHandleId = handle.id;
+        targetPoint = { x: closestH.x, y: closestH.y };
+        impactSpeedPxS = Math.hypot(vx, vy);
+        points.push({ x: closestH.x, y: closestH.y });
+        break;
+      }
+    }
+
+    if (targetHandleId !== null) {
+      break;
+    }
+  }
+
+  return {
+    points,
+    bouncePoints,
+    targetHandleId,
+    targetPoint,
+    impactSpeedPxS,
+    requiresActiveGrab: impactSpeedPxS > PHYSICS_CONSTANTS.safeGrabSpeedPxS,
+  };
+}
+
 export function stepZeroGPhysics(
   astronaut: AstronautEntity,
   dtS: number,

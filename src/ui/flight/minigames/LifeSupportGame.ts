@@ -240,6 +240,30 @@ export class LifeSupportGame {
     ctx.lineTo(760, 445);
     ctx.stroke();
 
+    // Анімований потік газу/холодоагенту в магістральних трубах
+    ctx.save();
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 10]);
+    ctx.lineDashOffset = -timeElapsedS * 48;
+    ctx.strokeStyle = mg.greenFilterInstalled ? "#3ddc84" : "rgba(248, 113, 113, 0.35)";
+    ctx.beginPath();
+    ctx.moveTo(45, 110);
+    ctx.lineTo(755, 110);
+    ctx.stroke();
+
+    ctx.strokeStyle = mg.ammoniaFlushed ? "#38bdf8" : "rgba(251, 146, 60, 0.35)";
+    ctx.beginPath();
+    ctx.moveTo(45, 270);
+    ctx.lineTo(755, 270);
+    ctx.stroke();
+
+    ctx.strokeStyle = mg.pressureLocked ? "#3ddc84" : "rgba(56, 189, 248, 0.35)";
+    ctx.beginPath();
+    ctx.moveTo(45, 445);
+    ctx.lineTo(755, 445);
+    ctx.stroke();
+    ctx.restore();
+
     // === СЕКЦІЯ 1: ЗАМІНА КАРТРИДЖА CO2-ФІЛЬТРА ===
     ctx.fillStyle = "#0b111d";
     ctx.strokeStyle = mg.greenFilterInstalled ? "#3ddc84" : "#475569";
