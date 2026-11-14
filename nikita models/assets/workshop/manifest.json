@@ -1,0 +1,3306 @@
+{
+  "schemaVersion": "1.0.0",
+  "game": "hryah",
+  "conventions": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "forwardAxis": "+Z",
+    "handedness": "right-handed (glTF 2.0 standard)",
+    "rendererConversionNotes": {
+      "threeJs": "Native match (+Y up, +Z forward, 1 unit = 1 meter). Load directly via GLTFLoader.",
+      "babylonJs": "Babylon converts right-handed glTF automatically via __root__ node; use scene.useRightHandedSystem = true for direct socket parity.",
+      "blenderOrZUp": "Rotate root +90 deg around X (X-right, Y-forward, Z-up) on import; standard Blender glTF 2.0 importer handles +Y up -> +Z up automatically."
+    }
+  },
+  "vfxLayerSemantics": {
+    "vfx_scan_cone": "Optional camera imaging frustum cone. Show only when camera is actively scanning inside the imaging window.",
+    "vfx_downlink_beam": "Optional antenna radio link cone/pulses. Show only during ground station pass when bufferMb > 0 and transmitter is active.",
+    "vfx_thruster_plume": "Optional engine exhaust plume. Show only during ignition/thrust maneuvers; keep hidden during passive orbital observation.",
+    "vfx_heater_glow": "Optional subtle amber heater strip indicator on satellite bus. Show only when heater is actively warming in eclipse shadow.",
+    "vfx_cold_frost": "Optional frost crystal overlay when coldStress >= 2 (camera cold-locked).",
+    "vfx_storm_particles": "Optional solar storm plasma ring overlay when storm === true."
+  },
+  "assets": [
+    {
+      "id": "astronaut",
+      "category": "character",
+      "glbPath": "astronaut.glb",
+      "zipPath": "assets/astronaut.glb",
+      "byteSize": 190408,
+      "triangles": 1964,
+      "vertices": 2424,
+      "meshCount": 51,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_mid",
+        "mat_led_cyan",
+        "mat_led_green",
+        "mat_suit_accent_orange",
+        "mat_suit_joint_gray",
+        "mat_suit_white",
+        "mat_visor_dark_glass"
+      ],
+      "mounts": [
+        {
+          "name": "backpack_mount",
+          "position": [
+            0,
+            0,
+            -0.09
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "hand_target_l",
+          "position": [
+            0,
+            -0.05,
+            0.02
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "hand_target_r",
+          "position": [
+            0,
+            -0.05,
+            0.02
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            0.18,
+            1.24,
+            0.44
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "run",
+            "float_idle",
+            "float_move",
+            "push_off",
+            "task_work",
+            "switch_on",
+            "switch_off",
+            "turn_left",
+            "turn_right",
+            "reposition"
+          ]
+        },
+        {
+          "name": "run",
+          "durationS": 1,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "turn_left",
+            "turn_right",
+            "task_work",
+            "switch_on",
+            "switch_off"
+          ]
+        },
+        {
+          "name": "float_idle",
+          "durationS": 3,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "float_move",
+            "push_off",
+            "grab_handle",
+            "idle",
+            "task_work",
+            "switch_on",
+            "switch_off"
+          ]
+        },
+        {
+          "name": "float_move",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "float_idle",
+            "grab_handle",
+            "push_off",
+            "task_work"
+          ]
+        },
+        {
+          "name": "push_off",
+          "durationS": 1.1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "float_move",
+            "float_idle",
+            "grab_handle"
+          ]
+        },
+        {
+          "name": "grab_handle",
+          "durationS": 1.1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "float_idle",
+            "task_work",
+            "switch_on",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "task_work",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "task_success",
+            "task_error",
+            "switch_on",
+            "switch_off",
+            "idle",
+            "float_idle"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "task_work",
+            "task_success",
+            "idle",
+            "float_idle",
+            "switch_off"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "task_work",
+            "task_success",
+            "idle",
+            "float_idle",
+            "switch_on"
+          ]
+        },
+        {
+          "name": "turn_left",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "run",
+            "float_idle",
+            "float_move"
+          ]
+        },
+        {
+          "name": "turn_right",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "run",
+            "float_idle",
+            "float_move"
+          ]
+        },
+        {
+          "name": "reposition",
+          "durationS": 2.4,
+          "loop": false,
+          "rootMotion": "scene-demo",
+          "allowedTransitions": [
+            "idle",
+            "task_work",
+            "switch_on",
+            "switch_off"
+          ]
+        },
+        {
+          "name": "task_success",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "float_idle",
+            "run"
+          ]
+        },
+        {
+          "name": "task_error",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "float_idle",
+            "task_work"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.306,
+          -0.008,
+          -0.338
+        ],
+        "max": [
+          0.306,
+          1.84,
+          0.193
+        ],
+        "size": [
+          0.612,
+          1.848,
+          0.531
+        ]
+      }
+    },
+    {
+      "id": "ship-cutaway",
+      "category": "ship",
+      "glbPath": "ship-cutaway.glb",
+      "zipPath": "assets/ship-cutaway.glb",
+      "byteSize": 116488,
+      "triangles": 908,
+      "vertices": 1615,
+      "meshCount": 44,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_light",
+        "mat_hull_mid",
+        "mat_led_cyan",
+        "mat_led_green",
+        "mat_mli_gold_foil",
+        "mat_solar_cell_blue",
+        "mat_suit_accent_orange",
+        "mat_visor_dark_glass"
+      ],
+      "mounts": [
+        {
+          "name": "satellite_release",
+          "position": [
+            0,
+            2.75,
+            -0.35
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "mount_console_power",
+          "position": [
+            -2.1,
+            0,
+            -0.92
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "anchor_power",
+          "position": [
+            -2.1,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "mount_console_thermal",
+          "position": [
+            -1.05,
+            0,
+            -0.92
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "anchor_thermal",
+          "position": [
+            -1.05,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "mount_console_oxygen",
+          "position": [
+            0,
+            0,
+            -0.92
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "anchor_oxygen",
+          "position": [
+            0,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "mount_console_docking",
+          "position": [
+            1.05,
+            0,
+            -0.92
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "anchor_docking",
+          "position": [
+            1.05,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "mount_console_separation",
+          "position": [
+            2.1,
+            0,
+            -0.92
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "anchor_separation",
+          "position": [
+            2.1,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            -0.28
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            0.16,
+            1.12,
+            -0.72
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "hatch_open",
+          "durationS": 1.5,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hatch_close"
+          ]
+        },
+        {
+          "name": "hatch_close",
+          "durationS": 1.5,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hatch_open"
+          ]
+        },
+        {
+          "name": "docking_approach",
+          "durationS": 2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "docking_align",
+            "docking_abort"
+          ]
+        },
+        {
+          "name": "docking_align",
+          "durationS": 1.6,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "docking_latch",
+            "docking_abort"
+          ]
+        },
+        {
+          "name": "docking_latch",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "docking_docked",
+            "docking_abort"
+          ]
+        },
+        {
+          "name": "docking_docked",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "docking_abort"
+          ]
+        },
+        {
+          "name": "docking_abort",
+          "durationS": 1.6,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "docking_approach"
+          ]
+        },
+        {
+          "name": "satellite_release_latch",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "satellite_depart"
+          ]
+        },
+        {
+          "name": "satellite_depart",
+          "durationS": 2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "satellite_drift"
+          ]
+        },
+        {
+          "name": "satellite_drift",
+          "durationS": 2.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": []
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -3.285,
+          -0.14,
+          -1.6
+        ],
+        "max": [
+          4.765,
+          3.38,
+          1.6
+        ],
+        "size": [
+          8.05,
+          3.52,
+          3.2
+        ]
+      }
+    },
+    {
+      "id": "console-power",
+      "category": "ship",
+      "glbPath": "consoles/console-power.glb",
+      "zipPath": "assets/consoles/console-power.glb",
+      "byteSize": 36164,
+      "triangles": 264,
+      "vertices": 460,
+      "meshCount": 12,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_cyan",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.62
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.2,
+            1.04,
+            0.16
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "switch_off",
+            "work_cycle",
+            "confirm",
+            "alarm"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "work_cycle",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "work_cycle",
+          "durationS": 1.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "confirm",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "confirm",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "work_cycle"
+          ]
+        },
+        {
+          "name": "alarm",
+          "durationS": 1.2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "switch_off"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.4,
+          0,
+          -0.251
+        ],
+        "max": [
+          0.4,
+          1.36,
+          0.331
+        ],
+        "size": [
+          0.8,
+          1.36,
+          0.582
+        ]
+      }
+    },
+    {
+      "id": "console-thermal",
+      "category": "ship",
+      "glbPath": "consoles/console-thermal.glb",
+      "zipPath": "assets/consoles/console-thermal.glb",
+      "byteSize": 36168,
+      "triangles": 264,
+      "vertices": 460,
+      "meshCount": 12,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_amber",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.62
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.2,
+            1.04,
+            0.16
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "switch_off",
+            "work_cycle",
+            "confirm",
+            "alarm"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "work_cycle",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "work_cycle",
+          "durationS": 1.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "confirm",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "confirm",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "work_cycle"
+          ]
+        },
+        {
+          "name": "alarm",
+          "durationS": 1.2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "switch_off"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.4,
+          0,
+          -0.251
+        ],
+        "max": [
+          0.4,
+          1.36,
+          0.331
+        ],
+        "size": [
+          0.8,
+          1.36,
+          0.582
+        ]
+      }
+    },
+    {
+      "id": "console-oxygen",
+      "category": "ship",
+      "glbPath": "consoles/console-oxygen.glb",
+      "zipPath": "assets/consoles/console-oxygen.glb",
+      "byteSize": 41740,
+      "triangles": 324,
+      "vertices": 560,
+      "meshCount": 14,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_green",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.62
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.2,
+            1.04,
+            0.16
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "switch_off",
+            "work_cycle",
+            "confirm",
+            "alarm"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "work_cycle",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "work_cycle",
+          "durationS": 1.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "confirm",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "confirm",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "work_cycle"
+          ]
+        },
+        {
+          "name": "alarm",
+          "durationS": 1.2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "switch_off"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.4,
+          0,
+          -0.251
+        ],
+        "max": [
+          0.4,
+          1.36,
+          0.331
+        ],
+        "size": [
+          0.8,
+          1.36,
+          0.582
+        ]
+      }
+    },
+    {
+      "id": "console-docking",
+      "category": "ship",
+      "glbPath": "consoles/console-docking.glb",
+      "zipPath": "assets/consoles/console-docking.glb",
+      "byteSize": 36168,
+      "triangles": 264,
+      "vertices": 460,
+      "meshCount": 12,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_cyan",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.62
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.2,
+            1.04,
+            0.16
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "switch_off",
+            "work_cycle",
+            "confirm",
+            "alarm"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "work_cycle",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "work_cycle",
+          "durationS": 1.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "confirm",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "confirm",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "work_cycle"
+          ]
+        },
+        {
+          "name": "alarm",
+          "durationS": 1.2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "switch_off"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.4,
+          0,
+          -0.251
+        ],
+        "max": [
+          0.4,
+          1.36,
+          0.331
+        ],
+        "size": [
+          0.8,
+          1.36,
+          0.582
+        ]
+      }
+    },
+    {
+      "id": "console-separation",
+      "category": "ship",
+      "glbPath": "consoles/console-separation.glb",
+      "zipPath": "assets/consoles/console-separation.glb",
+      "byteSize": 36172,
+      "triangles": 264,
+      "vertices": 460,
+      "meshCount": 12,
+      "materials": [
+        "mat_console_screen_blue",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_red",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.62
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.2,
+            1.04,
+            0.16
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "switch_off",
+            "work_cycle",
+            "confirm",
+            "alarm"
+          ]
+        },
+        {
+          "name": "switch_on",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "work_cycle",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "switch_off",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "switch_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "work_cycle",
+          "durationS": 1.8,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "confirm",
+            "switch_off",
+            "idle"
+          ]
+        },
+        {
+          "name": "confirm",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "work_cycle"
+          ]
+        },
+        {
+          "name": "alarm",
+          "durationS": 1.2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "switch_off"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.4,
+          0,
+          -0.251
+        ],
+        "max": [
+          0.4,
+          1.36,
+          0.331
+        ],
+        "size": [
+          0.8,
+          1.36,
+          0.582
+        ]
+      }
+    },
+    {
+      "id": "satellite-bus",
+      "category": "satellite",
+      "glbPath": "satellite-bus.glb",
+      "zipPath": "assets/satellite-bus.glb",
+      "byteSize": 87624,
+      "triangles": 1192,
+      "vertices": 1250,
+      "meshCount": 29,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_led_green",
+        "mat_mli_gold_foil",
+        "mat_vfx_cold_frost",
+        "mat_vfx_heater_glow",
+        "mat_vfx_storm_wave"
+      ],
+      "mounts": [
+        {
+          "name": "solar_left",
+          "position": [
+            -0.52,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "solar_right",
+          "position": [
+            0.52,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "antenna_mount",
+          "position": [
+            0,
+            0.5,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "camera_mount",
+          "position": [
+            0,
+            0,
+            0.5
+          ],
+          "rotation": [
+            1.5708,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "engine_mount",
+          "position": [
+            0,
+            -0.5,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "battery_mount",
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "satellite_release",
+          "position": [
+            0,
+            -0.52,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_heater_glow",
+        "vfx_cold_frost",
+        "vfx_storm_particles"
+      ],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "safe_enter",
+            "heater_on",
+            "separation_drift"
+          ]
+        },
+        {
+          "name": "safe_enter",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "safe_hold",
+            "safe_exit"
+          ]
+        },
+        {
+          "name": "safe_hold",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "safe_exit"
+          ]
+        },
+        {
+          "name": "safe_exit",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "heater_on"
+          ]
+        },
+        {
+          "name": "heater_on",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "heater_off",
+            "safe_enter"
+          ]
+        },
+        {
+          "name": "heater_off",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "heater_on",
+            "idle"
+          ]
+        },
+        {
+          "name": "separation_drift",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.935,
+          -1.069,
+          -0.523
+        ],
+        "max": [
+          0.935,
+          0.976,
+          0.523
+        ],
+        "size": [
+          1.87,
+          2.045,
+          1.045
+        ]
+      }
+    },
+    {
+      "id": "orbital-switches",
+      "category": "satellite",
+      "glbPath": "consoles/orbital-switches.glb",
+      "zipPath": "assets/consoles/orbital-switches.glb",
+      "byteSize": 91968,
+      "triangles": 1096,
+      "vertices": 1340,
+      "meshCount": 30,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_mid",
+        "mat_led_green",
+        "mat_led_off",
+        "mat_suit_accent_orange"
+      ],
+      "mounts": [
+        {
+          "name": "console_interact",
+          "position": [
+            0,
+            0,
+            0.55
+          ],
+          "rotation": [
+            0,
+            3.1416,
+            0
+          ]
+        },
+        {
+          "name": "hand_target",
+          "position": [
+            -0.36,
+            0.3,
+            0.21
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "all_on_nominal",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "camera_on",
+            "camera_off",
+            "transmitter_on",
+            "transmitter_off",
+            "heater_on",
+            "heater_off",
+            "safe_mode_on",
+            "safe_mode_off"
+          ]
+        },
+        {
+          "name": "camera_on",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "camera_off",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "camera_off",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "camera_on",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "transmitter_on",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "transmitter_off",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "transmitter_off",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "transmitter_on",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "heater_on",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "heater_off",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "heater_off",
+          "durationS": 0.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "heater_on",
+            "safe_mode_on"
+          ]
+        },
+        {
+          "name": "safe_mode_on",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "safe_mode_off"
+          ]
+        },
+        {
+          "name": "safe_mode_off",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "safe_mode_on",
+            "all_on_nominal"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.56,
+          0.05,
+          -0.07
+        ],
+        "max": [
+          0.56,
+          0.59,
+          0.224
+        ],
+        "size": [
+          1.12,
+          0.54,
+          0.294
+        ]
+      }
+    },
+    {
+      "id": "eng-cold",
+      "category": "engine",
+      "glbPath": "modules/eng-cold.glb",
+      "zipPath": "assets/modules/eng-cold.glb",
+      "byteSize": 26380,
+      "catalogStats": {
+        "slot": "engine",
+        "massKg": 4,
+        "costMUsd": 1,
+        "ispS": 220
+      },
+      "triangles": 192,
+      "vertices": 363,
+      "meshCount": 7,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_mid",
+        "mat_nozzle_graphite",
+        "mat_vfx_thruster_plume"
+      ],
+      "mounts": [
+        {
+          "name": "engine_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_thruster_plume"
+      ],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "ignition"
+          ]
+        },
+        {
+          "name": "ignition",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "thrust",
+            "shutdown"
+          ]
+        },
+        {
+          "name": "thrust",
+          "durationS": 1.5,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "shutdown"
+          ]
+        },
+        {
+          "name": "shutdown",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "ignition"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.26,
+          -0.675,
+          -0.26
+        ],
+        "max": [
+          0.26,
+          0,
+          0.26
+        ],
+        "size": [
+          0.52,
+          0.675,
+          0.52
+        ]
+      }
+    },
+    {
+      "id": "eng-chem",
+      "category": "engine",
+      "glbPath": "modules/eng-chem.glb",
+      "zipPath": "assets/modules/eng-chem.glb",
+      "byteSize": 28444,
+      "catalogStats": {
+        "slot": "engine",
+        "massKg": 8,
+        "costMUsd": 3,
+        "ispS": 300
+      },
+      "triangles": 440,
+      "vertices": 456,
+      "meshCount": 5,
+      "materials": [
+        "mat_frame_steel",
+        "mat_mli_copper_trim",
+        "mat_nozzle_graphite",
+        "mat_vfx_thruster_plume"
+      ],
+      "mounts": [
+        {
+          "name": "engine_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_thruster_plume"
+      ],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "ignition"
+          ]
+        },
+        {
+          "name": "ignition",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "thrust",
+            "shutdown"
+          ]
+        },
+        {
+          "name": "thrust",
+          "durationS": 1.5,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "shutdown"
+          ]
+        },
+        {
+          "name": "shutdown",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "ignition"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.26,
+          -0.975,
+          -0.26
+        ],
+        "max": [
+          0.26,
+          0,
+          0.26
+        ],
+        "size": [
+          0.52,
+          0.975,
+          0.52
+        ]
+      }
+    },
+    {
+      "id": "eng-ion",
+      "category": "engine",
+      "glbPath": "modules/eng-ion.glb",
+      "zipPath": "assets/modules/eng-ion.glb",
+      "byteSize": 35936,
+      "catalogStats": {
+        "slot": "engine",
+        "massKg": 20,
+        "costMUsd": 9,
+        "ispS": 1500
+      },
+      "triangles": 632,
+      "vertices": 610,
+      "meshCount": 6,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_mid",
+        "mat_ion_grid_cyan",
+        "mat_mli_copper_trim",
+        "mat_vfx_thruster_plume"
+      ],
+      "mounts": [
+        {
+          "name": "engine_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_thruster_plume"
+      ],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "ignition"
+          ]
+        },
+        {
+          "name": "ignition",
+          "durationS": 0.9,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "thrust",
+            "shutdown"
+          ]
+        },
+        {
+          "name": "thrust",
+          "durationS": 1.5,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "shutdown"
+          ]
+        },
+        {
+          "name": "shutdown",
+          "durationS": 1,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "ignition"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.3,
+          -0.755,
+          -0.3
+        ],
+        "max": [
+          0.32,
+          0,
+          0.3
+        ],
+        "size": [
+          0.62,
+          0.755,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "sol-s",
+      "category": "solar",
+      "glbPath": "modules/sol-s.glb",
+      "zipPath": "assets/modules/sol-s.glb",
+      "byteSize": 13124,
+      "catalogStats": {
+        "slot": "solar",
+        "massKg": 5,
+        "costMUsd": 1,
+        "powerW": 80
+      },
+      "triangles": 60,
+      "vertices": 120,
+      "meshCount": 5,
+      "materials": [
+        "mat_frame_steel",
+        "mat_solar_cell_blue",
+        "mat_solar_grid_line"
+      ],
+      "mounts": [
+        {
+          "name": "solar_left",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "solar_right",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "track_angle",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "hold",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        },
+        {
+          "name": "safe_feather",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "track_angle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          0,
+          -0.08,
+          -0.24
+        ],
+        "max": [
+          0.93,
+          0.08,
+          0.24
+        ],
+        "size": [
+          0.93,
+          0.16,
+          0.48
+        ]
+      }
+    },
+    {
+      "id": "sol-m",
+      "category": "solar",
+      "glbPath": "modules/sol-m.glb",
+      "zipPath": "assets/modules/sol-m.glb",
+      "byteSize": 19536,
+      "catalogStats": {
+        "slot": "solar",
+        "massKg": 10,
+        "costMUsd": 2,
+        "powerW": 160
+      },
+      "triangles": 96,
+      "vertices": 192,
+      "meshCount": 8,
+      "materials": [
+        "mat_frame_steel",
+        "mat_solar_cell_blue",
+        "mat_solar_grid_line"
+      ],
+      "mounts": [
+        {
+          "name": "solar_left",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "solar_right",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "track_angle",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "hold",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        },
+        {
+          "name": "safe_feather",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "track_angle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          0,
+          -0.08,
+          -0.24
+        ],
+        "max": [
+          1.61,
+          0.08,
+          0.24
+        ],
+        "size": [
+          1.61,
+          0.16,
+          0.48
+        ]
+      }
+    },
+    {
+      "id": "sol-l",
+      "category": "solar",
+      "glbPath": "modules/sol-l.glb",
+      "zipPath": "assets/modules/sol-l.glb",
+      "byteSize": 25944,
+      "catalogStats": {
+        "slot": "solar",
+        "massKg": 20,
+        "costMUsd": 4,
+        "powerW": 320
+      },
+      "triangles": 132,
+      "vertices": 264,
+      "meshCount": 11,
+      "materials": [
+        "mat_frame_steel",
+        "mat_solar_cell_blue",
+        "mat_solar_grid_line"
+      ],
+      "mounts": [
+        {
+          "name": "solar_left",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "solar_right",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "track_angle",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "hold",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "track_angle",
+            "stow",
+            "safe_feather"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.8,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        },
+        {
+          "name": "safe_feather",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "hold",
+            "track_angle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          0,
+          -0.08,
+          -0.28
+        ],
+        "max": [
+          2.29,
+          0.08,
+          0.28
+        ],
+        "size": [
+          2.29,
+          0.16,
+          0.56
+        ]
+      }
+    },
+    {
+      "id": "bat-s",
+      "category": "battery",
+      "glbPath": "modules/bat-s.glb",
+      "zipPath": "assets/modules/bat-s.glb",
+      "byteSize": 13004,
+      "catalogStats": {
+        "slot": "battery",
+        "massKg": 3,
+        "costMUsd": 1,
+        "capacityWh": 30
+      },
+      "triangles": 84,
+      "vertices": 148,
+      "meshCount": 4,
+      "materials": [
+        "mat_battery_cell_teal",
+        "mat_hull_mid",
+        "mat_led_green",
+        "mat_mli_gold_foil"
+      ],
+      "mounts": [
+        {
+          "name": "battery_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "discharge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "charge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "discharge_pulse"
+          ]
+        },
+        {
+          "name": "discharge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "charge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "low_charge_warning",
+          "durationS": 1,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "idle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.14,
+          -0.12,
+          0
+        ],
+        "max": [
+          0.14,
+          0.156,
+          0.21
+        ],
+        "size": [
+          0.28,
+          0.276,
+          0.21
+        ]
+      }
+    },
+    {
+      "id": "bat-m",
+      "category": "battery",
+      "glbPath": "modules/bat-m.glb",
+      "zipPath": "assets/modules/bat-m.glb",
+      "byteSize": 16796,
+      "catalogStats": {
+        "slot": "battery",
+        "massKg": 6,
+        "costMUsd": 2,
+        "capacityWh": 60
+      },
+      "triangles": 132,
+      "vertices": 224,
+      "meshCount": 5,
+      "materials": [
+        "mat_battery_cell_teal",
+        "mat_hull_mid",
+        "mat_led_green",
+        "mat_mli_gold_foil"
+      ],
+      "mounts": [
+        {
+          "name": "battery_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "discharge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "charge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "discharge_pulse"
+          ]
+        },
+        {
+          "name": "discharge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "charge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "low_charge_warning",
+          "durationS": 1,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "idle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.22,
+          -0.12,
+          0
+        ],
+        "max": [
+          0.22,
+          0.156,
+          0.21
+        ],
+        "size": [
+          0.44,
+          0.276,
+          0.21
+        ]
+      }
+    },
+    {
+      "id": "bat-l",
+      "category": "battery",
+      "glbPath": "modules/bat-l.glb",
+      "zipPath": "assets/modules/bat-l.glb",
+      "byteSize": 24412,
+      "catalogStats": {
+        "slot": "battery",
+        "massKg": 12,
+        "costMUsd": 4,
+        "capacityWh": 120
+      },
+      "triangles": 228,
+      "vertices": 376,
+      "meshCount": 7,
+      "materials": [
+        "mat_battery_cell_teal",
+        "mat_hull_mid",
+        "mat_led_green",
+        "mat_mli_gold_foil"
+      ],
+      "mounts": [
+        {
+          "name": "battery_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [],
+      "clips": [
+        {
+          "name": "idle",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "discharge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "charge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "discharge_pulse"
+          ]
+        },
+        {
+          "name": "discharge_pulse",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "idle",
+            "charge_pulse",
+            "low_charge_warning"
+          ]
+        },
+        {
+          "name": "low_charge_warning",
+          "durationS": 1,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "charge_pulse",
+            "idle"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.29,
+          -0.19,
+          0
+        ],
+        "max": [
+          0.29,
+          0.226,
+          0.21
+        ],
+        "size": [
+          0.58,
+          0.416,
+          0.21
+        ]
+      }
+    },
+    {
+      "id": "ant-s",
+      "category": "antenna",
+      "glbPath": "modules/ant-s.glb",
+      "zipPath": "assets/modules/ant-s.glb",
+      "byteSize": 36800,
+      "catalogStats": {
+        "slot": "antenna",
+        "massKg": 2,
+        "costMUsd": 1,
+        "downlinkMbps": 2,
+        "powerW": 10
+      },
+      "triangles": 560,
+      "vertices": 527,
+      "meshCount": 7,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_frame_steel",
+        "mat_led_cyan",
+        "mat_mli_gold_foil",
+        "mat_vfx_downlink_beam"
+      ],
+      "mounts": [
+        {
+          "name": "antenna_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_downlink_beam"
+      ],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.5,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "standby"
+          ]
+        },
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "transmit",
+            "standby"
+          ]
+        },
+        {
+          "name": "transmit",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "standby",
+            "aim"
+          ]
+        },
+        {
+          "name": "standby",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "stow"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.273,
+          0,
+          -0.28
+        ],
+        "max": [
+          0.273,
+          1.365,
+          0.28
+        ],
+        "size": [
+          0.546,
+          1.365,
+          0.56
+        ]
+      }
+    },
+    {
+      "id": "ant-m",
+      "category": "antenna",
+      "glbPath": "modules/ant-m.glb",
+      "zipPath": "assets/modules/ant-m.glb",
+      "byteSize": 40776,
+      "catalogStats": {
+        "slot": "antenna",
+        "massKg": 6,
+        "costMUsd": 3,
+        "downlinkMbps": 10,
+        "powerW": 30
+      },
+      "triangles": 648,
+      "vertices": 633,
+      "meshCount": 7,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_led_cyan",
+        "mat_vfx_downlink_beam"
+      ],
+      "mounts": [
+        {
+          "name": "antenna_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_downlink_beam"
+      ],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.5,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "standby"
+          ]
+        },
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "transmit",
+            "standby"
+          ]
+        },
+        {
+          "name": "transmit",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "standby",
+            "aim"
+          ]
+        },
+        {
+          "name": "standby",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "stow"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.34,
+          0,
+          -0.34
+        ],
+        "max": [
+          0.34,
+          1.465,
+          0.34
+        ],
+        "size": [
+          0.68,
+          1.465,
+          0.68
+        ]
+      }
+    },
+    {
+      "id": "ant-l",
+      "category": "antenna",
+      "glbPath": "modules/ant-l.glb",
+      "zipPath": "assets/modules/ant-l.glb",
+      "byteSize": 51124,
+      "catalogStats": {
+        "slot": "antenna",
+        "massKg": 15,
+        "costMUsd": 7,
+        "downlinkMbps": 50,
+        "powerW": 80
+      },
+      "triangles": 900,
+      "vertices": 839,
+      "meshCount": 9,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_frame_steel",
+        "mat_led_cyan",
+        "mat_mli_gold_foil",
+        "mat_vfx_downlink_beam"
+      ],
+      "mounts": [
+        {
+          "name": "antenna_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_downlink_beam"
+      ],
+      "clips": [
+        {
+          "name": "deploy",
+          "durationS": 1.5,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "standby"
+          ]
+        },
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "transmit",
+            "standby"
+          ]
+        },
+        {
+          "name": "transmit",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "standby",
+            "aim"
+          ]
+        },
+        {
+          "name": "standby",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "stow"
+          ]
+        },
+        {
+          "name": "stow",
+          "durationS": 1.4,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "deploy"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.56,
+          0,
+          -0.56
+        ],
+        "max": [
+          0.56,
+          1.565,
+          0.56
+        ],
+        "size": [
+          1.12,
+          1.565,
+          1.12
+        ]
+      }
+    },
+    {
+      "id": "cam-s",
+      "category": "instrument",
+      "glbPath": "modules/cam-s.glb",
+      "zipPath": "assets/modules/cam-s.glb",
+      "byteSize": 35696,
+      "catalogStats": {
+        "slot": "instrument",
+        "massKg": 5,
+        "costMUsd": 3,
+        "apertureM": 0.1,
+        "dataRateMbps": 2,
+        "powerW": 10
+      },
+      "triangles": 304,
+      "vertices": 503,
+      "meshCount": 7,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_light",
+        "mat_mli_gold_foil",
+        "mat_optics_lens_cyan",
+        "mat_vfx_scan_cone"
+      ],
+      "mounts": [
+        {
+          "name": "camera_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_scan_cone"
+      ],
+      "clips": [
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "scan",
+            "park"
+          ]
+        },
+        {
+          "name": "scan",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "park",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "cold_locked",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "aim"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.242,
+          0,
+          -0.242
+        ],
+        "max": [
+          0.242,
+          1.14,
+          0.242
+        ],
+        "size": [
+          0.484,
+          1.14,
+          0.484
+        ]
+      }
+    },
+    {
+      "id": "cam-m",
+      "category": "instrument",
+      "glbPath": "modules/cam-m.glb",
+      "zipPath": "assets/modules/cam-m.glb",
+      "byteSize": 35704,
+      "catalogStats": {
+        "slot": "instrument",
+        "massKg": 20,
+        "costMUsd": 10,
+        "apertureM": 0.2,
+        "dataRateMbps": 8,
+        "powerW": 30
+      },
+      "triangles": 304,
+      "vertices": 503,
+      "meshCount": 7,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_light",
+        "mat_mli_gold_foil",
+        "mat_optics_lens_cyan",
+        "mat_vfx_scan_cone"
+      ],
+      "mounts": [
+        {
+          "name": "camera_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_scan_cone"
+      ],
+      "clips": [
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "scan",
+            "park"
+          ]
+        },
+        {
+          "name": "scan",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "park",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "cold_locked",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "aim"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.374,
+          0,
+          -0.374
+        ],
+        "max": [
+          0.374,
+          1.28,
+          0.374
+        ],
+        "size": [
+          0.748,
+          1.28,
+          0.748
+        ]
+      }
+    },
+    {
+      "id": "cam-l",
+      "category": "instrument",
+      "glbPath": "modules/cam-l.glb",
+      "zipPath": "assets/modules/cam-l.glb",
+      "byteSize": 42956,
+      "catalogStats": {
+        "slot": "instrument",
+        "massKg": 70,
+        "costMUsd": 25,
+        "apertureM": 0.4,
+        "dataRateMbps": 30,
+        "powerW": 60
+      },
+      "triangles": 376,
+      "vertices": 627,
+      "meshCount": 10,
+      "materials": [
+        "mat_frame_steel",
+        "mat_hull_dark",
+        "mat_hull_light",
+        "mat_mli_gold_foil",
+        "mat_optics_lens_cyan",
+        "mat_vfx_scan_cone"
+      ],
+      "mounts": [
+        {
+          "name": "camera_mount",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_scan_cone"
+      ],
+      "clips": [
+        {
+          "name": "aim",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "scan",
+            "park"
+          ]
+        },
+        {
+          "name": "scan",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "park",
+          "durationS": 1.2,
+          "loop": false,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "aim",
+            "cold_locked"
+          ]
+        },
+        {
+          "name": "cold_locked",
+          "durationS": 1.6,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "park",
+            "aim"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -0.55,
+          0,
+          -0.55
+        ],
+        "max": [
+          0.55,
+          1.46,
+          0.55
+        ],
+        "size": [
+          1.1,
+          1.46,
+          1.1
+        ]
+      }
+    },
+    {
+      "id": "earth",
+      "category": "environment",
+      "glbPath": "environment/earth.glb",
+      "zipPath": "assets/environment/earth.glb",
+      "byteSize": 74488,
+      "triangles": 1480,
+      "vertices": 1564,
+      "meshCount": 12,
+      "materials": [
+        "mat_antenna_dish_silver",
+        "mat_earth_ice",
+        "mat_earth_land",
+        "mat_earth_ocean",
+        "mat_frame_steel",
+        "mat_led_cyan"
+      ],
+      "mounts": [
+        {
+          "name": "ground_station_anchor",
+          "position": [
+            0.35,
+            0.22,
+            1.12
+          ],
+          "rotation": [
+            0.2,
+            0.3,
+            0
+          ]
+        }
+      ],
+      "vfxLayers": [
+        "vfx_station_beacon"
+      ],
+      "clips": [
+        {
+          "name": "rotate_orbit",
+          "durationS": 4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "station_pass_ping",
+            "storm_front"
+          ]
+        },
+        {
+          "name": "station_pass_ping",
+          "durationS": 2,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "rotate_orbit",
+            "storm_front"
+          ]
+        },
+        {
+          "name": "storm_front",
+          "durationS": 2.4,
+          "loop": true,
+          "rootMotion": "in-place",
+          "allowedTransitions": [
+            "rotate_orbit"
+          ]
+        }
+      ],
+      "boundingBoxMeters": {
+        "min": [
+          -1.709,
+          -1.19,
+          -1.885
+        ],
+        "max": [
+          1.709,
+          1.19,
+          1.885
+        ],
+        "size": [
+          3.417,
+          2.38,
+          3.77
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Preserve built viewer bytes; review editable code rather than bundled shaders.
+assets/index-*.js -text -diff linguist-generated=true
+assets/index-*.css -text linguist-generated=true
+*.glb binary
+*.zip binary
