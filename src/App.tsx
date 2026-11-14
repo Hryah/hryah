@@ -6,14 +6,15 @@ import { PlayScreen, startPlay } from "./ui/play/PlayScreen";
 import type { GameState } from "./core/game";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
+import { Gallery } from "./scenes/gallery";
 
 // Перемикач екранів за #адресою: без адреси наскрізна гра (#play), #design консорціум (частина 1),
-// #orbit прототип орбіти, #debug дебаг-екран. Усі екрани лишаються змонтованими,
+// #orbit прототип орбіти, #debug дебаг-екран, #gallery перегляд сцен рушія. Усі екрани лишаються змонтованими,
 // тож перемикання не скидає прогрес.
-type View = "play" | "orbit" | "design" | "debug";
+type View = "play" | "orbit" | "design" | "debug" | "gallery";
 
 const viewFromHash = (hash: string): View =>
-  hash === "#debug" ? "debug" : hash === "#design" ? "design" : hash === "#orbit" ? "orbit" : "play";
+  hash === "#debug" ? "debug" : hash === "#gallery" ? "gallery" : hash === "#design" ? "design" : hash === "#orbit" ? "orbit" : "play";
 
 const useView = (): View => {
   const [view, setView] = useState<View>(() => viewFromHash(window.location.hash));
@@ -48,10 +49,12 @@ export function App() {
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
             <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
+            <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
           </nav>
           <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
           <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
+          {view === "gallery" && <Gallery active />}
         </main>
       </div>
     </>

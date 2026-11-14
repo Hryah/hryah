@@ -134,5 +134,9 @@
   "ui.play.success": "Mission accomplished",
   "ui.play.failure": "Mission failed",
   "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}.",
-  "ui.play.runOrbit": "Run the orbit"
+  "ui.play.runOrbit": "Run the orbit",
+  "ui.render.noWebgl": "3D view is unavailable: this browser or device does not support WebGL. The game still works with the controls below.",
+  "ui.gallery.engine": "Engine test",
+  "ui.gallery.orbit": "Orbit",
+  "ui.gallery.orbitState": "Mock view: charge {charge}%, storm {storm}, link {link}, safe mode {safe}, status {status}"
 }
