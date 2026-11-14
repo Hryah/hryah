@@ -33,7 +33,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-/** Для тестів: скидає кеш, не звільняючи копії, що ще живуть. */
+/** Для тестів: скидає кеш і звільняє спільні ресурси джерел (копії, що ще живуть, лишаються без геометрій). */
 export function clearModelCache(): void {
   for (const entry of cache.values()) if (entry.source) disposeObject(entry.source);
   cache.clear();

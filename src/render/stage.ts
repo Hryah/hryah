@@ -79,18 +79,21 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
   camera.lookAt(0, 0, 0);
 
   // Правило вигляду 2: одне спрямоване світло (зліва згори) і м'яке розсіяне, без тіней.
-  const lights: THREE.Light[] = [];
+  const lights: THREE.Object3D[] = [];
+  let sun: THREE.DirectionalLight | null = null;
+  const sunOffset = new THREE.Vector3(-6, 5, 4);
   if (options.lighting !== 'custom') {
-    const sun = new THREE.DirectionalLight(palette.white, 2.4);
-    sun.position.set(-6, 5, 4);
+    sun = new THREE.DirectionalLight(palette.white, 2.4);
+    sun.position.copy(sunOffset);
     if (options.shadows) {
       sun.castShadow = true;
       sun.shadow.mapSize.set(1024, 1024);
       const half = viewHeightUnits;
       Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: 30 });
+      sun.shadow.camera.updateProjectionMatrix();
       sun.shadow.normalBias = 0.03;
     }
-    lights.push(sun, new THREE.AmbientLight(palette.white, 0.45));
+    lights.push(sun, sun.target, new THREE.AmbientLight(palette.white, 0.45));
     root.add(...lights);
   }
 
@@ -103,6 +106,8 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     followTarget = target;
     if (!target) {
       camera.position.copy(basePosition);
+      camera.updateMatrixWorld();
+      if (sun) { sun.position.copy(sunOffset); sun.target.position.set(0, 0, 0); }
       return;
     }
     followOffset = opts?.offset ? new THREE.Vector3(opts.offset.x, opts.offset.y, opts.offset.z) : basePosition.clone();
@@ -112,6 +117,11 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     if (!followTarget) return;
     followTarget.getWorldPosition(followPoint).add(followOffset);
     camera.position.lerp(followPoint, 1 - Math.exp(-dtS * followRate));
+    if (sun) {
+      // Сонце й область його тіні їдуть разом із ціллю, інакше тіні зникли б за межами початкового вікна.
+      followTarget.getWorldPosition(sun.target.position);
+      sun.position.copy(sun.target.position).add(sunOffset);
+    }
   };
 
   const filters = createFilterChain(renderer);

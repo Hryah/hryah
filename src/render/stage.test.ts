@@ -134,4 +134,22 @@ describe('камера follow', () => {
     expect(stage.camera.position.distanceTo(home)).toBe(0);
     stage.dispose();
   });
+
+  it('сонце з тінню їде за ціллю і повертається після follow(null)', () => {
+    const run = stubFrames();
+    const stage = createStage(canvas, { shadows: true });
+    const sun = stage.root.children.find((c) => (c as THREE.DirectionalLight).castShadow) as THREE.DirectionalLight;
+    const home = sun.position.clone();
+    const target = new THREE.Object3D();
+    target.position.set(40, 0, 0);
+    stage.follow(target, { rate: 50 });
+    stage.start(() => undefined);
+    run(5);
+    expect(sun.target.position.x).toBeCloseTo(40);
+    expect(sun.position.x).toBeCloseTo(40 + home.x);
+    stage.follow(null);
+    expect(sun.position.distanceTo(home)).toBe(0);
+    expect(sun.target.position.length()).toBe(0);
+    stage.dispose();
+  });
 });
