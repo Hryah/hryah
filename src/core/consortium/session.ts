@@ -101,6 +101,8 @@ function settle(state: ConsortiumState): ConsortiumState {
 
 // Передати хід наступній агенції, що ще не запустилась. Коли коло завершене, настає новий ход.
 function endAgencyTurn(state: ConsortiumState): ConsortiumState {
+  // Усі вже запустились: підсумок на поточному ході, без зайвого переходу на наступний.
+  if (state.agencies.every((e) => e.launch)) return settle(state);
   const n = state.agencies.length;
   let next = state;
   let active = state.active;

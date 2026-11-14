@@ -36,7 +36,8 @@ export interface Payout {
 
 export interface Settlement {
   diversity: number;   // множник пулу ≥ 1
-  poolMUsd: number;
+  poolMUsd: number;    // усього виплачено: сума виплат разом із бонусом переможця
+  bonusMUsd: number;   // скільки з пулу становить бонус переможця
   payouts: Payout[];
 }
 
@@ -72,7 +73,7 @@ export function settleRewards(mission: Mission, runs: AgencyRun[], t: Tuning = T
   const values = runs.map((r) => runValueMUsd(mission, r, t));
   const total = values.reduce((a, b) => a + b, 0);
   const diversity = diversityMultiplier(runs, t);
-  const pool = total * diversity;
+  const basePool = total * diversity;
 
   // Переможець є лише якщо запусків щонайменше два і перший значно випереджає другого.
   const ranked = [...values].sort((a, b) => b - a);
@@ -80,17 +81,19 @@ export function settleRewards(mission: Mission, runs: AgencyRun[], t: Tuning = T
   const second = ranked[1] ?? 0;
   const hasWinner = runs.length >= 2 && first > 0 && first >= t.winnerRatio * second;
 
-  const payouts: Payout[] = runs.map((run, i) => {
+  const raw = runs.map((run, i) => {
     const value = values[i] ?? 0;
     const share = total > 0 ? value / total : 0;
     const winner = hasWinner && value === first;
-    return {
-      agencyId: run.agencyId,
-      valueMUsd: value,
-      share: Math.round(share * 1000) / 1000,
-      payoutMUsd: money(pool * share * (winner ? t.winnerBonus : 1)),
-      winner,
-    };
+    return { run, value, share, winner, payout: basePool * share * (winner ? t.winnerBonus : 1) };
   });
-  return { diversity: money(diversity), poolMUsd: money(pool), payouts };
+  const paid = raw.reduce((sum, r) => sum + r.payout, 0);
+  const payouts: Payout[] = raw.map((r) => ({
+    agencyId: r.run.agencyId,
+    valueMUsd: r.value,
+    share: Math.round(r.share * 1000) / 1000,
+    payoutMUsd: money(r.payout),
+    winner: r.winner,
+  }));
+  return { diversity: money(diversity), poolMUsd: money(paid), bonusMUsd: money(paid - basePool), payouts };
 }

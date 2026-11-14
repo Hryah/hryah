@@ -71,12 +71,13 @@
   "ui.waitHint": "Waiting makes new modules cheaper, but the deadline gets closer and data from a late launch is worth less.",
   "ui.result.title": "Mission results",
   "ui.result.nobody": "Nobody launched before the deadline.",
-  "ui.result.pool": "Total grant: {pool} M$ (variety bonus x{diversity})",
+  "ui.result.pool": "Total paid out: {pool} M$ (variety bonus x{diversity})",
   "ui.result.agency": "Agency",
   "ui.result.value": "Contribution",
   "ui.result.share": "Share",
   "ui.result.payout": "Grant",
   "ui.result.bonus": "winner bonus",
   "ui.result.missed": "{agency} missed the deadline and contributed nothing.",
-  "ui.result.again": "Play again"
+  "ui.result.again": "Play again",
+  "ui.result.bonusLine": "Includes {bonus} M$ of winner bonus."
 }

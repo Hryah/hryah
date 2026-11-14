@@ -125,6 +125,7 @@ function Results({ state, onRestart }: { state: ConsortiumState; onRestart: () =
       ) : (
         <>
           <div style={{ color: C.dim }}>{t("ui.result.pool", { pool: fmt(settlement.poolMUsd), diversity: fmt(settlement.diversity) })}</div>
+          {settlement.bonusMUsd > 0 && <div style={{ color: C.gold }}>{t("ui.result.bonusLine", { bonus: fmt(settlement.bonusMUsd) })}</div>}
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
             <thead>
               <tr style={{ color: C.dim, textAlign: "left", fontSize: 13 }}>

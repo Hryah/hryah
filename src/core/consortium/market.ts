@@ -22,8 +22,9 @@ export function priceFactor(entry: MarketEntry, turn: number): number | null {
 
 export function checkMarket(market: Market): void {
   for (const [id, e] of Object.entries(market)) {
-    if (!(e.settleTurn > e.fromTurn)) throw new Error(`${id}: settleTurn має бути більшим за fromTurn`);
-    if (!(e.startFactor >= 1)) throw new Error(`${id}: startFactor має бути не меншим за 1`);
+    if (!Number.isFinite(e.fromTurn) || e.fromTurn < 0) throw new Error(`${id}: fromTurn має бути скінченним і не меншим за 0`);
+    if (!Number.isFinite(e.settleTurn) || !(e.settleTurn > e.fromTurn)) throw new Error(`${id}: settleTurn має бути скінченним і більшим за fromTurn`);
+    if (!Number.isFinite(e.startFactor) || !(e.startFactor >= 1)) throw new Error(`${id}: startFactor має бути скінченним і не меншим за 1`);
   }
 }
 

@@ -35,7 +35,9 @@ export function App() {
           <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
           <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
         </nav>
-        {view === "design" ? <ConsortiumScreen /> : <DebugScreen />}
+        {/* Обидва екрани лишаються змонтованими, щоб перемикання не скидало прогрес. */}
+        <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
+        <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
       </main>
     </div>
   );

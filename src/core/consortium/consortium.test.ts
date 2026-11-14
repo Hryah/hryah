@@ -56,6 +56,12 @@ describe("ринок у часі", () => {
     expect(JSON.stringify(base)).toBe(before);
   });
 
+  it("відхиляє нескінченні й від'ємні значення ринку", () => {
+    expect(() => checkMarket({ x: { fromTurn: 0, startFactor: Infinity, settleTurn: 3 } })).toThrow();
+    expect(() => checkMarket({ x: { fromTurn: -1, startFactor: 1, settleTurn: 3 } })).toThrow();
+    expect(() => checkMarket({ x: { fromTurn: 0, startFactor: 1, settleTurn: Infinity } })).toThrow();
+  });
+
   it("відхиляє некоректний ринок", () => {
     expect(() => checkMarket({ x: { fromTurn: 3, startFactor: 1, settleTurn: 3 } })).toThrow();
     expect(() => checkMarket({ x: { fromTurn: 0, startFactor: 0.5, settleTurn: 3 } })).toThrow();
@@ -121,14 +127,29 @@ describe("нагорода", () => {
     const clear = settleRewards(m, [run("a", 0, 30000, 2, "cam-m", 450), run("b", 0, 10000, 2, "cam-m", 450)]);
     expect(clear.payouts.find((p) => p.agencyId === "a")?.winner).toBe(true);
     const a = clear.payouts.find((p) => p.agencyId === "a")!;
-    expect(a.payoutMUsd).toBeCloseTo(clear.poolMUsd * a.share * TUNING.winnerBonus, 1);
+    const b = clear.payouts.find((p) => p.agencyId === "b")!;
+    expect(a.payoutMUsd).toBeGreaterThan(b.payoutMUsd * 3); // частка 3:1 плюс бонус
+    expect(clear.bonusMUsd).toBeGreaterThan(0);
     const close = settleRewards(m, [run("a", 0, 12000, 2, "cam-m", 450), run("b", 0, 10000, 2, "cam-m", 450)]);
     expect(close.payouts.some((p) => p.winner)).toBe(false);
   });
 
+  it("пул дорівнює сумі виплат, а бонус виділений окремо", () => {
+    for (const runs of [
+      [run("a", 0, 30000, 2, "cam-m", 450), run("b", 0, 10000, 2, "cam-s", 650)],
+      [run("a", 0, 12000, 2, "cam-m", 450), run("b", 0, 10000, 2, "cam-m", 450)],
+    ]) {
+      const s = settleRewards(m, runs);
+      const sum = s.payouts.reduce((x, p) => x + p.payoutMUsd, 0);
+      expect(Math.abs(sum - s.poolMUsd)).toBeLessThan(0.02);
+    }
+    const noWinner = settleRewards(m, [run("a", 0, 12000, 2, "cam-m", 450), run("b", 0, 10000, 2, "cam-m", 450)]);
+    expect(noWinner.bonusMUsd).toBe(0);
+  });
+
   it("один запуск і порожній набір не дають переможця й не ламаються", () => {
     expect(settleRewards(m, [run("a", 0, 30000, 2)]).payouts[0]?.winner).toBe(false);
-    expect(settleRewards(m, [])).toEqual({ diversity: 1, poolMUsd: 0, payouts: [] });
+    expect(settleRewards(m, [])).toEqual({ diversity: 1, poolMUsd: 0, bonusMUsd: 0, payouts: [] });
     expect(settleRewards(m, [run("a", 0, 0, 2), run("b", 0, 0, 2)]).payouts.every((p) => p.payoutMUsd === 0)).toBe(true);
   });
 });
@@ -249,6 +270,14 @@ describe("сесія: недоступні модулі", () => {
 });
 
 describe("сесія: підсумок", () => {
+  it("коли запустилась остання агенція, ход у стані лишається тим, на якому вона запустилась", () => {
+    let s = start([usa, india]);
+    s = run2(s, wait, wait); // ход 1
+    s = run2(s, launch, launch);
+    expect(s.result).not.toBeNull();
+    expect(s.turn).toBe(1);
+  });
+
   it("після дедлайну ход у стані не виходить за дедлайн", () => {
     const s = run2(start([usa], 2), wait, wait, wait);
     expect(s.result).not.toBeNull();
