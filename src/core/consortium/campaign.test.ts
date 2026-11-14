@@ -302,3 +302,15 @@ describe("рев'ю: лобі з ботами, втрата в польоті, �
     expect(s.consortium.agencies.every((e) => e.report === undefined)).toBe(true);
   });
 });
+
+describe("фабрика: санкції й ринок", () => {
+  it("агенція не може робити на фабриці модуль, якого не бачить (санкції, ще не на ринку)", () => {
+    let s: RoomState = newRoom("me", "Me", ids, 3);
+    s = send(s, "me", { type: "wish", agencyId: "kestrel" });
+    s = send(s, "me", { type: "start" });
+    const order = { line: "glass", depositId: "import", steps: ["quick", "polish"] as [string, string], baseModuleId: "cam-l" };
+    expect(send(s, "me", { type: "play", action: { type: "factory", order } })).toBe(s); // cam-l під санкціями для Kestrel
+    const late = { line: "rf", depositId: "import", steps: ["roast", "plain"] as [string, string], baseModuleId: "ant-l" };
+    expect(send(s, "me", { type: "play", action: { type: "factory", order: late } })).toBe(s); // ant-l ще не на ринку на ході 0
+  });
+});

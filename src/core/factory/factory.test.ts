@@ -3,7 +3,7 @@ import agenciesData from "../../data/agencies.json";
 import type { AgencyProfile } from "../design/agency";
 import { CAMPAIGN_CATALOG } from "../consortium/scenarios";
 import {
-  depositsOf, emptyFactory, expectedQuality, glassDefectFactor, IMPORT_DEPOSIT, knownFlaws, MATERIALS, planBatch,
+  depositsOf, emptyFactory, expectedQuality, fabBaseOf, glassDefectFactor, IMPORT_DEPOSIT, knownFlaws, MATERIALS, planBatch,
   readyModules, workshopCapacity, type FactoryOrder, type FactoryState,
 } from ".";
 
@@ -108,5 +108,14 @@ describe("фабрика: партії", () => {
     expect(planBatch(borealis, f, { line: "alloy", depositId: foreign, steps: ["direct", "cast"], baseModuleId: "eng-chem" }, 0, catalog).reason).toBe("deposit");
     expect(planBatch(borealis, f, { line: "alloy", depositId: IMPORT_DEPOSIT, steps: ["cast", "direct"], baseModuleId: "eng-chem" }, 0, catalog).reason).toBe("step");
     expect(planBatch(borealis, f, { line: "alloy", depositId: IMPORT_DEPOSIT, steps: ["direct", "cast"], baseModuleId: "sol-m" }, 0, catalog).reason).toBe("module");
+  });
+});
+
+describe("фабрика: рев'ю", () => {
+  it("fabBaseOf знаходить базовий модуль і з дефісами в id агенції", () => {
+    const ids = catalog.map((m) => m.id);
+    expect(fabBaseOf("fab-cam-m-borealis-1", ids)).toBe("cam-m");
+    expect(fabBaseOf("fab-ant-laser-new-agency-12", ids)).toBe("ant-laser");
+    expect(fabBaseOf("cam-m", ids)).toBeUndefined();
   });
 });
