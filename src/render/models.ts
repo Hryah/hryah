@@ -10,6 +10,8 @@ import { disposeObject } from './primitives';
 export interface ModelHandle {
   /** Додається в сцену; позицію, поворот і масштаб міняє сцена. Вміст підміняється після завантаження. */
   readonly object: THREE.Group;
+  /** Виконується, коли заглушку замінено моделлю (або завантаження не вдалось, або викликано dispose): ніколи не відхиляється. */
+  readonly ready: Promise<void>;
   /** true, доки показується заглушка (або файл не завантажився). */
   isPlaceholder(): boolean;
   /** Виймає з батька й звільняє; спільні ресурси файла звільняються з останньою копією. */
@@ -19,6 +21,8 @@ export interface ModelHandle {
 export interface ModelOptions {
   /** Розмір заглушки у світових одиницях. Типово 1. */
   placeholderSize?: number;
+  /** Вмикає castShadow і receiveShadow на мешах моделі (після підміни заглушки). Типово вимкнено. */
+  shadows?: boolean;
 }
 
 interface CacheEntry {
@@ -35,10 +39,10 @@ export function clearModelCache(): void {
   cache.clear();
 }
 
-function release(url: string): void {
-  const entry = cache.get(url);
-  if (!entry || --entry.refs > 0) return;
-  cache.delete(url);
+function release(url: string, entry: CacheEntry): void {
+  if (--entry.refs > 0) return;
+  // Запис міг бути видалений після помилки, а під тим самим url — створений новий: чужий не чіпаємо.
+  if (cache.get(url) === entry) cache.delete(url);
   if (entry.source) disposeObject(entry.source);
 }
 
@@ -53,8 +57,8 @@ export function loadModel(url: string, options: ModelOptions = {}): ModelHandle 
   let placeholder = true;
   let disposed = false;
 
-  let entry = cache.get(url);
-  if (!entry) {
+  let found = cache.get(url);
+  if (!found) {
     const created: CacheEntry = { promise: Promise.resolve(null), source: null, refs: 0 };
     created.promise = new GLTFLoader().loadAsync(url).then(
       (gltf) => {
@@ -66,20 +70,28 @@ export function loadModel(url: string, options: ModelOptions = {}): ModelHandle 
       () => { if (cache.get(url) === created) cache.delete(url); return null; },
     );
     cache.set(url, created);
-    entry = created;
+    found = created;
   }
+  const entry = found;
   entry.refs += 1;
 
-  void entry.promise.then((source) => {
+  const ready = entry.promise.then((source) => {
     if (disposed || !source) return;
     // Клон ділить геометрії й матеріали з оригіналом: їх звільняє лише release.
     disposeObject(stub);
-    object.add(source.clone(true));
+    const copy = source.clone(true);
+    if (options.shadows) {
+      copy.traverse((node) => {
+        if ((node as THREE.Mesh).isMesh) { node.castShadow = true; node.receiveShadow = true; }
+      });
+    }
+    object.add(copy);
     placeholder = false;
   });
 
   return {
     object,
+    ready,
     isPlaceholder: () => placeholder,
     dispose() {
       if (disposed) return;
@@ -87,7 +99,7 @@ export function loadModel(url: string, options: ModelOptions = {}): ModelHandle 
       object.removeFromParent();
       if (placeholder) disposeObject(stub);
       object.clear();
-      release(url);
+      release(url, entry);
     },
   };
 }

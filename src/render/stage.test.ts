@@ -80,14 +80,21 @@ describe('опції рендера', () => {
     expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
     expect(renderer.toneMappingExposure).toBe(1);
     expect(lightCount(stage)).toBe(2);
+    expect(stage.root.children.some((c) => (c as THREE.DirectionalLight).castShadow)).toBe(false);
     stage.dispose();
     expect(lightCount(stage)).toBe(0);
   });
 
+  it('shadows: true вмикає тінь від типового сонця', () => {
+    const stage = createStage(canvas, { shadows: true });
+    expect(stage.root.children.some((c) => (c as THREE.DirectionalLight).castShadow)).toBe(true);
+    stage.dispose();
+  });
+
   it('shadows, aces і exposure виставляються на рендерері; custom не додає світло', () => {
-    const stage = createStage(canvas, { shadows: { type: 'pcfsoft' }, toneMapping: 'aces', exposure: 1.25, lighting: 'custom' });
+    const stage = createStage(canvas, { shadows: true, toneMapping: 'aces', exposure: 1.25, lighting: 'custom' });
     expect(renderer.shadowMap.enabled).toBe(true);
-    expect(renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
+    expect(renderer.shadowMap.type).toBe(THREE.PCFShadowMap);
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
     expect(renderer.toneMappingExposure).toBe(1.25);
     expect(lightCount(stage)).toBe(0);

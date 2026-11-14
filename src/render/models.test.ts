@@ -69,4 +69,28 @@ describe('loadModel', () => {
     expect(a.object.children).toHaveLength(0);
     expect(spy).toHaveBeenCalledOnce();
   });
+
+  it('dispose старої копії не звільняє модель нового запису після помилки', async () => {
+    loadAsync.mockRejectedValueOnce(new Error('404'));
+    const old = loadModel('x.glb');
+    await flush();
+    const gltf = makeGltf();
+    const spy = vi.spyOn(gltf.geometry, 'dispose');
+    loadAsync.mockResolvedValueOnce({ scene: gltf.scene });
+    const fresh = loadModel('x.glb');
+    await fresh.ready;
+    old.dispose();
+    expect(spy).not.toHaveBeenCalled();
+    expect(fresh.isPlaceholder()).toBe(false);
+  });
+
+  it('shadows вмикає castShadow на мешах після завантаження; ready чекає підміни', async () => {
+    loadAsync.mockResolvedValue({ scene: makeGltf().scene });
+    const a = loadModel('s.glb', { shadows: true });
+    await a.ready;
+    const meshes: THREE.Mesh[] = [];
+    a.object.traverse((n) => { if ((n as THREE.Mesh).isMesh) meshes.push(n as THREE.Mesh); });
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(meshes.every((m) => m.castShadow && m.receiveShadow)).toBe(true);
+  });
 });

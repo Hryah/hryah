@@ -46,8 +46,8 @@ export interface StageOptions {
   viewHeightUnits?: number;
   /** Нахил камери над горизонтом у градусах: «вигляд спереду трохи згори». */
   cameraElevationDeg?: number;
-  /** Тіні від спрямованого світла. Типово вимкнені. */
-  shadows?: boolean | { type?: 'pcf' | 'pcfsoft' };
+  /** Тіні від типового сонця (воно кидає тінь; меші сцени мають мати castShadow/receiveShadow). Типово вимкнені. */
+  shadows?: boolean;
   /** Відображення яскравості. Типово 'none' (без змін кольорів палітри). */
   toneMapping?: 'none' | 'aces';
   /** Експозиція для toneMapping. Типово 1. */
@@ -70,8 +70,7 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
   renderer.toneMappingExposure = options.exposure ?? 1;
   if (options.shadows) {
     renderer.shadowMap.enabled = true;
-    const soft = typeof options.shadows === 'object' && options.shadows.type === 'pcfsoft';
-    renderer.shadowMap.type = soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
   }
 
   const root = new THREE.Scene();
@@ -84,6 +83,13 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
   if (options.lighting !== 'custom') {
     const sun = new THREE.DirectionalLight(palette.white, 2.4);
     sun.position.set(-6, 5, 4);
+    if (options.shadows) {
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      const half = viewHeightUnits;
+      Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: 30 });
+      sun.shadow.normalBias = 0.03;
+    }
     lights.push(sun, new THREE.AmbientLight(palette.white, 0.45));
     root.add(...lights);
   }
