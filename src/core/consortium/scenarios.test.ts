@@ -17,7 +17,7 @@ const market = marketData as Market;
 
 function playBots(id: string): ConsortiumState {
   const sc = SCENARIOS[id]!;
-  let s = newConsortium({ mission: sc.mission, catalog: CAMPAIGN_CATALOG }, market, agencies, 12, 5, { campaign: sc.campaign });
+  let s = newConsortium({ mission: sc.mission, catalog: sc.catalog ?? CAMPAIGN_CATALOG }, market, agencies, 12, 5, { campaign: sc.campaign });
   for (let g = 0; g < 3000 && !s.result; g++) {
     const n = stepConsortium(s, botAction(s));
     s = n === s ? stepConsortium(s, { type: "wait" }) : n;
@@ -46,7 +46,7 @@ describe("баланс сценаріїв (перебір і кампанія б
   for (const id of Object.keys(SCENARIOS)) {
     it(`${id}: прохідний, без єдиного виграшного проєкту, програма не закривається за одне вікно`, () => {
       const sc = SCENARIOS[id]!;
-      const rows = sweepDesigns(sc.mission, CAMPAIGN_CATALOG, [6, 12, 24, 48]);
+      const rows = sweepDesigns(sc.mission, sc.catalog ?? CAMPAIGN_CATALOG, [6, 12, 24, 48]);
       const wins = rows.filter((r) => r.win);
       if (id === "big-eye") {
         // Каталог не дає потрібної різкості: лише власне дзеркало максимальної апертури.

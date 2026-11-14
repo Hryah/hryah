@@ -395,5 +395,17 @@
   "ui.factory.quality": "quality {q}%",
   "ui.factory.left": "left in: {flaws}",
   "ui.factory.inTurns": "ready in {n} turn(s)",
-  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit.",
+  "mission.stationResupply.title": "Station Resupply",
+  "mission.stationResupply.brief": "The station is running low. Pick one container (water, food, spare parts or an experiment), reach the station orbit and keep the spacecraft alive through the approach. Three containers of the same thing are worth less than a mix.",
+  "cargo.water": "Water container",
+  "cargo.food": "Food container (needs cooling power)",
+  "cargo.parts": "Spare parts container",
+  "cargo.experiment": "Live experiment (needs heating power)",
+  "scenario.lifeline.title": "Lifeline",
+  "scenario.lifeline.brief": "Three short windows to keep a space station supplied. Coordinate what each agency brings.",
+  "fab.cargo.water": "Water container (own production)",
+  "fab.cargo.food": "Food container (needs cooling power) (own production)",
+  "fab.cargo.parts": "Spare parts container (own production)",
+  "fab.cargo.experiment": "Live experiment (needs heating power) (own production)"
 }
