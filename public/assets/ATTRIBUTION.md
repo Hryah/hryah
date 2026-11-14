@@ -26,3 +26,14 @@
 - `oxygen-tanks.svg` — `scuba-tanks` by **Delapouite** (`#7dd3fc`)
 - `energy-tank.svg` — `energy-tank` by **Delapouite** (`#3ddc84`)
 - `radar-dish.svg` — `radar-dish` by **Lorc** (`#cbd5e1`)
+
+## 5. Векторні темплейти гри (`public/assets/templates/` — 41 файл SVG)
+- **Команда проєкту (original designer SVGs & normalised 2D cel-shaded vectors):**
+  - `design/eng-{cold,chem,ion}.svg`, `design/sol-{s,m,l}.svg`, `design/bat-{s,m,l}.svg`, `design/ant-{s,m,l}.svg`, `design/cam-{s,m,l}.svg`, `design/bus-standard.svg`
+  - `flight/astro-{idle,pull,fly,stun}.svg`, `flight/mod-{horizontal,hub,vertical}.svg`, `flight/{console-terminal,door-seal,handle-rail,obstacle-pillar,obstacle-cargo}.svg`
+  - `orbit/target-poi.svg`
+  - `extras/{astro-front,astro-back,astro-left,astro-right,rocket-sketch-base,rocket-sketch-mid,rocket-sketch-top,hub-sketch}.svg`
+- **Похідні відкритих векторних матеріалів (recolored / adapted to team palette):**
+  - `design/launcher-small.svg` — адаптовано з [File:Vega.svg](https://commons.wikimedia.org/wiki/File:Vega.svg) (Wikimedia Commons).
+  - `design/launcher-medium.svg`, `design/launcher-heavy.svg` — адаптовано з [File:Falcon_9_&_Heavy.svg](https://commons.wikimedia.org/wiki/File:Falcon_9_%26_Heavy.svg) (Wikimedia Commons).
+  - `orbit/ground-station.svg` — адаптовано з `satellite_antenna` у [Microsoft FluentUI Emoji](https://github.com/microsoft/fluentui-emoji). Ліцензія: **MIT License**.

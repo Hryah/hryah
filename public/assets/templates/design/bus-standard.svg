@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- 4 Orthogonal Gimbal/Docking Flange Ports (Top, Right, Bottom, Left) -->
+    <!-- Top mount (Battery port) -->
+    <g>
+      <rect x="206" y="48" width="100" height="44" rx="14" fill="#9AA8C4" stroke="#0D1736" stroke-width="11"/>
+      <rect x="218" y="42" width="76" height="26" rx="10" fill="#F3832D" stroke="#0D1736" stroke-width="10"/>
+      <rect x="228" y="47" width="38" height="10" rx="5" fill="#FBD37B"/>
+    </g>
+    <!-- Bottom mount (Antenna / Thruster lower collar) -->
+    <g>
+      <rect x="206" y="420" width="100" height="44" rx="14" fill="#32446A" stroke="#0D1736" stroke-width="11"/>
+      <rect x="218" y="444" width="76" height="26" rx="10" fill="#F3832D" stroke="#0D1736" stroke-width="10"/>
+      <rect x="228" y="451" width="38" height="9" rx="4" fill="#FBD37B"/>
+    </g>
+    <!-- Left mount (Engine rear flange) -->
+    <g>
+      <rect x="48" y="206" width="44" height="100" rx="14" fill="#9AA8C4" stroke="#0D1736" stroke-width="11"/>
+      <rect x="42" y="218" width="26" height="76" rx="10" fill="#C0C8DD" stroke="#0D1736" stroke-width="10"/>
+      <circle cx="55" cy="236" r="5" fill="#0D1736"/>
+      <circle cx="55" cy="276" r="5" fill="#0D1736"/>
+    </g>
+    <!-- Right mount (Solar / Camera gimbal collar) -->
+    <g>
+      <rect x="420" y="206" width="44" height="100" rx="14" fill="#788FB3" stroke="#0D1736" stroke-width="11"/>
+      <rect x="444" y="218" width="26" height="76" rx="10" fill="#F3832D" stroke="#0D1736" stroke-width="10"/>
+      <rect x="451" y="228" width="10" height="36" rx="5" fill="#FBD37B"/>
+    </g>
+
+    <!-- Main Chamfered Octagonal Structural Chassis -->
+    <polygon points="136,88 376,88 424,136 424,376 376,424 136,424 88,376 88,136"
+             fill="#C0C8DD" stroke="#0D1736" stroke-width="13"/>
+
+    <!-- 2-Tone Cel-Shading Bevels (Top-Left lit highlight, Bottom-Right cool slate shadow) -->
+    <polygon points="140,98 370,98 354,116 148,116 116,148 116,356 98,372 98,140"
+             fill="#E3E0E2"/>
+    <polygon points="414,142 414,372 372,414 142,414 158,396 364,396 396,364 396,158"
+             fill="#9AA8C4"/>
+
+    <!-- Structural Truss Frame & Corner Bolts -->
+    <polygon points="150,118 362,118 394,150 394,362 362,394 150,394 118,362 118,150"
+             fill="#32446A" stroke="#0D1736" stroke-width="9"/>
+
+    <!-- Quilted Gold Kapton MLI Thermal Foil Core Bay -->
+    <rect x="142" y="142" width="228" height="228" rx="18"
+          fill="#FAAC31" stroke="#0D1736" stroke-width="9"/>
+    <!-- Kapton Highlight Foil & Quilted Shadow Half -->
+    <path d="M160,147 H352 A13,13 0 0 1 365,160 V225 L147,330 V160 A13,13 0 0 1 160,147 Z"
+          fill="#FBD37B" opacity="0.55"/>
+    <path d="M365,225 V352 A13,13 0 0 1 352,365 H160 L365,260 Z"
+          fill="#F3832D" opacity="0.65"/>
+    <!-- Crinkled / Quilted Foil Seam Lines -->
+    <g stroke="#C4703C" stroke-width="5" opacity="0.85">
+      <line x1="218" y1="146" x2="218" y2="366"/>
+      <line x1="294" y1="146" x2="294" y2="366"/>
+      <line x1="146" y1="218" x2="366" y2="218"/>
+      <line x1="146" y1="294" x2="366" y2="294"/>
+    </g>
+
+    <!-- Center Avionics / Bus Telemetry Core Module -->
+    <rect x="190" y="190" width="132" height="132" rx="18"
+          fill="#C0C8DD" stroke="#0D1736" stroke-width="9"/>
+    <rect x="206" y="206" width="100" height="100" rx="11"
+          fill="#2F4173" stroke="#0D1736" stroke-width="6"/>
+    <!-- Avionics Status Indicator Glass & Louvers -->
+    <rect x="220" y="220" width="72" height="26" rx="6"
+          fill="#0D1736" stroke="#788FB3" stroke-width="3"/>
+    <rect x="228" y="227" width="38" height="12" rx="4" fill="#3EA2F6"/>
+    <circle cx="278" cy="233" r="5" fill="#FBD37B"/>
+    <!-- Radiator Vents -->
+    <g fill="#9AA8C4" stroke="#0D1736" stroke-width="3.5">
+      <rect x="220" y="258" width="72" height="10" rx="3"/>
+      <rect x="220" y="274" width="72" height="10" rx="3"/>
+      <rect x="220" y="290" width="44" height="8" rx="3"/>
+    </g>
+
+    <!-- 4 Chamfer Corner Structural Lug Bolts -->
+    <g fill="#E3E0E2" stroke="#0D1736" stroke-width="5">
+      <circle cx="136" cy="136" r="10"/>
+      <circle cx="376" cy="136" r="10"/>
+      <circle cx="136" cy="376" r="10"/>
+      <circle cx="376" cy="376" r="10"/>
+    </g>
+  </g>
+</svg>
