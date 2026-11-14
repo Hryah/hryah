@@ -8,7 +8,7 @@ import { stubDesign, stubFlight, stubOrbit } from '../stubs';
 import type { Market } from './market';
 import { runValueMUsd } from './reward';
 import { applyDamage } from './damage';
-import { defectDamage, startDevelopment, type DevProject } from './develop';
+import { defectDamage, SCALING, startDevelopment, type DevProject } from './develop';
 import { inputFor } from './session';
 
 export interface TurnBest {
@@ -68,5 +68,5 @@ export function bestByLaunchTurn(
 
 // Очікуваний брак не залежить від кидка: для аналізу береться «брак є» з типовою тяжкістю.
 function defectDamageOf(plan: DevProject) {
-  return defectDamage({ ...plan, defect: plan.defect ?? { severity: 0.25 + 0.45 / 2 } });
+  return defectDamage({ ...plan, defect: plan.defect ?? { severity: SCALING.severityMin + SCALING.severityRange / 2 } });
 }

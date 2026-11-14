@@ -18,6 +18,8 @@ const AGENCIES = Object.values(agenciesData) as AgencyProfile[];
 const MARKET = marketData as Market;
 const BASE = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
 const MAX_AGENCIES = 4;
+// Сід кидків браку береться тут, на екрані: ядро власного рандому не має, тож кожна нова гра отримує свій.
+const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const button = {
   padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent",
@@ -28,7 +30,7 @@ export function ConsortiumScreen() {
   const [state, setState] = useState<ConsortiumState | null>(null);
   const dispatch = (action: ConsortiumAction) => setState((s) => (s ? stepConsortium(s, action) : s));
 
-  if (!state) return <Setup onStart={(chosen) => setState(newConsortium(BASE, MARKET, chosen))} />;
+  if (!state) return <Setup onStart={(chosen) => setState(newConsortium(BASE, MARKET, chosen, undefined, newSeed()))} />;
   if (state.result) return <Results state={state} onRestart={() => setState(null)} />;
   return <Turn state={state} dispatch={dispatch} />;
 }

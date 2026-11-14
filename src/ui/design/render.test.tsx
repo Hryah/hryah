@@ -6,6 +6,7 @@ import { newConsortium, stepConsortium, type ConsortiumAction, type Market } fro
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
+import { describeEntry } from "./cause";
 import { ConsortiumScreen, Results, Turn } from "./ConsortiumScreen";
 import { DesignScreen } from "./DesignScreen";
 
@@ -93,5 +94,16 @@ describe("власна розробка на екрані", () => {
     expect(html).toContain("Custom camera, 0.3 m");
     expect(html).toMatch(/ready in \d+ turns/);
     expect(html).not.toContain("Start development");
+  });
+});
+
+describe("розбір причин: власна розробка", () => {
+  it("модуль власної розробки названо, а не показано сирим id", () => {
+    const text = describeEntry(
+      { id: "design:instrument", phase: "design", tS: 0, kind: "decision", system: "science", messageKey: "design.chose", params: { slot: "instrument", module: "custom-instrument-borealis" } },
+      { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG },
+    );
+    expect(text).toContain("Custom camera");
+    expect(text).not.toContain("custom-instrument");
   });
 });

@@ -371,6 +371,9 @@ describe("сесія: власна розробка", () => {
     expect(bad.log.some((e) => e.id === "design:defect-instrument" && (e.causedBy?.length ?? 0) > 0)).toBe(true);
     expect(good.log.some((e) => e.id === "design:defect-instrument")).toBe(false);
     expect(bad.outcome.deliveredMb).toBeLessThan(good.outcome.deliveredMb);
+    // До виплат іде пошкоджена спека: різкість гірша, тож і внесок менший.
+    expect(bad.spec.resolutionM).toBeGreaterThan(good.spec.resolutionM);
+    expect(runValueMUsd(base.mission, bad)).toBeLessThan(runValueMUsd(base.mission, good));
     const ids = new Set(bad.log.map((e) => e.id));
     for (const e of bad.log) for (const c of e.causedBy ?? []) expect(ids.has(c), c).toBe(true);
   });

@@ -16,8 +16,7 @@ function freeze<T>(v: T): T {
 }
 
 // Випадкова дія з усіх, що дозволяє тип: у тому числі абсурдні значення.
-function randomAction(state: ConsortiumState, r: () => number): ConsortiumAction {
-  const entry = state.agencies[state.active];
+function randomAction(_state: ConsortiumState, r: () => number): ConsortiumAction {
   const mods = SAMPLE_CATALOG.modules;
   const pick = <T,>(xs: T[]): T => xs[Math.floor(r() * xs.length)]!;
   const kind = Math.floor(r() * 9);
@@ -31,7 +30,6 @@ function randomAction(state: ConsortiumState, r: () => number): ConsortiumAction
     case 6: case 7: return { type: "wait" };
     default: return { type: "design", action: { type: "confirm" } };
   }
-  void entry;
 }
 
 describe("фаз-тест консорціуму: випадкові дії", () => {

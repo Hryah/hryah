@@ -120,7 +120,7 @@ function settle(state: ConsortiumState): ConsortiumState {
     const flight = stubFlight({ mission, spec, log: launchLog });
     const orbit = stubOrbit({ mission, spec, flight: flight.result, log: [...launchLog, ...flight.log] });
     runs.push({
-      agencyId: e.agency.id, launchTurn: e.launch.turn, spec: e.launch.spec, outcome: orbit.result,
+      agencyId: e.agency.id, launchTurn: e.launch.turn, spec, outcome: orbit.result,
       log: [...launchLog, ...flight.log, ...orbit.log],
     });
   }
