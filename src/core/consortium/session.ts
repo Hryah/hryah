@@ -15,7 +15,7 @@ import { applyAgency, type AgencyProfile } from '../design/agency';
 import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
 import {
-  checkCampaign, hiddenMission, missionSeeds, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport,
+  checkCampaign, hiddenMission, missionSeeds, pickReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport,
 } from './campaign';
 import { applyDamage } from './damage';
 import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder, type DevProject } from './develop';
@@ -356,7 +356,7 @@ export function applyReport(state: ConsortiumState, agencyId: string, report: Mi
   if (!entry || !entry.launch || entry.report) return state;
   const next = replaceAt(state, index, {
     ...entry,
-    report: { flight: report.flight, orbitActions: report.orbitActions.map((a) => (a.type === 'tick' ? { type: 'tick', dtS: a.dtS } : { type: 'toggle', id: a.id })) },
+    report: pickReport(report),
   });
   return next.awaiting ? settle(next) : next;
 }

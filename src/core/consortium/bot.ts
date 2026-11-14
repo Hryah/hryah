@@ -52,8 +52,10 @@ function searchTarget(input: DesignInput): Design | null {
   const bySlot = SLOTS.map((slot) => input.catalog.modules.filter((m: ModuleDef) => m.slot === slot));
   if (bySlot.some((list) => list.length === 0)) return null;
   const [lo, hi] = input.mission.altRangeKm;
-  const alts = [...new Set([lo, Math.round((lo + hi) / 100) * 50, hi])];
+  const mid = Math.min(hi, Math.max(lo, Math.round((lo + hi) / 100) * 50));
+  const alts = [...new Set([lo, mid, hi])];
   const launchers = [...input.mission.launchers].sort((a, b) => a.maxPayloadKg - b.maxPayloadKg);
+  if (launchers.length === 0) return null;
 
   const evaluate = (modules: Record<SlotId, string>): { design: Design; value: number } | null => {
     let best: { design: Design; value: number } | null = null;

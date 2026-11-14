@@ -177,7 +177,8 @@ export function startBlockers(lobby: LobbyState, knownAgencyIds?: string[]): str
 // Агенції ботів ходять самі: та сама дія від того самого стану, тож за одним екраном і онлайн результат однаковий.
 function autoPlay(state: PlayState, bots: string[]): PlayState {
   let consortium = state.consortium;
-  for (let guard = 0; guard < 2000 && !consortium.result && !consortium.awaiting; guard++) {
+  // Запобіжник від зациклення, з великим запасом: кожна ітерація або змінює стан, або цикл зупиняється.
+  for (let guard = 0; guard < 100_000 && !consortium.result && !consortium.awaiting; guard++) {
     const entry = activeAgency(consortium);
     const owner = state.assignments.find((a) => a.agencyId === entry?.agency.id);
     if (!owner) break;

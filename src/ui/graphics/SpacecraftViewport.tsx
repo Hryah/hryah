@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import type { SlotId } from '../../core/contracts';
 import { CompositeSpacecraftSvg, TemplateUnitView } from './adapters';
-import { templateRegistry } from './registry';
+import { resolveAssetUrl, templateRegistry } from './registry';
 import type { RenderMode, ViewportContext, VisualTemplate } from './types';
 
 const SLOT_ORDER: readonly SlotId[] = ['instrument', 'solar', 'battery', 'antenna', 'engine'];
@@ -57,13 +57,16 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
         }}
       >
         <div>
-          <strong style={{ fontSize: 15 }}>🛰️ Графічний адаптер · Збірка та 3D-темплейти</strong>
+          <strong style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <img src={resolveAssetUrl('assets/icons/ui/orbit.svg')} alt="" width={16} height={16} />
+            Графічний адаптер · 2D SVG темплейти
+          </strong>
           <div style={{ fontSize: 11, color: '#8a90a8' }}>
-            Автоматична прив&apos;язка стану гри до 3D GLB (NASA/Kenney), текстур планет та SVG-схем
+            Автоматична прив&apos;язка стану гри до 2D SVG-спрайтів та інженерних схем
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          {(['auto', '3d', 'sprite', 'blueprint'] as const).map((m) => (
+          {(['auto', 'sprite', 'blueprint'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setRenderMode(m)}
@@ -78,13 +81,13 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
                 fontWeight: renderMode === m ? 700 : 400,
               }}
             >
-              {m === 'auto' ? 'Auto' : m === '3d' ? '3D GLB' : m === 'sprite' ? '2D/Tex' : 'Blueprint'}
+              {m === 'auto' ? 'Auto' : m === 'sprite' ? '2D SVG' : 'Blueprint'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Основна сітка: зліва композитне креслення збірки, справа інспектор обраного 3D/2D темплейту */}
+      {/* Основна сітка: зліва композитне 2D креслення збірки, справа інспектор обраного темплейту */}
       <div
         style={{
           display: 'grid',
@@ -98,6 +101,7 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
             assembly={assembly}
             altKm={context.flight?.orbit.altKm ?? context.design.altKm}
             fuelKg={context.flight?.fuelLeftKg ?? context.design.fuelKg}
+            preferSprites={renderMode !== 'blueprint'}
             selectedSlot={inspectTarget === 'slot' ? selectedSlot : null}
             onSelectSlot={(slot) => {
               setInspectTarget('slot');
@@ -105,7 +109,7 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
             }}
           />
 
-          {/* Швидкий вибір вузла для огляду в 3D */}
+          {/* Швидкий вибір вузла для огляду */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             {SLOT_ORDER.map((slot) => {
               const mod = assembly.attachedModules[slot];
@@ -183,14 +187,18 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
                 border: `1px solid ${inspectTarget === 'astronaut' ? '#f59e0b' : '#2a2f4a'}`,
                 background: inspectTarget === 'astronaut' ? '#1e293b' : 'transparent',
                 color: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
               }}
             >
-              🧑‍🚀 Астронавт
+              <img src={resolveAssetUrl('assets/templates/flight/astro-idle.svg')} alt="" width={14} height={14} />
+              Астронавт
             </button>
           </div>
         </div>
 
-        {/* Картка активного темплейту з 3D-в'ювером */}
+        {/* Картка активного темплейту з в'ювером */}
         <div
           style={{
             background: '#0e1220',
@@ -216,14 +224,16 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
           />
 
           <div style={{ marginTop: 8, fontSize: 10, color: '#8a90a8', lineHeight: 1.45 }}>
-            {activeTemplate.model3d && (
-              <div>
-                📦 3D: <code>{activeTemplate.model3d.url}</code>
+            {activeTemplate.sprite2d && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <img src={resolveAssetUrl('assets/icons/ui/eye.svg')} alt="" width={12} height={12} />
+                2D: <code>{activeTemplate.sprite2d.url}</code>
               </div>
             )}
             {activeTemplate.planetTextures && (
-              <div>
-                🌍 Tex: <code>{activeTemplate.planetTextures.dayMapUrl}</code>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <img src={resolveAssetUrl('assets/icons/ui/globe.svg')} alt="" width={12} height={12} />
+                Tex: <code>{activeTemplate.planetTextures.dayMapUrl}</code>
               </div>
             )}
           </div>

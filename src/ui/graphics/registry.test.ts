@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from '../../core/stubs';
 import { parseGlbBuffer } from './glb-viewer';
-import { DEFAULT_TEMPLATES, TemplateRegistry, templateRegistry } from './registry';
+import { DEFAULT_TEMPLATES, resolveAssetUrl, TemplateRegistry, templateRegistry } from './registry';
 
 function buildTestGlbWithNodeTransforms(): ArrayBuffer {
   // Трикутник у локальних координатах [0,0,0], [1,0,0], [0,1,0]
@@ -71,6 +71,13 @@ function buildTestGlbWithNodeTransforms(): ArrayBuffer {
   return buf;
 }
 
+// URL у реєстрі вже з префіксом BASE_URL (напр. /experimental/): для звірки з файлами public/ знімаємо його.
+const fromBase = (url: string): string => {
+  const base = import.meta.env.BASE_URL || '/';
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return url.startsWith(prefix) ? `/${url.slice(prefix.length)}` : url;
+};
+
 describe('TemplateRegistry (Графічний адаптер)', () => {
   it('має прив’язані темплейти для всіх модулів SAMPLE_CATALOG', () => {
     for (const mod of SAMPLE_CATALOG.modules) {
@@ -90,18 +97,22 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     }
   });
 
-  it('у DEFAULT_TEMPLATES прописані лише наявні у репозиторії 3D асети без мертвих посилань', () => {
-    const committedGlbs = new Set([
-      '/assets/models/spacecraft/satellite_bus.glb',
-      '/assets/models/modules/solar_medium.glb',
-      '/assets/models/modules/antenna_medium.glb',
-    ]);
+  it('у DEFAULT_TEMPLATES усі темплейти працюють виключно на наявних 2D SVG асетах без 3D GLB і мертвих посилань', () => {
+    const publicAssetKeys = new Set(
+      Object.keys(import.meta.glob('../../../public/assets/**/*', { eager: false })).map(
+        (key) => `/${key.replace(/^.*\/public\//, '')}`,
+      ),
+    );
     for (const tpl of DEFAULT_TEMPLATES) {
-      if (tpl.model3d) {
-        expect(committedGlbs.has(tpl.model3d.url)).toBe(true);
+      expect(tpl.model3d).toBeUndefined();
+      expect(tpl.sprite2d?.url, `Missing sprite2d on ${tpl.id}`).toBeTruthy();
+      expect(publicAssetKeys.has(fromBase(tpl.sprite2d!.url)), `Missing sprite2d file: ${tpl.sprite2d!.url}`).toBe(true);
+      if (tpl.planetTextures?.dayMapUrl) {
+        expect(
+          publicAssetKeys.has(fromBase(tpl.planetTextures.dayMapUrl)),
+          `Missing planetTextures file: ${tpl.planetTextures.dayMapUrl}`,
+        ).toBe(true);
       }
-      expect(tpl.sprite2d).toBeUndefined();
-      expect(tpl.planetTextures).toBeUndefined();
     }
   });
 
@@ -146,6 +157,13 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     const unknownProp = templateRegistry.getTemplate('prop:custom-crate');
     expect(unknownProp.category).toBe('prop');
     expect(unknownProp.blueprint.shape).toBe('prop-custom');
+  });
+
+  it('resolveAssetUrl є ідемпотентним для повторних викликів з URL реєстру', () => {
+    const first = resolveAssetUrl('assets/icons/ui/rocket.svg');
+    expect(resolveAssetUrl(first)).toBe(first);
+    const tpl = templateRegistry.getModuleTemplate('solar', 'sol-m');
+    expect(resolveAssetUrl(tpl.sprite2d!.url)).toBe(tpl.sprite2d!.url);
   });
 
   it('parseGlbBuffer враховує трансформації вузлів glTF (scenes/nodes translation)', () => {

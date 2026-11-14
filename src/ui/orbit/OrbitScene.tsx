@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { resolveAssetUrl } from '../graphics/registry';
 import text from './texts.en.json';
 
 export interface OrbitSceneProps {
@@ -171,9 +172,22 @@ export function OrbitScene({
             d={`M${satelliteX},${satelliteY} Q${(satelliteX + 487) / 2 + 28},${(satelliteY + 326) / 2 - 28} 487,326`}
             className="scene-signal" strokeDasharray="3 9" strokeWidth="0.9" opacity="0.35"
           />
+          <image
+            href={resolveAssetUrl('assets/templates/orbit/target-poi.svg')}
+            x="402"
+            y="246"
+            width="20"
+            height="20"
+            opacity="0.88"
+          />
           <circle cx="487" cy="326" r="7" strokeWidth="0.7" opacity="0.7" className="scene-station-ring" />
-          <circle cx="487" cy="326" r="3" fill={signalColor} strokeWidth="0" />
-          <circle cx="487" cy="326" r="7" strokeWidth="0.7" opacity="0.5" />
+          <image
+            href={resolveAssetUrl('assets/templates/orbit/ground-station.svg')}
+            x="476"
+            y="314"
+            width="22"
+            height="22"
+          />
         </g>
       )}
 

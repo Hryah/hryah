@@ -189,23 +189,23 @@ export class SolarGame {
       mg.jamTimerS > 0,
     );
 
-    // 3D GLB прев'ю сонячної панелі (assets/models/modules/solar_medium.glb) у реальному часі за кутами (α, β)
-    const solarGlb = flightAssetCache.getGlbMesh(
-      "assets/models/modules/solar_medium.glb",
-    );
-    if (solarGlb) {
-      const previewCx = (alphaCx + betaCx) * 0.5;
-      const previewCy = alphaCy + 144;
-      flightAssetCache.drawGlbMeshOnCanvas(
-        ctx,
-        solarGlb,
-        previewCx,
-        previewCy,
-        34,
-        (mg.panelAlphaDeg * Math.PI) / 180,
-        (mg.panelBetaDeg * Math.PI) / 180,
-        mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#38bdf8",
-      );
+    // 2D SVG прев'ю сонячної панелі (assets/templates/design/sol-m.svg) у реальному часі за кутами (α, β)
+    const solarImg = flightAssetCache.getImage("assets/templates/design/sol-m.svg");
+    const previewCx = (alphaCx + betaCx) * 0.5;
+    const previewCy = alphaCy + 144;
+    if (solarImg) {
+      const alphaRad = (mg.panelAlphaDeg * Math.PI) / 180;
+      const betaRad = (mg.panelBetaDeg * Math.PI) / 180;
+      const tiltScaleY = Math.max(0.32, Math.abs(Math.cos(betaRad)));
+      ctx.save();
+      ctx.translate(previewCx, previewCy);
+      ctx.rotate(alphaRad * 0.35);
+      ctx.scale(1, tiltScaleY);
+      ctx.strokeStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#38bdf8";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-42, -26, 84, 52);
+      ctx.drawImage(solarImg, -40, -24, 80, 48);
+      ctx.restore();
     }
 
     // Права колонка: Осцилограф потужності (кВт) та індикатор температури мотора

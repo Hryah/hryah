@@ -311,7 +311,7 @@ export class LifeSupportGame {
     ctx.stroke();
 
     const barrelSprite = flightAssetCache.getImage(
-      "assets/sprites/station/machine_barrelLarge.png",
+      "assets/icons/station/filter-barrel.svg",
     );
     if (barrelSprite) {
       ctx.save();
@@ -326,21 +326,16 @@ export class LifeSupportGame {
       ctx.restore();
     }
 
-    // 3D GLB телеметричний датчик СЖЗ у шапці щита (assets/models/modules/antenna_medium.glb)
-    const sensorGlb = flightAssetCache.getGlbMesh(
-      "assets/models/modules/antenna_medium.glb",
+    // 2D SVG телеметричний датчик СЖЗ у шапці щита (assets/templates/design/ant-m.svg)
+    const sensorImg = flightAssetCache.getImage(
+      "assets/templates/design/ant-m.svg",
     );
-    if (sensorGlb) {
-      flightAssetCache.drawGlbMeshOnCanvas(
-        ctx,
-        sensorGlb,
-        670,
-        26,
-        15,
-        timeElapsedS * 1.6,
-        0.35,
-        "#fdba74",
-      );
+    if (sensorImg) {
+      ctx.save();
+      ctx.translate(670, 26);
+      ctx.rotate(Math.sin(timeElapsedS * 1.6) * 0.25);
+      ctx.drawImage(sensorImg, -16, -16, 32, 32);
+      ctx.restore();
     }
 
     ctx.fillStyle = "#dcfce7";
