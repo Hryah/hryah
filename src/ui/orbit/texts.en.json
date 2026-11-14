@@ -315,5 +315,6 @@
   "orbit.proto.success": "Mission accomplished: {deliveredMb} Mb delivered over {orbits} orbits.",
   "orbit.proto.complete": "Mission ended after {orbits} orbits with {deliveredMb} Mb delivered.",
   "ui.finalTelemetry": "Final telemetry",
-  "ui.confirmed": "CONFIRMED"
+  "ui.confirmed": "CONFIRMED",
+  "ui.modelsPreview": "3D models"
 }

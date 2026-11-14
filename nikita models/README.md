@@ -1,5 +1,9 @@
 # Nikita models — HRYAH asset workshop
 
+**[Open public 3D preview](https://hryah-nikita-models.racingbadger2.chatgpt.site/)** — no login or installation required.
+
+[Download the complete viewer and models ZIP](https://hryah-nikita-models.racingbadger2.chatgpt.site/assets/workshop/hryah-workshop-pack.zip).
+
 Ready-built HTML viewer and downloadable models, kept separately from the main game.
 No dependency installation is required to view this snapshot.
 

@@ -43,6 +43,7 @@ export function App() {
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
             <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
+            <a href="https://hryah-nikita-models.racingbadger2.chatgpt.site/" target="_blank" rel="noopener noreferrer" style={{ color: "#c4ef8b" }}>{orbitText["ui.modelsPreview"]}</a>
           </nav>
           <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>

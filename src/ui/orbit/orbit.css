@@ -50,6 +50,8 @@ button:focus-visible, a:focus-visible { outline: 2px solid #c4ef8b; outline-offs
 .breadcrumb { display: flex; gap: 13px; align-items: center; color: #6c7787; font-size: 11px; }
 .breadcrumb span { color: #bdc5d0; }
 .topbar-actions { display: flex; align-items: center; gap: 17px; }
+.models-preview-link { display: inline-flex; align-items: center; gap: 6px; color: var(--green) !important; font-size: 11px; white-space: nowrap; }
+@media (max-width: 600px) { .topbar-actions { gap: 9px; } .topbar-actions .local-badge { display: none; } }
 .local-badge { color: #929aa6; border: 1px solid var(--border); padding: 4px 8px; font: 9px ui-monospace, monospace; border-radius: 4px; }
 .icon-button { display: grid; place-items: center; border: 1px solid transparent; color: #929caa; background: transparent; padding: 5px; border-radius: 4px; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; padding: 31px 0 25px; }
