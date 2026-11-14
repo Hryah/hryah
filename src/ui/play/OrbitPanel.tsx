@@ -3,6 +3,7 @@
 import { orbitView, type OrbitAction, type OrbitState, type ToggleId } from "../../core/orbit";
 import { OrbitScene } from "../orbit/OrbitScene";
 import { fmt, t } from "../text";
+import { describeEntry } from "../design/cause";
 
 const tr = t;
 const num = (n: number, d = 0) => fmt(n, d);
@@ -34,18 +35,26 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
           const on = overridden ? view.activeSystems[id] : state.toggles[id];
           // Увімкнено, але система не працює (холод, пошкодження з польоту): показуємо «недоступно», а не «увімкнено».
           const unavailable = !done && !overridden && state.toggles[id] && !view.activeSystems[id];
-          const note = unavailable ? tr("controls.unavailable")
-            : overridden ? tr(id === "heater" ? "controls.forcedHeater" : "controls.overridden") : null;
+          const note = overridden ? tr(id === "heater" ? "controls.forcedHeater" : "controls.overridden") : null;
           return (
           <button key={id} role="switch" aria-checked={on && !unavailable} disabled={done || overridden}
             style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${on && !unavailable ? "#5ad19a" : "#2a2f45"}`, background: "#161a2b", color: "inherit", cursor: done || overridden ? "default" : "pointer" }}
             onClick={() => dispatch({ type: "toggle", id })}>
-            {tr(`ui.control.${id}`)}: {tr(on ? "ui.enabled" : "ui.off")}{note ? ` (${note})` : ""}
+            {tr(`ui.control.${id}`)}: {unavailable ? tr("controls.unavailable") : tr(on ? "ui.enabled" : "ui.off")}{note ? ` (${note})` : ""}
           </button>
           );
         })}
       </div>
       {!done && view.stormNext && <div style={{ color: "#f4b46a" }}>{tr("ui.stormWarning")}</div>}
+      {!done && !view.stormNext && view.stormInOrbits !== null && view.stormInOrbits <= 2 && (
+        <div style={{ color: "#f4b46a" }}>{tr("ui.stormSoon", { turns: view.stormInOrbits })}</div>
+      )}
+      <div style={{ color: "#8a90a8", fontSize: 13, display: "grid", gap: 2 }} data-testid="orbit-log">
+        <strong>{tr("ui.missionLog")}</strong>
+        {[...state.log].reverse().slice(0, 4).map((e) => (
+          <div key={e.id}>{describeEntry(e, { mission: state.input.mission, catalog: { modules: [] } })}</div>
+        ))}
+      </div>
       <div>
         <button disabled={done} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #5ad19a", background: "#161a2b", color: "inherit", cursor: done ? "default" : "pointer" }}
           onClick={() => dispatch({ type: "tick", dtS: state.input.flight.orbit.periodS })}>

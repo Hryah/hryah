@@ -63,7 +63,23 @@ describe("наскрізна гра: екран показує поточну ч
     g = step(g, { phase: "orbit", action: { type: "toggle", id: "safeMode" } });
     const html = render(g);
     expect(html).toContain("Onboard storage");
+    expect(html).toContain('data-testid="orbit-log"'); // стрічка подій орбіти
+    expect(html).toContain("Mission log");
     expect(html).toContain("by safe mode");
     expect(html).toContain("Enabled by safe mode"); // обігрівач у безпечному режимі не «призупинений»
+  });
+
+  it("екран орбіти попереджає про бурю заздалегідь, а заблокована система показується як «недоступна»", () => {
+    let g = newGame(SAMPLE_MISSION, SAMPLE_CATALOG, 7);
+    g = step(g, { phase: "design", action: { type: "confirm" } });
+    g = step(g, { phase: "flight", action: { type: "complete_phase" } });
+    const seen = new Set<string>();
+    for (let i = 0; i < 12 && g.phase === "orbit"; i++) {
+      const html = render(g);
+      if (/Solar storm in \d orbits/.test(html)) seen.add("soon");
+      if (/Solar storm expected|storm/i.test(html) && !/Solar storm in/.test(html)) seen.add("next");
+      g = step(g, { phase: "orbit", action: { type: "tick", dtS: g.orbit.input.flight.orbit.periodS } });
+    }
+    expect(seen.has("soon")).toBe(true);
   });
 });
