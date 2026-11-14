@@ -72,4 +72,32 @@ describe("склейка частин", () => {
     }
     expect(JSON.parse(JSON.stringify(state))).toEqual(state);
   });
+
+  it("не дублює попередні записи у підсумковому журналі", () => {
+    const end = playToEnd(step(start(), {
+      phase: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" },
+    }));
+    expect(end.phase).toBe("debrief");
+    if (end.phase !== "debrief") throw new Error("Гра не дійшла до розбору");
+    const ids = end.record.log.map((entry) => entry.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.filter((id) => id.startsWith("design:"))).toHaveLength(5);
+    expect(ids).toContain("orbit:battery-dead");
+  });
+
+  it("проходить до розбору з іншим каталогом і місією", () => {
+    const mission = {
+      ...SAMPLE_MISSION, id: "another-mission",
+      launchers: SAMPLE_MISSION.launchers.map((launcher) => ({ ...launcher, id: `other-${launcher.id}` })),
+    };
+    const catalog = {
+      modules: SAMPLE_CATALOG.modules.map((module) => ({ ...module, id: `other-${module.id}` })),
+    };
+    const end = playToEnd(newGame(mission, catalog, 42));
+    expect(end.phase).toBe("debrief");
+    if (end.phase !== "debrief") throw new Error("Гра не дійшла до розбору");
+    expect(end.record.missionId).toBe(mission.id);
+    expect(Object.values(end.record.spec.design.modules).every((id) => id.startsWith("other-"))).toBe(true);
+    expect(JSON.parse(JSON.stringify(end))).toEqual(end);
+  });
 });

@@ -75,7 +75,10 @@ export function DebugScreen() {
           <label style={{ color: C.dim, fontSize: 13 }}>
             сід{" "}
             <input
-              type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value))}
+              type="number" value={seed} onChange={(e) => {
+                const nextSeed = e.currentTarget.valueAsNumber;
+                if (Number.isFinite(nextSeed)) setSeed(nextSeed);
+              }}
               style={{ width: 56, background: "transparent", color: "inherit", border: `1px solid ${C.line}`, borderRadius: 6, padding: 4 }}
             />
           </label>

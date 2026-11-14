@@ -1,0 +1,7 @@
+{
+  "design.chose": "Selected {module} for {slot}.",
+  "flight.lowOrbit": "Insufficient delta-v: {haveMs} m/s available, {needMs} m/s required.",
+  "orbit.batteryDead": "Battery depleted: {haveWh} Wh available, {needWh} Wh required in eclipse.",
+  "orbit.insufficientData": "Insufficient data delivered: {deliveredMb} Mb delivered, {requiredMb} Mb required.",
+  "orbit.insufficientResolution": "Insufficient image resolution: {resolutionM} m achieved, {requiredM} m required."
+}
