@@ -39,7 +39,7 @@ describe("buildSpec", () => {
     const summary = summarize(sweepDesigns(m, SAMPLE_CATALOG));
     expect(summary.total).toBe(6561);
     expect(summary.launchable).toBe(4836);
-    expect(summary.wins).toBe(562);
+    expect(summary.wins).toBe(369);
     expect(summary.failsByMargin).toEqual({ dv: 2241, science: 3645, energy: 2187, link: 2187, mass: 936, budget: 792 });
   });
 
@@ -115,10 +115,11 @@ describe("енергія й дані", () => {
     expect(netPowerW(power, { camera: true, transmitter: true, heater: true, safeMode: false }, false)).toBe(-95);
   });
 
-  it("netPowerW: безпечний режим вимикає камеру й передавач, база вдвічі менша, обігрів лишається", () => {
+  it("netPowerW: безпечний режим вимикає камеру й передавач, база зберігається, обігрів дозволений", () => {
     const loads = { camera: true, transmitter: true, heater: false, safeMode: true };
-    expect(netPowerW(power, loads, false)).toBe(-10);
-    expect(netPowerW(power, { ...loads, heater: true }, false)).toBe(-25);
+    expect(netPowerW(power, loads, false)).toBe(-20);
+    expect(netPowerW(power, { ...loads, heater: true }, false)).toBe(-35);
+    expect(netPowerW(power, { ...loads, heater: true }, true)).toBe(140);
   });
 
   it("netPowerW: пошкодження панелей зменшує генерацію", () => {

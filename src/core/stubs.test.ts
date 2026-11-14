@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { causeChains, danglingCauses } from "./debrief";
 import type { Mission } from "./contracts";
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION, runStubGame, stubDesign, stubFlight, stubOrbit } from "./stubs";
+import { stubOrbitPhase } from "./stub-phases";
 import texts from "../data/texts.en.json";
 
 const withModule = (slot: "battery" | "instrument", id: string) => ({
@@ -100,5 +101,40 @@ describe("заглушки: наскрізний прохід", () => {
   it("запис забігу серіалізується в JSON без втрат", () => {
     const run = runStubGame(1);
     expect(JSON.parse(JSON.stringify(run))).toEqual(run);
+  });
+});
+
+
+describe("межі висоти орбітальної заглушки", () => {
+  it("зараховує межі діапазону та пояснює провал поза ними", () => {
+    const design = stubDesign({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG });
+    const flight = stubFlight({ mission: SAMPLE_MISSION, spec: design.result, log: design.log });
+    for (const [altKm, success] of [[200, false], [399.999, false], [400, true], [800, true], [800.001, false]] as const) {
+      const input = { mission: SAMPLE_MISSION, spec: design.result,
+        flight: { ...flight.result, orbit: { ...flight.result.orbit, altKm } }, log: design.log };
+      const initial = stubOrbitPhase.init(input, 42);
+      const before = JSON.stringify(initial);
+      const next = stubOrbitPhase.step(initial, { type: "continue" });
+      expect(JSON.stringify(initial)).toBe(before);
+      expect(stubOrbitPhase.step(initial, { type: "continue" })).toEqual(next);
+      expect(JSON.parse(JSON.stringify(next))).toEqual(next);
+      const output = stubOrbitPhase.finish(next);
+      expect(output.result.success).toBe(success);
+      expect(JSON.parse(JSON.stringify(output))).toEqual(output);
+      if (!success) {
+        expect(output.log).toContainEqual(expect.objectContaining({ id: "orbit:invalid-altitude", causedBy: ["design:engine"] }));
+        expect(danglingCauses([...input.log, ...output.log])).toEqual([]);
+        expect(Object.keys(texts)).toContain("orbit.invalidAltitude");
+      }
+    }
+  });
+
+  it("пов'язує низьку орбіту з реальною відмовою польоту", () => {
+    const run = runStubGame(42, { ...SAMPLE_DESIGN, fuelKg: 0 });
+    const failure = run.log.find((entry) => entry.id === "orbit:invalid-altitude");
+    expect(run.flight.orbit.altKm).toBe(200);
+    expect(run.outcome.success).toBe(false);
+    expect(failure?.causedBy).toEqual(["flight:low-orbit"]);
+    expect(danglingCauses(run.log)).toEqual([]);
   });
 });
