@@ -1,0 +1,92 @@
+{
+  "living-planet": {
+    "titleKey": "scenario.livingPlanet.title",
+    "briefKey": "scenario.livingPlanet.brief",
+    "missionId": "earth-observer",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 1800,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "disaster": {
+    "titleKey": "scenario.disaster.title",
+    "briefKey": "scenario.disaster.brief",
+    "missionId": "disaster-response",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 420,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "ice-watch": {
+    "titleKey": "scenario.iceWatch.title",
+    "briefKey": "scenario.iceWatch.brief",
+    "missionId": "ice-watch",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 4200,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "big-eye": {
+    "titleKey": "scenario.bigEye.title",
+    "briefKey": "scenario.bigEye.brief",
+    "missionId": "big-eye",
+    "campaign": {
+      "rounds": 4,
+      "windowTurns": 5,
+      "programGoal": 260,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "guest": {
+    "titleKey": "scenario.guest.title",
+    "briefKey": "scenario.guest.brief",
+    "missionId": "guest",
+    "campaign": {
+      "rounds": 2,
+      "windowTurns": 5,
+      "programGoal": 1500,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "selene": {
+    "titleKey": "scenario.selene.title",
+    "briefKey": "scenario.selene.brief",
+    "missionId": "selene",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 5500,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  }
+}

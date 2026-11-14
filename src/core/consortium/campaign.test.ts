@@ -197,3 +197,34 @@ describe("кампанія в кімнаті", () => {
     expect(s.consortium.campaign).toBeUndefined();
   });
 });
+
+describe("дослідження", () => {
+  const withPts = (s: PlayState, pts: number): PlayState => ({
+    ...s,
+    consortium: {
+      ...s.consortium,
+      agencies: s.consortium.agencies.map((e) => (e.agency.id === "borealis" ? { ...e, account: { ...e.account!, researchPts: pts } } : e)),
+    },
+  });
+  const me = (s: RoomState) => (s as PlayState).consortium.agencies.find((e) => e.agency.id === "borealis")!;
+
+  it("розвідка відкриває справжні умови без запуску; очки списуються; двічі не купується", () => {
+    const s = withPts(soloRoom(), 20);
+    const next = send(s, "me", { type: "play", action: { type: "research", nodeId: "scouting" } });
+    expect(me(next).account!.knowsConditions).toBe(true);
+    expect(me(next).account!.researchPts).toBe(14);
+    expect(me(next).design.input.mission.passSPerOrbit).toBe((next as PlayState).consortium.campaign!.trueMission.passSPerOrbit);
+    expect(send(next, "me", { type: "play", action: { type: "research", nodeId: "scouting" } })).toBe(next);
+    expect(me(next).actionsLeft).toBe(me(s).actionsLeft); // дослідження не забирає дій ходу
+  });
+
+  it("індустрія росте, без очок нічого не відбувається, невідомий вузол ігнорується", () => {
+    const s = withPts(soloRoom(), 8);
+    const before = me(s).agency.industries.optics;
+    const next = send(s, "me", { type: "play", action: { type: "research", nodeId: "ind-optics" } });
+    expect(me(next).agency.industries.optics).toBeCloseTo(Math.min(1, before + 0.1), 5);
+    expect(send(next, "me", { type: "play", action: { type: "research", nodeId: "test-stand" } })).toBe(next);
+    expect(send(s, "me", { type: "play", action: { type: "research", nodeId: "warp-drive" } })).toBe(s);
+    expect(isRoomAction({ type: "play", action: { type: "research", nodeId: 5 } })).toBe(false);
+  });
+});

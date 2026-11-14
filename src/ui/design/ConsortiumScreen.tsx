@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
-import campaignData from "../../data/campaign.json";
 import {
-  activeAgency, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
-  type CampaignConfig, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
+  activeAgency, campaignRoomSetup, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
 import { MissionRunner } from "../campaign/MissionRunner";
@@ -36,7 +35,7 @@ const button = {
 // Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
 // Онлайн: той самий RoomState приходить із сервера кімнат (online.ts), а дії йдуть на сервер.
 // Основний режим — кампанія з кількох вікон запуску (docs/EXPANSION.md); сервер кімнат грає з тими самими налаштуваннями.
-const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES, campaign: campaignData as CampaignConfig };
+const ROOM_SETUP: RoomSetup = campaignRoomSetup(MARKET, AGENCIES);
 const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
 // Соло: одна людина й три боти-конкуренти. Країну гравець обирає в лобі.
 const newSoloRoom = (): RoomState => {

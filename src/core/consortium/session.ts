@@ -10,7 +10,7 @@
 //
 // Стан: звичайні JSON-дані, step чиста. Рандому тут нема.
 
-import type { CauseEntry, DesignInput, Mission, SpacecraftSpec } from '../contracts';
+import type { CauseEntry, Design, DesignInput, Mission, SpacecraftSpec } from '../contracts';
 import { applyAgency, type AgencyProfile } from '../design/agency';
 import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
@@ -20,6 +20,7 @@ import {
 import { applyDamage } from './damage';
 import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder, type DevProject } from './develop';
 import { applyMarket, checkMarket, type Market } from './market';
+import { applyResearch, RESEARCH } from './research';
 import { runValueMUsd, settleRewards, type AgencyRun, type Settlement } from './reward';
 
 // Скільки різних елементів керування (слот, пальне, висота, носій) агенція може чіпати за хід.
@@ -40,6 +41,8 @@ export interface Account {
   programPts: number;        // внесок у наукову програму за всі вікна
   knowsConditions: boolean;  // після першого запуску агенція знає справжні умови місії
   missedInRow: number;       // скільки вікон поспіль без запуску
+  unlocked: string[];        // відкриті вузли досліджень
+  lastDesign?: Design;       // проєкт останнього запуску (для серії)
 }
 
 export interface AgencyEntry {
@@ -95,7 +98,8 @@ export type ConsortiumAction =
   | { type: 'design'; action: DesignAction }
   | { type: 'develop'; order: DevOrder }
   | { type: 'launch' }
-  | { type: 'wait' };
+  | { type: 'wait' }
+  | { type: 'research'; nodeId: string };
 
 export interface ConsortiumOptions {
   campaign?: CampaignConfig;
@@ -131,7 +135,7 @@ function entryInput(
 ): DesignInput {
   if (!state.campaign || !account) return inputFor(state.base, state.market, agency, turn, projects);
   const mission = knownMission(state, { account });
-  const input = applyAgency(applyMarket({ mission, catalog: state.base.catalog }, state.market, turn), agency);
+  const input = applyAgency(applyMarket({ mission, catalog: state.base.catalog }, state.market, turn + (agency.marketLeadTurns ?? 0)), agency);
   const ready = projects.filter((p) => isReady(p, turn)).map((p) => p.module);
   return {
     mission: { ...input.mission, budgetMUsd: money(account.fundsMUsd) },
@@ -153,7 +157,7 @@ export function newConsortium(
   const head = { base, market, ...(campaign ? { campaign } : {}) };
   const entries: AgencyEntry[] = agencies.map((agency) => {
     const account: Account | undefined = campaign
-      ? { fundsMUsd: money(base.mission.budgetMUsd * agency.budgetFactor), researchPts: 0, programPts: 0, knowsConditions: false, missedInRow: 0 }
+      ? { fundsMUsd: money(base.mission.budgetMUsd * agency.budgetFactor), researchPts: 0, programPts: 0, knowsConditions: false, missedInRow: 0, unlocked: [] }
       : undefined;
     return {
       agency,
@@ -284,6 +288,8 @@ function closeRound(state: ConsortiumState): ConsortiumState {
       programPts: money(account.programPts + valuePts),
       knowsConditions: account.knowsConditions || launched,
       missedInRow,
+      unlocked: account.unlocked,
+      ...(e.launch ? { lastDesign: e.launch.spec.design } : account.lastDesign ? { lastDesign: account.lastDesign } : {}),
     };
     return { ...e, account: next };
   });
@@ -410,13 +416,42 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       if (launchBlockers(entry.design).length > 0) return state;
       const frozen = designPhase.step(entry.design, { type: 'confirm' });
       const { result, log } = designPhase.finish(frozen);
+      // Серія: повторний запуск того самого проєкту дешевший (частина ціни повертається).
+      const series = entry.account?.unlocked.includes('series') && sameDesign(entry.account.lastDesign, result.design);
+      const refund = series ? result.costMUsd * seriesRefund() : 0;
       const account = entry.account
-        ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - result.costMUsd) }
+        ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - result.costMUsd + refund) }
         : undefined;
       const launched: AgencyEntry = { ...entry, design: frozen, launch: { turn: state.turn, spec: result, log }, ...(account ? { account } : {}) };
       return endAgencyTurn(replaceAt(state, state.active, launched));
     }
     case 'wait':
       return endAgencyTurn(state);
+    case 'research': {
+      // Дослідження не забирає дій ходу: лише очки.
+      const node = RESEARCH[action.nodeId];
+      const account = entry.account;
+      if (!node || !account || account.unlocked.includes(node.id) || account.researchPts < node.costPts) return state;
+      const agency = applyResearch(entry.agency, node);
+      const next: Account = {
+        ...account,
+        researchPts: account.researchPts - node.costPts,
+        unlocked: [...account.unlocked, node.id],
+        knowsConditions: account.knowsConditions || node.effect.kind === 'scout',
+      };
+      return replaceAt(state, state.active, {
+        ...entry, agency, account: next,
+        design: { ...entry.design, input: entryInput(state, agency, state.turn, entry.projects, next) },
+      });
+    }
   }
+}
+
+function sameDesign(a: Design | undefined, b: Design): boolean {
+  return a !== undefined && JSON.stringify(a.modules) === JSON.stringify(b.modules) && a.launcherId === b.launcherId;
+}
+
+function seriesRefund(): number {
+  const e = RESEARCH.series?.effect;
+  return e && e.kind === 'series' ? e.refund : 0;
 }

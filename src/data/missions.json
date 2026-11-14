@@ -39,5 +39,210 @@
         "costMUsd": 30
       }
     ]
+  },
+  "disaster-response": {
+    "id": "disaster-response",
+    "titleKey": "mission.disasterResponse.title",
+    "briefKey": "mission.disasterResponse.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 50,
+    "dvRequiredMs": 250,
+    "altRangeKm": [
+      350,
+      500
+    ],
+    "requiredResolutionM": 1.5,
+    "requiredDataMb": 6000,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "ice-watch": {
+    "id": "ice-watch",
+    "titleKey": "mission.iceWatch.title",
+    "briefKey": "mission.iceWatch.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 70,
+    "dvRequiredMs": 400,
+    "altRangeKm": [
+      600,
+      900
+    ],
+    "requiredResolutionM": 4,
+    "requiredDataMb": 18000,
+    "durationOrbits": 16,
+    "imagingSPerOrbit": 400,
+    "passSPerOrbit": 420,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "big-eye": {
+    "id": "big-eye",
+    "titleKey": "mission.bigEye.title",
+    "briefKey": "mission.bigEye.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 90,
+    "dvRequiredMs": 300,
+    "altRangeKm": [
+      550,
+      600
+    ],
+    "requiredResolutionM": 0.8,
+    "requiredDataMb": 8000,
+    "durationOrbits": 10,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "guest": {
+    "id": "guest",
+    "titleKey": "mission.guest.title",
+    "briefKey": "mission.guest.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 75,
+    "dvRequiredMs": 350,
+    "altRangeKm": [
+      500,
+      700
+    ],
+    "requiredResolutionM": 3,
+    "requiredDataMb": 30000,
+    "durationOrbits": 8,
+    "imagingSPerOrbit": 600,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "selene": {
+    "id": "selene",
+    "titleKey": "mission.selene.title",
+    "briefKey": "mission.selene.brief",
+    "body": {
+      "name": "Moon",
+      "radiusKm": 1737,
+      "muKm3S2": 4902.8
+    },
+    "budgetMUsd": 80,
+    "dvRequiredMs": 900,
+    "altRangeKm": [
+      50,
+      200
+    ],
+    "requiredResolutionM": 2,
+    "requiredDataMb": 8000,
+    "durationOrbits": 10,
+    "imagingSPerOrbit": 600,
+    "passSPerOrbit": 200,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
   }
 }
