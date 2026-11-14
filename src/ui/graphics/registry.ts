@@ -2,10 +2,11 @@
 // Усі дані темплейтів і точок кріплення зберігаються в src/data/visual-templates.json.
 // Шляхи до ассетів автоматично враховують import.meta.env.BASE_URL (працює на / і /experimental/).
 
-import type { SlotId } from '../../core/contracts';
+import type { SlotId, SystemId } from '../../core/contracts';
 import rawManifest from '../../data/visual-templates.json';
 import type {
   AttachmentSocket,
+  BlueprintShapeId,
   ITemplateRegistry,
   SpacecraftVisualAssembly,
   ViewportContext,
@@ -42,6 +43,30 @@ function normalizeTemplateUrls(t: VisualTemplate): VisualTemplate {
 export const SATELLITE_SOCKETS = rawManifest.sockets as unknown as Record<SlotId, AttachmentSocket>;
 
 const SLOT_FALLBACK_IDS = rawManifest.slotFallbackIds as Record<SlotId, string>;
+
+const SLOT_DEFAULT_SHAPES: Record<SlotId, { shape: BlueprintShapeId; system: SystemId; color: string }> = {
+  engine: { shape: 'engine-chem', system: 'propulsion', color: '#f97316' },
+  solar: { shape: 'solar-medium', system: 'power', color: '#60a5fa' },
+  battery: { shape: 'battery-medium', system: 'power', color: '#34d399' },
+  antenna: { shape: 'antenna-patch', system: 'comms', color: '#fb923c' },
+  instrument: { shape: 'camera-medium', system: 'science', color: '#c084fc' },
+};
+
+const BUS_FALLBACK: VisualTemplate = {
+  id: 'bus:standard',
+  category: 'spacecraft',
+  system: 'structure',
+  displayName: 'CubeSat / SmallSat Bus',
+  packName: 'Fallback',
+  blueprint: {
+    shape: 'satellite-bus',
+    primaryColor: '#2d3748',
+    secondaryColor: '#4a5568',
+    accentColor: '#eab308',
+    scaleFactor: 1.0,
+    label: 'BUS',
+  },
+};
 
 export const DEFAULT_TEMPLATES: readonly VisualTemplate[] = (
   rawManifest.templates as unknown as readonly VisualTemplate[]
@@ -88,27 +113,73 @@ export class TemplateRegistry implements ITemplateRegistry {
     if (exact) return exact;
     const fallbackId = SLOT_FALLBACK_IDS[slot];
     const fallback = this.byId.get(fallbackId);
-    if (!fallback) {
-      throw new Error(`Missing fallback template for slot: ${slot}`);
+    if (fallback) {
+      return {
+        ...fallback,
+        id: moduleId,
+        displayName: `${moduleId} (${slot})`,
+        blueprint: { ...fallback.blueprint, label: moduleId.toUpperCase() },
+      };
     }
+    const slotDefault = SLOT_DEFAULT_SHAPES[slot];
     return {
-      ...fallback,
       id: moduleId,
+      category: 'module',
+      slot,
+      system: slotDefault.system,
       displayName: `${moduleId} (${slot})`,
-      blueprint: { ...fallback.blueprint, label: moduleId.toUpperCase() },
+      packName: 'Fallback',
+      blueprint: {
+        shape: slotDefault.shape,
+        primaryColor: '#1e293b',
+        secondaryColor: '#475569',
+        accentColor: slotDefault.color,
+        scaleFactor: 1.0,
+        label: moduleId.toUpperCase(),
+      },
     };
   }
 
   getLauncherTemplate(launcherId: string): VisualTemplate {
-    return this.byId.get(launcherId) ?? this.byId.get('medium')!;
+    const exact = this.byId.get(launcherId) ?? this.byId.get('medium');
+    if (exact) return exact;
+    return {
+      id: launcherId,
+      category: 'launcher',
+      displayName: launcherId,
+      packName: 'Fallback',
+      blueprint: {
+        shape: 'launcher-medium',
+        primaryColor: '#1e293b',
+        secondaryColor: '#f8fafc',
+        accentColor: '#f97316',
+        scaleFactor: 1.0,
+        label: launcherId.toUpperCase(),
+      },
+    };
   }
 
   getBodyTemplate(bodyName: string): VisualTemplate {
-    return this.byId.get(bodyName) ?? this.byId.get('Earth')!;
+    const exact = this.byId.get(bodyName) ?? this.byId.get('Earth');
+    if (exact) return exact;
+    return {
+      id: bodyName,
+      category: 'body',
+      displayName: bodyName,
+      packName: 'Fallback',
+      blueprint: {
+        shape: 'body-earth',
+        primaryColor: '#0284c7',
+        secondaryColor: '#15803d',
+        accentColor: '#7dd3fc',
+        scaleFactor: 1.0,
+        label: bodyName.toUpperCase(),
+      },
+    };
   }
 
   getBusTemplate(): VisualTemplate {
-    return this.byId.get('bus:standard')!;
+    return this.byId.get('bus:standard') ?? BUS_FALLBACK;
   }
 
   buildAssembly(ctx: ViewportContext): SpacecraftVisualAssembly {

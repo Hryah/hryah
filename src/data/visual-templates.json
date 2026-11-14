@@ -3,37 +3,37 @@
     "solar": {
       "slot": "solar",
       "label": "solar",
-      "pos2d": { "x": 180, "y": 125 },
+      "pos2d": { "x": 245, "y": 128 },
       "pos3d": { "x": 0, "y": 0, "z": 0 },
       "layerOrder": 1
     },
     "engine": {
       "slot": "engine",
       "label": "engine",
-      "pos2d": { "x": 180, "y": 192 },
+      "pos2d": { "x": 245, "y": 170 },
       "pos3d": { "x": 0, "y": -1.1, "z": 0 },
       "layerOrder": 2
     },
     "battery": {
       "slot": "battery",
       "label": "battery",
-      "pos2d": { "x": 180, "y": 132 },
+      "pos2d": { "x": 245, "y": 122 },
       "pos3d": { "x": 0, "y": 0.1, "z": 0.35 },
       "layerOrder": 3
     },
     "instrument": {
       "slot": "instrument",
       "label": "instrument",
-      "pos2d": { "x": 180, "y": 72 },
+      "pos2d": { "x": 245, "y": 86 },
       "pos3d": { "x": 0, "y": 0.95, "z": 0 },
       "layerOrder": 4
     },
     "antenna": {
       "slot": "antenna",
       "label": "antenna",
-      "pos2d": { "x": 234, "y": 88 },
+      "pos2d": { "x": 281, "y": 100 },
       "pos3d": { "x": 0.75, "y": 0.65, "z": 0 },
-      "rotationDeg": -25,
+      "rotationDeg": -10,
       "layerOrder": 5
     }
   },
@@ -72,9 +72,7 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Cold Gas Thruster",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/engine_cold.glb", "format": "glb", "scale": 0.8 },
-      "sprite2d": { "url": "assets/sprites/modules/engine_cold.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "engine-cold",
         "primaryColor": "#64748b",
@@ -90,9 +88,7 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Hydrazine Chemical Thruster",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/engine_chem.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/modules/engine_chem.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "engine-chem",
         "primaryColor": "#475569",
@@ -108,9 +104,7 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Hall-Effect Ion Drive",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/engine_ion.glb", "format": "glb", "scale": 1.15 },
-      "sprite2d": { "url": "assets/sprites/modules/engine_ion.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "engine-ion",
         "primaryColor": "#1e293b",
@@ -126,9 +120,7 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Small Solar Wings",
-      "packName": "NASA / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/solar_small.glb", "format": "glb", "scale": 0.8 },
-      "sprite2d": { "url": "assets/sprites/modules/solar_small.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "solar-small",
         "primaryColor": "#1e3a8a",
@@ -144,9 +136,8 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Medium Dual Solar Array",
-      "packName": "NASA / Kenney Space Station Kit",
+      "packName": "NASA 3D / Kenney Space Station Kit",
       "model3d": { "url": "assets/models/modules/solar_medium.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/modules/solar_medium.png" },
       "blueprint": {
         "shape": "solar-medium",
         "primaryColor": "#1d4ed8",
@@ -162,9 +153,7 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Large Quad Solar Array",
-      "packName": "NASA / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/solar_large.glb", "format": "glb", "scale": 1.35 },
-      "sprite2d": { "url": "assets/sprites/modules/solar_large.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "solar-large",
         "primaryColor": "#1e40af",
@@ -180,9 +169,7 @@
       "slot": "battery",
       "system": "power",
       "displayName": "Compact Li-Ion Pack",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/battery_small.glb", "format": "glb", "scale": 0.8 },
-      "sprite2d": { "url": "assets/sprites/modules/battery_small.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "battery-small",
         "primaryColor": "#065f46",
@@ -198,9 +185,7 @@
       "slot": "battery",
       "system": "power",
       "displayName": "Dual Li-Ion Battery Bank",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/battery_medium.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/modules/battery_medium.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "battery-medium",
         "primaryColor": "#047857",
@@ -216,9 +201,7 @@
       "slot": "battery",
       "system": "power",
       "displayName": "High-Capacity Deep-Eclipse Battery",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/battery_large.glb", "format": "glb", "scale": 1.2 },
-      "sprite2d": { "url": "assets/sprites/modules/battery_large.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "battery-large",
         "primaryColor": "#064e3b",
@@ -234,9 +217,7 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "Omni Whip Antenna",
-      "packName": "NASA / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/antenna_small.glb", "format": "glb", "scale": 0.85 },
-      "sprite2d": { "url": "assets/sprites/modules/antenna_small.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "antenna-whip",
         "primaryColor": "#7c2d12",
@@ -252,9 +233,8 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "X-Band Patch Array",
-      "packName": "NASA / Kenney Space Station Kit",
+      "packName": "NASA 3D / Kenney Space Station Kit",
       "model3d": { "url": "assets/models/modules/antenna_medium.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/modules/antenna_medium.png" },
       "blueprint": {
         "shape": "antenna-patch",
         "primaryColor": "#9a3412",
@@ -270,9 +250,7 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "Ka-Band High-Gain Parabolic Dish",
-      "packName": "NASA / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/antenna_large.glb", "format": "glb", "scale": 1.25 },
-      "sprite2d": { "url": "assets/sprites/modules/antenna_large.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "antenna-dish",
         "primaryColor": "#c2410c",
@@ -288,9 +266,7 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "Compact Wide-Field Imager",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/camera_small.glb", "format": "glb", "scale": 0.85 },
-      "sprite2d": { "url": "assets/sprites/modules/camera_small.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "camera-compact",
         "primaryColor": "#581c87",
@@ -306,9 +282,7 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "Multispectral Pushbroom Scanner",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/modules/camera_medium.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/modules/camera_medium.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "camera-medium",
         "primaryColor": "#6b21a8",
@@ -324,9 +298,7 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "High-Resolution Orbital Telescope",
-      "packName": "NASA 3D Resources",
-      "model3d": { "url": "assets/models/modules/camera_large.glb", "format": "glb", "scale": 1.3 },
-      "sprite2d": { "url": "assets/sprites/modules/camera_large.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "camera-telescope",
         "primaryColor": "#4c1d95",
@@ -340,9 +312,7 @@
       "id": "small",
       "category": "launcher",
       "displayName": "Light Launch Vehicle",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/launchers/launcher_small.glb", "format": "glb", "scale": 0.85 },
-      "sprite2d": { "url": "assets/sprites/launchers/launcher_small.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "launcher-small",
         "primaryColor": "#334155",
@@ -356,9 +326,7 @@
       "id": "medium",
       "category": "launcher",
       "displayName": "Medium Launch Vehicle",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/launchers/launcher_medium.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/launchers/launcher_medium.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "launcher-medium",
         "primaryColor": "#1e293b",
@@ -372,9 +340,7 @@
       "id": "heavy",
       "category": "launcher",
       "displayName": "Heavy Lift Launch Vehicle",
-      "packName": "NASA / Kenney Space Kit",
-      "model3d": { "url": "assets/models/launchers/launcher_heavy.glb", "format": "glb", "scale": 1.2 },
-      "sprite2d": { "url": "assets/sprites/launchers/launcher_heavy.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "launcher-heavy",
         "primaryColor": "#0f172a",
@@ -388,16 +354,7 @@
       "id": "Earth",
       "category": "body",
       "displayName": "Earth (NASA Blue Marble)",
-      "packName": "NASA Visible Earth",
-      "model3d": { "url": "assets/models/bodies/earth.glb", "format": "glb", "scale": 1.0 },
-      "planetTextures": {
-        "dayMapUrl": "assets/textures/bodies/earth_day.jpg",
-        "nightMapUrl": "assets/textures/bodies/earth_lights.png",
-        "cloudsMapUrl": "assets/textures/bodies/earth_clouds.png",
-        "normalMapUrl": "assets/textures/bodies/earth_normal.jpg",
-        "specularMapUrl": "assets/textures/bodies/earth_specular.jpg",
-        "atmosphereColor": "#38bdf8"
-      },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "body-earth",
         "primaryColor": "#0284c7",
@@ -411,12 +368,7 @@
       "id": "Moon",
       "category": "body",
       "displayName": "Moon (NASA LRO)",
-      "packName": "NASA LRO",
-      "model3d": { "url": "assets/models/bodies/moon.glb", "format": "glb", "scale": 1.0 },
-      "planetTextures": {
-        "dayMapUrl": "assets/textures/bodies/moon.jpg",
-        "atmosphereColor": "#94a3b8"
-      },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "body-moon",
         "primaryColor": "#64748b",
@@ -430,9 +382,7 @@
       "id": "char:astronaut",
       "category": "character",
       "displayName": "NASA Astronaut (EVA EMU)",
-      "packName": "NASA 3D Resources",
-      "model3d": { "url": "assets/models/characters/astronaut.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/characters/astronaut.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "character-astronaut",
         "primaryColor": "#e2e8f0",
@@ -446,9 +396,7 @@
       "id": "char:engineer",
       "category": "character",
       "displayName": "Flight Engineer (EVA Suit)",
-      "packName": "NASA 3D Resources",
-      "model3d": { "url": "assets/models/characters/eva_suit.glb", "format": "glb", "scale": 1.0 },
-      "sprite2d": { "url": "assets/sprites/characters/engineer.png" },
+      "packName": "Blueprint / Custom Pack",
       "blueprint": {
         "shape": "character-engineer",
         "primaryColor": "#f97316",

@@ -1,16 +1,15 @@
 // glb-viewer.tsx — Легковаговий парсер і 3D-рендерер бінарних моделей .glb (glTF 2.0) на чистому Canvas.
-// Не потребує зовнішніх бібліотек у package.json (Three.js тощо), працює з будь-якими моделями
-// NASA 3D Resources та Kenney Space Kit із папки public/assets/models/.
+// Підтримує повну ієрархію сцен і вузлів glTF (nodes, children, matrix, translation, rotation, scale).
 
 import { useEffect, useRef, useState } from 'react';
 
-interface Vec3 {
+export interface Vec3 {
   x: number;
   y: number;
   z: number;
 }
 
-interface Triangle {
+export interface Triangle {
   v0: Vec3;
   v1: Vec3;
   v2: Vec3;
@@ -18,10 +17,19 @@ interface Triangle {
   color: [number, number, number];
 }
 
-interface ParsedMesh {
+export interface ParsedMesh {
   triangles: Triangle[];
   vertexCount: number;
   triangleCount: number;
+}
+
+interface GlTFNode {
+  mesh?: number;
+  children?: number[];
+  matrix?: number[];
+  translation?: [number, number, number];
+  rotation?: [number, number, number, number];
+  scale?: [number, number, number];
 }
 
 interface GlTFJson {
@@ -33,14 +41,7 @@ interface GlTFJson {
       mode?: number;
     }>;
   }>;
-  nodes?: Array<{
-    mesh?: number;
-    children?: number[];
-    matrix?: number[];
-    translation?: [number, number, number];
-    rotation?: [number, number, number, number];
-    scale?: [number, number, number];
-  }>;
+  nodes?: GlTFNode[];
   scenes?: Array<{ nodes?: number[] }>;
   scene?: number;
   accessors?: Array<{
@@ -63,9 +64,68 @@ interface GlTFJson {
   }>;
 }
 
+type Mat4 = readonly [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+];
+
+const IDENTITY_MAT4: Mat4 = [
+  1, 0, 0, 0,
+  0, 1, 0, 0,
+  0, 0, 1, 0,
+  0, 0, 0, 1,
+];
+
+/** Множення двох column-major матриць 4x4 (glTF 2.0 стандарт) */
+function multiplyMat4(a: Mat4, b: Mat4): Mat4 {
+  const out = new Array<number>(16).fill(0);
+  for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 4; row++) {
+      let sum = 0;
+      for (let k = 0; k < 4; k++) {
+        sum += a[k * 4 + row]! * b[col * 4 + k]!;
+      }
+      out[col * 4 + row] = sum;
+    }
+  }
+  return out as unknown as Mat4;
+}
+
+/** Побудова локальної column-major матриці 4x4 для вузла glTF (matrix або TRS) */
+function nodeLocalMat4(node: GlTFNode): Mat4 {
+  if (node.matrix && node.matrix.length === 16) {
+    return node.matrix as unknown as Mat4;
+  }
+  const [tx, ty, tz] = node.translation ?? [0, 0, 0];
+  const [qx, qy, qz, qw] = node.rotation ?? [0, 0, 0, 1];
+  const [sx, sy, sz] = node.scale ?? [1, 1, 1];
+
+  const x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
+  const xx = qx * x2, xy = qx * y2, xz = qx * z2;
+  const yy = qy * y2, yz = qy * z2, zz = qz * z2;
+  const wx = qw * x2, wy = qw * y2, wz = qw * z2;
+
+  return [
+    (1 - (yy + zz)) * sx, (xy + wz) * sx, (xz - wy) * sx, 0,
+    (xy - wz) * sy, (1 - (xx + zz)) * sy, (yz + wx) * sy, 0,
+    (xz + wy) * sz, (yz - wx) * sz, (1 - (xx + yy)) * sz, 0,
+    tx, ty, tz, 1,
+  ];
+}
+
+function transformPointMat4(m: Mat4, v: Vec3): Vec3 {
+  return {
+    x: m[0] * v.x + m[4] * v.y + m[8] * v.z + m[12],
+    y: m[1] * v.x + m[5] * v.y + m[9] * v.z + m[13],
+    z: m[2] * v.x + m[6] * v.y + m[10] * v.z + m[14],
+  };
+}
+
 const meshCache = new Map<string, ParsedMesh>();
 
-function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
+export function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
   const view = new DataView(arrayBuffer);
   const magic = view.getUint32(0, true);
   if (magic !== 0x46546c67) {
@@ -94,6 +154,8 @@ function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
     throw new Error('GLB не містить JSON або BIN чанка');
   }
 
+  const meshes = json.meshes ?? [];
+  const nodes = json.nodes ?? [];
   const accessors = json.accessors ?? [];
   const bufferViews = json.bufferViews ?? [];
   const materials = json.materials ?? [];
@@ -141,8 +203,13 @@ function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
 
   const rawTriangles: Triangle[] = [];
   let totalVertices = 0;
+  const visitedMeshes = new Set<number>();
 
-  for (const mesh of json.meshes ?? []) {
+  function emitMesh(meshIdx: number, worldMat: Mat4): void {
+    const mesh = meshes[meshIdx];
+    if (!mesh) return;
+    visitedMeshes.add(meshIdx);
+
     for (const prim of mesh.primitives) {
       if (prim.mode !== undefined && prim.mode !== 4) continue;
       const posIdx = prim.attributes['POSITION'];
@@ -164,10 +231,14 @@ function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
           : positions.map((_, idx) => idx);
 
       for (let i = 0; i + 2 < indices.length; i += 3) {
-        const v0 = positions[indices[i]!];
-        const v1 = positions[indices[i + 1]!];
-        const v2 = positions[indices[i + 2]!];
-        if (!v0 || !v1 || !v2) continue;
+        const raw0 = positions[indices[i]!];
+        const raw1 = positions[indices[i + 1]!];
+        const raw2 = positions[indices[i + 2]!];
+        if (!raw0 || !raw1 || !raw2) continue;
+
+        const v0 = transformPointMat4(worldMat, raw0);
+        const v1 = transformPointMat4(worldMat, raw1);
+        const v2 = transformPointMat4(worldMat, raw2);
 
         const ux = v1.x - v0.x;
         const uy = v1.y - v0.y;
@@ -188,6 +259,49 @@ function parseGlbBuffer(arrayBuffer: ArrayBuffer): ParsedMesh {
           color: rgb,
         });
       }
+    }
+  }
+
+  // Обхід графа сцени glTF (scenes -> nodes -> children) із накопиченням матриць трансформацій
+  const visitedNodes = new Set<number>();
+  function traverseNode(nodeIdx: number, parentMat: Mat4): void {
+    if (visitedNodes.has(nodeIdx)) return;
+    const node = nodes[nodeIdx];
+    if (!node) return;
+    visitedNodes.add(nodeIdx);
+
+    const worldMat = multiplyMat4(parentMat, nodeLocalMat4(node));
+    if (node.mesh !== undefined) {
+      emitMesh(node.mesh, worldMat);
+    }
+    for (const childIdx of node.children ?? []) {
+      traverseNode(childIdx, worldMat);
+    }
+  }
+
+  if (nodes.length > 0) {
+    const activeScene = json.scenes?.[json.scene ?? 0];
+    if (activeScene?.nodes && activeScene.nodes.length > 0) {
+      for (const rootIdx of activeScene.nodes) {
+        traverseNode(rootIdx, IDENTITY_MAT4);
+      }
+    }
+    // Вузли, які не увійшли до коренів activeScene
+    const childSet = new Set<number>();
+    for (const n of nodes) {
+      for (const c of n.children ?? []) childSet.add(c);
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      if (!visitedNodes.has(i) && !childSet.has(i)) {
+        traverseNode(i, IDENTITY_MAT4);
+      }
+    }
+  }
+
+  // Якщо в GLB є меші, не прив'язані до жодного вузла
+  for (let mIdx = 0; mIdx < meshes.length; mIdx++) {
+    if (!visitedMeshes.has(mIdx)) {
+      emitMesh(mIdx, IDENTITY_MAT4);
     }
   }
 
@@ -250,13 +364,21 @@ export function GlbModelCanvas({
   onFallback,
 }: GlbCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [meshInfo, setMeshInfo] = useState<{ tris: number; verts: number } | null>(null);
+  const onFallbackRef = useRef(onFallback);
+  onFallbackRef.current = onFallback;
+
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(() =>
+    meshCache.has(url) ? 'ready' : 'loading',
+  );
+  const [meshInfo, setMeshInfo] = useState<{ tris: number; verts: number } | null>(() => {
+    const cached = meshCache.get(url);
+    return cached ? { tris: cached.triangleCount, verts: cached.vertexCount } : null;
+  });
   const rotRef = useRef({ yaw: 0.6, pitch: 0.35, dragging: false, lastX: 0, lastY: 0 });
 
+  // Завантаження залежить лише від [url]; ре-рендер батька не перезапускає завантаження і цикл анімації
   useEffect(() => {
     let cancelled = false;
-    setStatus('loading');
 
     const cached = meshCache.get(url);
     if (cached) {
@@ -265,9 +387,13 @@ export function GlbModelCanvas({
       return;
     }
 
+    setStatus('loading');
     fetch(url)
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') ?? '';
+        if (!res.ok || contentType.includes('text/html')) {
+          throw new Error(`Invalid GLB response (${res.status})`);
+        }
         return res.arrayBuffer();
       })
       .then((buf) => {
@@ -280,13 +406,13 @@ export function GlbModelCanvas({
       .catch(() => {
         if (cancelled) return;
         setStatus('error');
-        onFallback?.();
+        onFallbackRef.current?.();
       });
 
     return () => {
       cancelled = true;
     };
-  }, [url, onFallback]);
+  }, [url]);
 
   useEffect(() => {
     if (status !== 'ready') return;

@@ -31,5 +31,5 @@ export {
   TemplateUnitView,
 } from './adapters';
 
-export { GlbModelCanvas } from './glb-viewer';
+export { GlbModelCanvas, parseGlbBuffer } from './glb-viewer';
 export { SpacecraftViewport } from './SpacecraftViewport';

@@ -4,7 +4,7 @@
 // 3. 'blueprint' — векторні інженерні схеми NASA-стилю (працюють без зовнішніх файлів)
 // 4. 'auto'      — автоматичний вибір доступного представлення з плавним фолбеком
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { SlotId } from '../../core/contracts';
 import { GlbModelCanvas } from './glb-viewer';
 import { templateRegistry } from './registry';
@@ -190,17 +190,11 @@ export function BlueprintShapeSvg({ spec, size = 72, damaged = false }: Blueprin
       {/* Персонажі / Астронавти */}
       {(shape === 'character-astronaut' || shape === 'character-engineer') && (
         <g>
-          {/* Ранець життєзабезпечення PLSS */}
           <rect x="30" y="34" width="40" height="36" rx="4" fill={secondaryColor} stroke={stroke} strokeWidth="1.5" />
-          {/* Шолом скафандра */}
           <circle cx="50" cy="26" r="15" fill={primaryColor} stroke={stroke} strokeWidth="2" />
-          {/* Золотий візор */}
           <ellipse cx="50" cy="26" rx="10" ry="7" fill={accentColor} />
-          {/* Торс скафандра */}
           <rect x="35" y="40" width="30" height="30" rx="6" fill={primaryColor} stroke={stroke} strokeWidth="2" />
-          {/* Пульт на грудях */}
           <rect x="42" y="47" width="16" height="10" rx="2" fill={secondaryColor} stroke={accentColor} strokeWidth="1.2" />
-          {/* Руки й ноги */}
           <rect x="23" y="42" width="10" height="24" rx="5" fill={primaryColor} stroke={stroke} strokeWidth="1.5" />
           <rect x="67" y="42" width="10" height="24" rx="5" fill={primaryColor} stroke={stroke} strokeWidth="1.5" />
           <rect x="37" y="70" width="11" height="20" rx="4" fill={primaryColor} stroke={stroke} strokeWidth="1.5" />
@@ -242,55 +236,65 @@ export function TemplateUnitView({
   const [glbFailed, setGlbFailed] = useState(false);
   const [spriteFailed, setSpriteFailed] = useState(false);
 
-  const canTry3D = (mode === 'auto' || mode === '3d') && !!template.model3d && !glbFailed;
+  const modelUrl = template.model3d?.url;
+  const imgUrl = template.planetTextures?.dayMapUrl ?? template.sprite2d?.url;
+
+  // Скидаємо стан фолбеку при зміні темплейту, URL асетів або режиму відображення
+  useEffect(() => {
+    setGlbFailed(false);
+    setSpriteFailed(false);
+  }, [template.id, modelUrl, imgUrl, mode]);
+
+  const handleGlbFallback = useCallback(() => {
+    setGlbFailed(true);
+  }, []);
+
+  const canTry3D = (mode === 'auto' || mode === '3d') && !!modelUrl && !glbFailed;
   const canTrySprite =
     (mode === 'sprite' || (mode === 'auto' && !canTry3D)) &&
-    (!!template.sprite2d || !!template.planetTextures) &&
+    !!imgUrl &&
     !spriteFailed;
 
-  if (canTry3D && template.model3d) {
+  if (canTry3D && modelUrl) {
     return (
       <GlbModelCanvas
-        url={template.model3d.url}
+        url={modelUrl}
         width={width}
         height={height}
         accentColor={damaged ? '#ff5c7a' : template.blueprint.accentColor}
-        onFallback={() => setGlbFailed(true)}
+        onFallback={handleGlbFallback}
       />
     );
   }
 
-  if (canTrySprite) {
-    const imgUrl = template.planetTextures?.dayMapUrl ?? template.sprite2d?.url;
-    if (imgUrl) {
-      return (
-        <div
+  if (canTrySprite && imgUrl) {
+    return (
+      <div
+        style={{
+          width,
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#090c15',
+          borderRadius: 8,
+          overflow: 'hidden',
+          border: `1px solid ${template.blueprint.accentColor}33`,
+        }}
+      >
+        <img
+          src={imgUrl}
+          alt={template.displayName}
+          onError={() => setSpriteFailed(true)}
           style={{
-            width,
-            height,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#090c15',
-            borderRadius: 8,
-            overflow: 'hidden',
-            border: `1px solid ${template.blueprint.accentColor}33`,
+            maxWidth: '90%',
+            maxHeight: '90%',
+            objectFit: 'contain',
+            borderRadius: template.category === 'body' ? '50%' : 4,
           }}
-        >
-          <img
-            src={imgUrl}
-            alt={template.displayName}
-            onError={() => setSpriteFailed(true)}
-            style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
-              objectFit: 'contain',
-              borderRadius: template.category === 'body' ? '50%' : 4,
-            }}
-          />
-        </div>
-      );
-    }
+        />
+      </div>
+    );
   }
 
   return (
@@ -339,8 +343,8 @@ export interface CompositeSpacecraftSvgProps {
 
 /**
  * Композитний візуалізатор зібраного космічного апарата:
- * Динамічно монтує всі 5 обраних гравцем модулів на точки кріплення супутника
- * та показує ракету-носій поруч.
+ * Динамічно монтує всі 5 обраних гравцем модулів на точки кріплення (socket.pos2d, socket.layerOrder)
+ * із маніфесту visual-templates.json та показує ракету-носій поруч.
  */
 export function CompositeSpacecraftSvg({
   assembly,
@@ -349,18 +353,162 @@ export function CompositeSpacecraftSvg({
   selectedSlot,
   onSelectSlot,
 }: CompositeSpacecraftSvgProps) {
-  const { attachedModules, launcherTemplate, bodyTemplate } = assembly;
-  const solar = attachedModules.solar;
-  const engine = attachedModules.engine;
-  const battery = attachedModules.battery;
-  const instrument = attachedModules.instrument;
-  const antenna = attachedModules.antenna;
+  const { attachedModules, launcherTemplate, bodyTemplate, busTemplate } = assembly;
+  const busCenter = attachedModules.solar.socket.pos2d;
 
-  const wingSpan = Math.round(62 * solar.template.blueprint.scaleFactor);
-  const wingHeight = Math.round(28 * solar.template.blueprint.scaleFactor);
-  const dishScale = antenna.template.blueprint.scaleFactor;
-  const camScale = instrument.template.blueprint.scaleFactor;
-  const engScale = engine.template.blueprint.scaleFactor;
+  // Сортуємо слоти за порядком шарів (socket.layerOrder) із visual-templates.json
+  const sortedSlots = (Object.keys(attachedModules) as SlotId[]).sort(
+    (a, b) => attachedModules[a].socket.layerOrder - attachedModules[b].socket.layerOrder,
+  );
+
+  const renderSlotModule = (slot: SlotId) => {
+    const mod = attachedModules[slot];
+    const { pos2d, rotationDeg } = mod.socket;
+    const { blueprint } = mod.template;
+    const isSelected = selectedSlot === slot;
+    const strokeColor = mod.damageSeverity > 0 ? '#ff5c7a' : isSelected ? '#ffffff' : blueprint.accentColor;
+    const transform = `translate(${pos2d.x}, ${pos2d.y})${rotationDeg ? ` rotate(${rotationDeg})` : ''}`;
+
+    if (slot === 'solar') {
+      const wingSpan = Math.round(62 * blueprint.scaleFactor);
+      const wingHeight = Math.round(28 * blueprint.scaleFactor);
+      return (
+        <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+          <rect
+            x={-36 - wingSpan}
+            y={-wingHeight / 2}
+            width={wingSpan}
+            height={wingHeight}
+            rx="3"
+            fill={blueprint.primaryColor}
+            stroke={strokeColor}
+            strokeWidth={isSelected ? 2.5 : 1.5}
+          />
+          <rect
+            x={36}
+            y={-wingHeight / 2}
+            width={wingSpan}
+            height={wingHeight}
+            rx="3"
+            fill={blueprint.primaryColor}
+            stroke={strokeColor}
+            strokeWidth={isSelected ? 2.5 : 1.5}
+          />
+          <line
+            x1={-36 - wingSpan / 2}
+            y1={-wingHeight / 2}
+            x2={-36 - wingSpan / 2}
+            y2={wingHeight / 2}
+            stroke={blueprint.accentColor}
+            strokeWidth="1"
+          />
+          <line
+            x1={36 + wingSpan / 2}
+            y1={-wingHeight / 2}
+            x2={36 + wingSpan / 2}
+            y2={wingHeight / 2}
+            stroke={blueprint.accentColor}
+            strokeWidth="1"
+          />
+          <text x={36 + wingSpan / 2} y={-wingHeight / 2 - 6} textAnchor="middle" fill="#93c5fd" fontSize="9" fontFamily="monospace">
+            {blueprint.label}
+          </text>
+        </g>
+      );
+    }
+
+    if (slot === 'engine') {
+      return (
+        <g
+          key={slot}
+          transform={`${transform} scale(${blueprint.scaleFactor})`}
+          onClick={() => onSelectSlot?.(slot)}
+          style={{ cursor: 'pointer' }}
+        >
+          <polygon
+            points="-14,0 14,0 22,26 -22,26"
+            fill={blueprint.secondaryColor}
+            stroke={strokeColor}
+            strokeWidth="2"
+          />
+          <ellipse cx="0" cy="34" rx="14" ry="8" fill={blueprint.accentColor} opacity="0.6" />
+          <text x="0" y="50" textAnchor="middle" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
+            {blueprint.label}
+          </text>
+        </g>
+      );
+    }
+
+    if (slot === 'battery') {
+      return (
+        <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+          <rect
+            x="-26"
+            y="-12"
+            width="52"
+            height="24"
+            rx="4"
+            fill={blueprint.primaryColor}
+            stroke={strokeColor}
+            strokeWidth={isSelected ? 2.5 : 1.5}
+          />
+          <text x="0" y="3" textAnchor="middle" fill="#a7f3d0" fontSize="9" fontFamily="monospace">
+            {blueprint.label}
+          </text>
+        </g>
+      );
+    }
+
+    if (slot === 'instrument') {
+      return (
+        <g
+          key={slot}
+          transform={`${transform} scale(${blueprint.scaleFactor})`}
+          onClick={() => onSelectSlot?.(slot)}
+          style={{ cursor: 'pointer' }}
+        >
+          <rect
+            x="-18"
+            y="-28"
+            width="36"
+            height="28"
+            rx="4"
+            fill={blueprint.primaryColor}
+            stroke={strokeColor}
+            strokeWidth="2"
+          />
+          <circle cx="0" cy="-14" r="9" fill="#090d16" stroke={blueprint.accentColor} strokeWidth="2" />
+          <text x="0" y="-34" textAnchor="middle" fill="#e9d5ff" fontSize="9" fontFamily="monospace">
+            {blueprint.label}
+          </text>
+        </g>
+      );
+    }
+
+    return (
+      <g
+        key={slot}
+        transform={`${transform} scale(${blueprint.scaleFactor})`}
+        onClick={() => onSelectSlot?.(slot)}
+        style={{ cursor: 'pointer' }}
+      >
+        <line x1="0" y1="0" x2="22" y2="-18" stroke="#94a3b8" strokeWidth="2.5" />
+        <path
+          d="M12,-30 Q26,-10 36,-24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="3"
+        />
+        <circle cx="28" cy="-26" r="3.5" fill={blueprint.accentColor} />
+        <text x="40" y="-22" fill="#fdba74" fontSize="9" fontFamily="monospace">
+          {blueprint.label}
+        </text>
+      </g>
+    );
+  };
+
+  const backSlots = sortedSlots.filter((s) => attachedModules[s].socket.layerOrder <= 1);
+  const frontSlots = sortedSlots.filter((s) => attachedModules[s].socket.layerOrder > 1);
 
   return (
     <svg
@@ -426,14 +574,12 @@ export function CompositeSpacecraftSvg({
           НОСІЙ: {launcherTemplate.id.toUpperCase()}
         </text>
         <g transform={`scale(${launcherTemplate.blueprint.scaleFactor * 0.9})`}>
-          {/* Обтічник */}
           <polygon
             points="0,-82 18,-48 -18,-48"
             fill={launcherTemplate.blueprint.accentColor}
             stroke="#e2e8f0"
             strokeWidth="1.5"
           />
-          {/* Перший/другий ступінь */}
           <rect
             x="-18"
             y="-48"
@@ -444,7 +590,6 @@ export function CompositeSpacecraftSvg({
             stroke={launcherTemplate.blueprint.primaryColor}
             strokeWidth="2"
           />
-          {/* Бокові прискорювачі для heavy/medium */}
           {launcherTemplate.id !== 'small' && (
             <>
               <rect
@@ -469,72 +614,25 @@ export function CompositeSpacecraftSvg({
               />
             </>
           )}
-          {/* Сопло ракети */}
           <polygon points="-14,48 14,48 20,62 -20,62" fill="#475569" />
         </g>
       </g>
 
-      {/* Центральна зона: Зібраний супутник у точках кріплення (Sockets) */}
-      <g transform="translate(245, 128)">
-        {/* 1. Сонячні крила (ліве і праве) */}
-        <g
-          onClick={() => onSelectSlot?.('solar')}
-          style={{ cursor: 'pointer' }}
-        >
-          <rect
-            x={-36 - wingSpan}
-            y={-wingHeight / 2}
-            width={wingSpan}
-            height={wingHeight}
-            rx="3"
-            fill={solar.template.blueprint.primaryColor}
-            stroke={selectedSlot === 'solar' ? '#ffffff' : solar.template.blueprint.accentColor}
-            strokeWidth={selectedSlot === 'solar' ? 2.5 : 1.5}
-          />
-          <rect
-            x={36}
-            y={-wingHeight / 2}
-            width={wingSpan}
-            height={wingHeight}
-            rx="3"
-            fill={solar.template.blueprint.primaryColor}
-            stroke={selectedSlot === 'solar' ? '#ffffff' : solar.template.blueprint.accentColor}
-            strokeWidth={selectedSlot === 'solar' ? 2.5 : 1.5}
-          />
-          {/* Секції сонячних панелей */}
-          <line
-            x1={-36 - wingSpan / 2}
-            y1={-wingHeight / 2}
-            x2={-36 - wingSpan / 2}
-            y2={wingHeight / 2}
-            stroke={solar.template.blueprint.accentColor}
-            strokeWidth="1"
-          />
-          <line
-            x1={36 + wingSpan / 2}
-            y1={-wingHeight / 2}
-            x2={36 + wingSpan / 2}
-            y2={wingHeight / 2}
-            stroke={solar.template.blueprint.accentColor}
-            strokeWidth="1"
-          />
-          <text x={36 + wingSpan / 2} y={-wingHeight / 2 - 6} textAnchor="middle" fill="#93c5fd" fontSize="9" fontFamily="monospace">
-            {solar.template.blueprint.label}
-          </text>
-        </g>
+      {/* Задні шари модулів (layerOrder <= 1) */}
+      {backSlots.map(renderSlotModule)}
 
-        {/* 2. Базовий корпус супутника + паливний бак */}
+      {/* Базовий корпус супутника + паливний бак */}
+      <g transform={`translate(${busCenter.x}, ${busCenter.y})`}>
         <rect
           x="-36"
           y="-42"
           width="72"
           height="84"
           rx="8"
-          fill="#1e293b"
-          stroke="#eab308"
+          fill={busTemplate.blueprint.primaryColor}
+          stroke={busTemplate.blueprint.accentColor}
           strokeWidth="2"
         />
-        {/* Індикатор палива в баку */}
         <rect
           x="-28"
           y="12"
@@ -556,86 +654,10 @@ export function CompositeSpacecraftSvg({
         <text x="0" y="26" textAnchor="middle" fill="#e2e8f0" fontSize="9" fontFamily="monospace">
           ПАЛИВО: {fuelKg} кг
         </text>
-
-        {/* 3. Акумуляторний блок (всередині корпусу) */}
-        <g
-          onClick={() => onSelectSlot?.('battery')}
-          style={{ cursor: 'pointer' }}
-        >
-          <rect
-            x="-26"
-            y="-18"
-            width="52"
-            height="24"
-            rx="4"
-            fill={battery.template.blueprint.primaryColor}
-            stroke={selectedSlot === 'battery' ? '#ffffff' : battery.template.blueprint.accentColor}
-            strokeWidth={selectedSlot === 'battery' ? 2.5 : 1.5}
-          />
-          <text x="0" y="-3" textAnchor="middle" fill="#a7f3d0" fontSize="9" fontFamily="monospace">
-            {battery.template.blueprint.label}
-          </text>
-        </g>
-
-        {/* 4. Маршовий двигун (знизу корпусу) */}
-        <g
-          transform={`translate(0, 42) scale(${engScale})`}
-          onClick={() => onSelectSlot?.('engine')}
-          style={{ cursor: 'pointer' }}
-        >
-          <polygon
-            points="-14,0 14,0 22,26 -22,26"
-            fill={engine.template.blueprint.secondaryColor}
-            stroke={selectedSlot === 'engine' ? '#ffffff' : engine.template.blueprint.accentColor}
-            strokeWidth="2"
-          />
-          <ellipse cx="0" cy="34" rx="14" ry="8" fill={engine.template.blueprint.accentColor} opacity="0.6" />
-          <text x="0" y="50" textAnchor="middle" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-            {engine.template.blueprint.label}
-          </text>
-        </g>
-
-        {/* 5. Наукова камера / телескоп (зверху корпусу) */}
-        <g
-          transform={`translate(0, -42) scale(${camScale})`}
-          onClick={() => onSelectSlot?.('instrument')}
-          style={{ cursor: 'pointer' }}
-        >
-          <rect
-            x="-18"
-            y="-28"
-            width="36"
-            height="28"
-            rx="4"
-            fill={instrument.template.blueprint.primaryColor}
-            stroke={selectedSlot === 'instrument' ? '#ffffff' : instrument.template.blueprint.accentColor}
-            strokeWidth="2"
-          />
-          <circle cx="0" cy="-14" r="9" fill="#090d16" stroke={instrument.template.blueprint.accentColor} strokeWidth="2" />
-          <text x="0" y="-34" textAnchor="middle" fill="#e9d5ff" fontSize="9" fontFamily="monospace">
-            {instrument.template.blueprint.label}
-          </text>
-        </g>
-
-        {/* 6. Антена зв'язку (справа зверху на штанзі) */}
-        <g
-          transform={`translate(36, -28) scale(${dishScale})`}
-          onClick={() => onSelectSlot?.('antenna')}
-          style={{ cursor: 'pointer' }}
-        >
-          <line x1="0" y1="0" x2="22" y2="-18" stroke="#94a3b8" strokeWidth="2.5" />
-          <path
-            d="M12,-30 Q26,-10 36,-24"
-            fill="none"
-            stroke={selectedSlot === 'antenna' ? '#ffffff' : antenna.template.blueprint.accentColor}
-            strokeWidth="3"
-          />
-          <circle cx="28" cy="-26" r="3.5" fill={antenna.template.blueprint.accentColor} />
-          <text x="42" y="-26" fill="#fdba74" fontSize="9" fontFamily="monospace">
-            {antenna.template.blueprint.label}
-          </text>
-        </g>
       </g>
+
+      {/* Передні шари модулів (layerOrder > 1) */}
+      {frontSlots.map(renderSlotModule)}
     </svg>
   );
 }

@@ -74,7 +74,7 @@ export function DebugScreen() {
 
   const viewportCtx: ViewportContext = {
     phase: state.phase,
-    mission: SAMPLE_MISSION,
+    mission: state.mission,
     design: activeSpec?.design ?? SAMPLE_DESIGN,
     spec: activeSpec,
     flight:
