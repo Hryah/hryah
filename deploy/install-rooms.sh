@@ -9,11 +9,16 @@ set -euo pipefail
 id hryah &>/dev/null || { echo "немає користувача hryah: спершу pi-bootstrap.sh" >&2; exit 1; }
 
 echo "==> Node"
-if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
-  apt-get update -qq && apt-get install -y -qq nodejs >/dev/null
-fi
-node -v
-[ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ] || { echo "потрібен Node 20+" >&2; exit 1; }
+# apt не чіпаємо: на Pi мало місця, а Node там уже є у runner-а (externals/node24, див. ai-review.yml). Беремо системний 20+, інакше runner-ів.
+node_major() { "$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
+NODE_BIN=""
+for c in "$(command -v node || true)" /home/hryah/actions-runner/externals/node24/bin/node /home/hryah/actions-runner/externals/node22/bin/node /home/hryah/actions-runner/externals/node20/bin/node /home/*/actions-runner/externals/node2*/bin/node; do
+  [ -n "$c" ] && [ -x "$c" ] && [ "$(node_major "$c")" -ge 20 ] && { NODE_BIN="$c"; break; }
+done
+[ -n "$NODE_BIN" ] || { echo "не знайшов Node 20+ ні в системі, ні в runner-а. Постав: sudo apt-get install -y nodejs" >&2; exit 1; }
+echo "node: $NODE_BIN ($("$NODE_BIN" -v))"
+# hryah має вміти його запускати
+sudo -u hryah "$NODE_BIN" -v >/dev/null || { echo "користувач hryah не може запустити $NODE_BIN" >&2; exit 1; }
 
 echo "==> порти 8090/8091"
 for p in 8090 8091; do
@@ -31,18 +36,19 @@ After=network.target
 [Service]
 User=hryah
 # Поки першого релізу з сервером немає, чекаємо й пробуємо знову.
-ExecStart=/bin/sh -c 'f=/srv/hryah/%i/server/rooms.mjs; [ -f "$$f" ] || { sleep 30; exit 1; }; exec /usr/bin/env node "$$f" --channel=%i'
+ExecStart=/bin/sh -c 'f=/srv/hryah/%i/server/rooms.mjs; [ -f "$$f" ] || { sleep 30; exit 1; }; exec @NODE@ "$$f" --channel=%i'
 Restart=always
 RestartSec=5
 MemoryMax=200M
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
 UNIT
+sed -i "s|@NODE@|$NODE_BIN|" /etc/systemd/system/hryah-rooms@.service
 systemctl daemon-reload
 systemctl enable --now hryah-rooms@main hryah-rooms@experimental
 
