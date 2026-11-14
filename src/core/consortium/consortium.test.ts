@@ -16,9 +16,9 @@ import {
 const market = marketData as Market;
 const agencies = Object.values(agenciesData) as AgencyProfile[];
 const base: DesignInput = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
-const usa = agencies.find((a) => a.id === "usa")!;
-const india = agencies.find((a) => a.id === "india")!;
-const esa = agencies.find((a) => a.id === "esa")!;
+const borealis = agencies.find((a) => a.id === "borealis")!;
+const monsoon = agencies.find((a) => a.id === "monsoon")!;
+const meridia = agencies.find((a) => a.id === "meridia")!;
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object") {
@@ -155,7 +155,7 @@ describe("нагорода", () => {
   });
 });
 
-const start = (list: AgencyProfile[] = [usa, india, esa], deadline = DEFAULT_DEADLINE_TURN) => newConsortium(base, market, list, deadline);
+const start = (list: AgencyProfile[] = [borealis, monsoon, meridia], deadline = DEFAULT_DEADLINE_TURN) => newConsortium(base, market, list, deadline);
 const run2 = (s: ConsortiumState, ...actions: ConsortiumAction[]) => actions.reduce(stepConsortium, s);
 const launch: ConsortiumAction = { type: "launch" };
 const wait: ConsortiumAction = { type: "wait" };
@@ -237,9 +237,9 @@ describe("сесія: хід агенцій", () => {
     s = run2(s, launch);
     expect(s.agencies[0]?.launch?.turn).toBe(0);
     expect(s.active).toBe(1);
-    s = run2(s, wait, wait); // india, esa → новий ход
+    s = run2(s, wait, wait); // monsoon, meridia → новий ход
     expect(s.turn).toBe(1);
-    expect(s.active).toBe(1); // перша вже запущена, ходить india
+    expect(s.active).toBe(1); // перша вже запущена, ходить monsoon
   });
 
   it("запуск із заблокованим проєктом ігнорується", () => {
@@ -258,22 +258,22 @@ describe("сесія: хід агенцій", () => {
   });
 
   it("дедлайн: хто не запустився, лишається без внеску", () => {
-    let s = start([usa, india], 1);
-    s = run2(s, launch); // usa на ході 0
-    s = run2(s, wait); // india чекає, настає ход 1
+    let s = start([borealis, monsoon], 1);
+    s = run2(s, launch); // borealis на ході 0
+    s = run2(s, wait); // monsoon чекає, настає ход 1
     expect(s.result).toBeNull();
-    s = run2(s, wait); // india на ході 1 знову чекає, ход 2 > дедлайн 1
-    expect(s.result?.runs.map((r) => r.agencyId)).toEqual(["usa"]);
+    s = run2(s, wait); // monsoon на ході 1 знову чекає, ход 2 > дедлайн 1
+    expect(s.result?.runs.map((r) => r.agencyId)).toEqual(["borealis"]);
   });
 
   it("якщо ніхто не запустився до дедлайну, нагорода нульова", () => {
-    const s = run2(start([usa], 0), wait);
+    const s = run2(start([borealis], 0), wait);
     expect(s.result?.settlement.poolMUsd).toBe(0);
   });
 
   it("раніший запуск цінніший за той самий апарат пізніше", () => {
-    const early = run2(start([usa], 12), launch).result?.settlement.poolMUsd ?? 0;
-    let late = start([usa], 12);
+    const early = run2(start([borealis], 12), launch).result?.settlement.poolMUsd ?? 0;
+    let late = start([borealis], 12);
     for (let i = 0; i < 6; i++) late = run2(late, wait);
     late = run2(late, launch);
     expect(late.result?.settlement.poolMUsd ?? 0).toBeLessThan(early);
@@ -299,7 +299,7 @@ describe("сесія: недоступні модулі", () => {
 
 describe("сесія: підсумок", () => {
   it("коли запустилась остання агенція, ход у стані лишається тим, на якому вона запустилась", () => {
-    let s = start([usa, india]);
+    let s = start([borealis, monsoon]);
     s = run2(s, wait, wait); // ход 1
     s = run2(s, launch, launch);
     expect(s.result).not.toBeNull();
@@ -307,7 +307,7 @@ describe("сесія: підсумок", () => {
   });
 
   it("після дедлайну ход у стані не виходить за дедлайн", () => {
-    const s = run2(start([usa], 2), wait, wait, wait);
+    const s = run2(start([borealis], 2), wait, wait, wait);
     expect(s.result).not.toBeNull();
     expect(s.turn).toBe(2);
   });
@@ -315,7 +315,7 @@ describe("сесія: підсумок", () => {
 
 describe("сесія: журнал причин у результатах", () => {
   it("прогін зберігає журнал усіх частин, і причини посилаються на існуючі записи", () => {
-    let s = start([usa]);
+    let s = start([borealis]);
     s = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } }, launch);
     const log = s.result?.runs[0]?.log ?? [];
     expect(log.some((e) => e.id === "design:battery")).toBe(true);

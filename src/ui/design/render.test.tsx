@@ -43,7 +43,7 @@ describe("екран частини 1: розмітка", () => {
 
   it("екран консорціуму починає з вибору агенцій", () => {
     const html = renderToStaticMarkup(<ConsortiumScreen />);
-    for (const text of ["Choose the agencies", "United States", "India", "Europe", "Start the mission"]) expect(html, text).toContain(text);
+    for (const text of ["Choose the agencies", "Borealis Federation", "Monsoon Union", "Meridia Concord", "Start the mission"]) expect(html, text).toContain(text);
   });
 });
 
@@ -56,14 +56,14 @@ describe("екран частини 1: вичерпані дії", () => {
 });
 
 describe("результати: розбір причин", () => {
-  const usa = (agenciesData as unknown as Record<string, AgencyProfile>).usa!;
+  const borealis = (agenciesData as unknown as Record<string, AgencyProfile>).borealis!;
   const play = (...actions: ConsortiumAction[]) =>
-    actions.reduce(stepConsortium, newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, marketData as Market, [usa]));
+    actions.reduce(stepConsortium, newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, marketData as Market, [borealis]));
 
   it("слабка батарея: показано відмову й рішення гравця, що до неї привело", () => {
     const state = play({ type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } }, { type: "launch" });
     const html = renderToStaticMarkup(<Results state={state} onRestart={() => undefined} />);
-    expect(html).toContain("Why United States got this result");
+    expect(html).toContain("Why Borealis Federation got this result");
     expect(html).toContain("Battery depleted");
     expect(html).toContain("Selected Small battery for Battery");
     expect(html).not.toContain("ui.");
