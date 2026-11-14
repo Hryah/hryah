@@ -65,16 +65,23 @@ function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s
       </div>
       <hr style={{ borderColor: C.line, width: "100%" }} />
       <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <form
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+        onSubmit={(e) => {
+          e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
+          if (!named || busy) return;
+          if (code.length === 4) run(() => joinRoom(code, name)); else run(() => createRoom(name));
+        }}
+      >
         <input value={name} maxLength={24} placeholder={t("ui.menu.name")} aria-label={t("ui.menu.name")} onChange={(e) => setName(e.target.value)} />
-        <button style={{ ...button, opacity: named && !busy ? 1 : 0.5 }} disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
+        <button type="button" style={{ ...button, opacity: named && !busy ? 1 : 0.5 }} disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
           {t("ui.menu.create")}
         </button>
         <input value={code} maxLength={4} size={5} placeholder={t("ui.menu.code")} aria-label={t("ui.menu.code")} onChange={(e) => setCode(e.target.value.toUpperCase())} />
-        <button style={{ ...button, opacity: named && code.length === 4 && !busy ? 1 : 0.5 }} disabled={!named || code.length !== 4 || busy} onClick={() => run(() => joinRoom(code, name))}>
+        <button type="button" style={{ ...button, opacity: named && code.length === 4 && !busy ? 1 : 0.5 }} disabled={!named || code.length !== 4 || busy} onClick={() => run(() => joinRoom(code, name))}>
           {t("ui.menu.join")}
         </button>
-      </div>
+      </form>
       {notice && <div style={{ color: C.gold }}>{notice}</div>}
       {error && <div style={{ color: C.bad }}>{t("ui.menu.error", { error })}</div>}
     </div>

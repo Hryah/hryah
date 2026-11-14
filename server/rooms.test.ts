@@ -130,3 +130,61 @@ describe("сервер кімнат", () => {
     expect(rooms.size()).toBe(0);
   });
 });
+
+describe("неактивні гравці й рестарт", () => {
+  const clock = () => { let t = 1_000; return { now: () => t, advance: (ms: number) => { t += ms; } }; };
+  const stateOf = async (rooms: Rooms, code: string, p: { player: string; token: string }) => {
+    const r = await rooms.poll(code, p.player, p.token, 0, 0);
+    return "error" in r ? null : (r.state as RoomState);
+  };
+
+  it("гравець, що зник із лобі без «Вийти», зникає зі списку, а господар переходить далі", async () => {
+    const c = clock();
+    const rooms = new Rooms({ setup, now: c.now, idleMs: 1000 });
+    const a = rooms.create("Ann") as { code: string; player: string; token: string };
+    const b = rooms.join(a.code, "Bob") as { player: string; token: string };
+    c.advance(500);
+    await rooms.poll(a.code, a.player, a.token, 0, 0); // Ann ще тут
+    c.advance(700);
+    rooms.sweep(); // Bob мовчить 1200 мс
+    const s = await stateOf(rooms, a.code, a);
+    expect(s?.phase === "lobby" && s.players.map((p) => p.id)).toEqual([a.player]);
+    expect(await stateOf(rooms, a.code, b)).toBeNull(); // токен Боба вже недійсний
+  });
+
+  it("той, хто тримає опитування, не вважається зниклим; останній зниклий закриває кімнату", async () => {
+    const c = clock();
+    const rooms = new Rooms({ setup, now: c.now, idleMs: 1000 });
+    const a = rooms.create("Ann") as { code: string; player: string; token: string };
+    const pending = rooms.poll(a.code, a.player, a.token, 99, 50); // відкрите опитування
+    c.advance(5000);
+    rooms.sweep();
+    expect(rooms.size()).toBe(1);
+    await pending;
+    c.advance(5000);
+    rooms.sweep();
+    expect(rooms.size()).toBe(0);
+  });
+
+  it("у грі зниклий гравець більше не блокує чергу", async () => {
+    const c = clock();
+    const rooms = new Rooms({ setup, now: c.now, idleMs: 1000 });
+    const a = rooms.create("Ann") as { code: string; player: string; token: string };
+    const b = rooms.join(a.code, "Bob") as { player: string; token: string };
+    rooms.act(a.code, b.player, b.token, { type: "ready", ready: true });
+    rooms.act(a.code, a.player, a.token, { type: "start" });
+    c.advance(1500);
+    await rooms.poll(a.code, a.player, a.token, 0, 0); // Ann жива, Bob зник
+    rooms.sweep();
+    const s = await stateOf(rooms, a.code, a);
+    expect(s?.phase === "play" && s.left).toEqual([b.player]);
+  });
+
+  it("під час рестарту нові кімнати й входи відхиляються з 503", () => {
+    const rooms = new Rooms({ setup });
+    const a = rooms.create("Ann") as { code: string };
+    rooms.drain();
+    expect(rooms.create("Bob")).toMatchObject({ status: 503 });
+    expect(rooms.join(a.code, "Bob")).toMatchObject({ status: 503 });
+  });
+});
