@@ -70,11 +70,16 @@ export function createDesignScene(): Scene<DesignView> {
 
   return {
     mount(stage: Stage) {
+      // Усе, що вже створено, збираємо тут: якщо mount кине виняток до присвоєння parts, dispose() нічого не знає про ці об'єкти.
+      const created: SpriteHandle[] = [];
+      const trackSprite = (sprite: SpriteHandle) => { created.push(sprite); return sprite; };
       const world = new THREE.Group();
+      const stand = new THREE.Group();
+      let stars: ReturnType<typeof createStars> | null = null;
+      try {
       world.position.y = WORLD_Y;
 
       // Стенд: низька платформа й дві опори.
-      const stand = new THREE.Group();
       const platform = createBox(4.2, 0.25, 2.2, 'metal');
       platform.position.y = -0.125;
       stand.add(platform);
@@ -86,7 +91,7 @@ export function createDesignScene(): Scene<DesignView> {
 
       const craft = new THREE.Group();
       craft.position.y = CRAFT_BASE_Y;
-      const hull = createSprite('bus', spriteSource);
+      const hull = trackSprite(createSprite('bus', spriteSource));
       hull.object.position.z = HULL_Z;
       layer(hull, HULL_ORDER);
       craft.add(hull.object);
@@ -96,7 +101,7 @@ export function createDesignScene(): Scene<DesignView> {
         const slot = item.slot as SlotId;
         const point = ATTACH[slot];
         if (!point) continue;
-        const sprite = createSprite(item.id, spriteSource);
+        const sprite = trackSprite(createSprite(item.id, spriteSource));
         sprite.object.position.set(point.x, point.y, point.z);
         sprite.setScale(0);
         layer(sprite, SLOT_ORDER[slot]);
@@ -108,7 +113,7 @@ export function createDesignScene(): Scene<DesignView> {
       // Запасний спрайт на кожен слот: модуль поза каталогом теж має бути видно.
       for (const slot of Object.keys(ATTACH) as SlotId[]) {
         const point = ATTACH[slot];
-        const sprite = createSprite(`custom-${slot}`, spriteSource);
+        const sprite = trackSprite(createSprite(`custom-${slot}`, spriteSource));
         sprite.object.position.set(point.x, point.y, point.z);
         sprite.setScale(0);
         layer(sprite, SLOT_ORDER[slot]);
@@ -117,10 +122,17 @@ export function createDesignScene(): Scene<DesignView> {
         modules.push({ slot, id: null, sprite, level: 0, alert: 0 });
       }
 
-      const stars = createStars(400, 30, 5);
+      stars = createStars(400, 30, 5);
       world.add(stand, craft);
       stage.root.add(stars.points, world);
       parts = { world, stand, craft, stars, hull, modules };
+      } catch (error) {
+        for (const sprite of created) sprite.dispose();
+        disposeObject(stand);
+        if (stars) disposeObject(stars.points);
+        world.removeFromParent();
+        throw error;
+      }
     },
 
     update(view, dtS, timeS) {

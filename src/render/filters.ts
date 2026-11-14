@@ -44,8 +44,9 @@ function createTargets(renderer: THREE.WebGLRenderer, width: number, height: num
   const type = renderer.extensions.has('EXT_color_buffer_float') ? THREE.HalfFloatType : THREE.UnsignedByteType;
   const gl = renderer.getContext() as WebGL2RenderingContext;
   const colorFormat = type === THREE.HalfFloatType ? gl.RGBA16F : gl.RGBA8;
-  const colorSamples = gl.getInternalformatParameter(gl.RENDERBUFFER, colorFormat, gl.SAMPLES) as Int32Array;
-  const depthSamples = gl.getInternalformatParameter(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, gl.SAMPLES) as Int32Array;
+  // При втраті контексту WebGL2 повертає null: тоді MSAA просто вимкнено.
+  const colorSamples = (gl.getInternalformatParameter(gl.RENDERBUFFER, colorFormat, gl.SAMPLES) as Int32Array | null) ?? new Int32Array(0);
+  const depthSamples = (gl.getInternalformatParameter(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, gl.SAMPLES) as Int32Array | null) ?? new Int32Array(0);
   // Ліміт MSAA залежить і від формату кольору, і від формату глибини; нуль вимикає MSAA.
   const samples = Math.max(0, ...Array.from(colorSamples).filter((n) =>
     n <= 4 && n <= renderer.capabilities.maxSamples && depthSamples.includes(n)));

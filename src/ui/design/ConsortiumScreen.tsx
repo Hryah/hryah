@@ -238,7 +238,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   );
 }
 
-export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
@@ -283,6 +283,7 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
 
   return (
     <DesignScreen
+      active={active}
       state={entry.design} editable={(control) => entry.actionsLeft > 0 || entry.touched.includes(control)} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />
