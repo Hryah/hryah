@@ -49,4 +49,4 @@ for (const asset of manifest.assets) {
 
 assert.equal(manifest.assets.find(asset => asset.id === 'front')?.originalFilename, 'космонавт перед (2).svg');
 assert.equal(manifest.assets.find(asset => asset.id === 'front-alternate')?.primary, false);
-console.log('All 5 original SVG sources verified. Four canonical views selected; runtime preparation is pending.');
+console.log('All 5 original SVG sources are unchanged. Four canonical views selected; runtime derivatives are checked separately by scripts/astronaut/prepare.mjs --check.');

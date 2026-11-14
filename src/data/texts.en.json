@@ -134,5 +134,7 @@
   "ui.play.success": "Mission accomplished",
   "ui.play.failure": "Mission failed",
   "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}.",
-  "ui.play.runOrbit": "Run the orbit"
+  "ui.play.runOrbit": "Run the orbit",
+  "room.nav": "Cabin 2.5D",
+  "room.loading": "Loading the cabin…"
 }
