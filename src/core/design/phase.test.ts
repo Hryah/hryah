@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { DesignInput } from "../contracts";
 import { availableActions, newGame, step, type GameAction, type GameState } from "../game";
 import texts from "../../data/texts.en.json";
-import { SAMPLE_CATALOG, SAMPLE_MISSION, stubDesign } from "../stubs";
+import { buildSpec } from "../model";
+import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../stubs";
 import { designPhase, launchBlockers, type DesignAction, type DesignState } from "./phase";
 
 const input: DesignInput = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
@@ -112,9 +113,9 @@ describe("частина 1: запуск", () => {
 });
 
 describe("частина 1: результат", () => {
-  it("spec збігається з розрахунком заглушки для того самого проєкту", () => {
+  it("spec збігається з buildSpec для того самого проєкту", () => {
     const s = run(start(), { type: "setFuel", fuelKg: 20 }, { type: "setModule", slot: "solar", moduleId: "sol-l" });
-    expect(designPhase.finish(s).result).toEqual(stubDesign(input, s.design).result);
+    expect(designPhase.finish(s).result).toEqual(buildSpec(input, s.design).result);
   });
 
   it("журнал має фіксовані id рішень і всі id унікальні", () => {
