@@ -3,17 +3,11 @@ import {
   type BlueprintSpec,
   parseGlbBuffer,
   type SpacecraftVisualAssembly,
+  resolveAssetUrl,
   templateRegistry,
   type VisualTemplate,
 } from "../../graphics";
 import type { ParsedMesh, Vec3 } from "../../graphics/glb-viewer";
-
-function resolveAssetUrl(rawUrl: string): string {
-  const baseUrl = import.meta.env.BASE_URL ?? "/";
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const cleanPath = rawUrl.startsWith("/") ? rawUrl.slice(1) : rawUrl;
-  return `${normalizedBase}${cleanPath}`;
-}
 
 /**
  * Кеш і Canvas-адаптер для інтеграції `templateRegistry` (`visual-templates.json`),

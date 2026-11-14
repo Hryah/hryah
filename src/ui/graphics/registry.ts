@@ -17,8 +17,9 @@ const basePrefix = import.meta.env.BASE_URL || '/';
 
 export function resolveAssetUrl(url: string): string {
   if (/^(https?:|data:|blob:)/.test(url)) return url;
-  const clean = url.replace(/^\/+/, '');
   const prefix = basePrefix.endsWith('/') ? basePrefix : `${basePrefix}/`;
+  if (url.startsWith(prefix)) return url;
+  const clean = url.replace(/^\/+/, '');
   return `${prefix}${clean}`;
 }
 

@@ -21,6 +21,7 @@ export {
   DEFAULT_TEMPLATES,
   SATELLITE_SOCKETS,
   TemplateRegistry,
+  resolveAssetUrl,
   templateRegistry,
 } from './registry';
 

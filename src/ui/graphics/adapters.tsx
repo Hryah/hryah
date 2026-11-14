@@ -383,19 +383,21 @@ export function CompositeSpacecraftSvg({
               <image href={spriteUrl} x={24} y={-wingH / 2} width={wingW} height={wingH} preserveAspectRatio="xMinYMid meet" />
             </g>
             <image href={spriteUrl} x={24} y={-wingH / 2} width={wingW} height={wingH} preserveAspectRatio="xMinYMid meet" />
-            {(isSelected || mod.damageSeverity > 0) && (
-              <rect
-                x={22}
-                y={-wingH / 2 - 2}
-                width={wingW + 4}
-                height={wingH + 4}
-                rx="4"
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth="1.5"
-                strokeDasharray="3 3"
-              />
-            )}
+            {(isSelected || mod.damageSeverity > 0) &&
+              [-(26 + wingW), 22].map((rectX) => (
+                <rect
+                  key={rectX}
+                  x={rectX}
+                  y={-wingH / 2 - 2}
+                  width={wingW + 4}
+                  height={wingH + 4}
+                  rx="4"
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                />
+              ))}
             <text x={24 + wingW * 0.55} y={-wingH / 2 - 5} textAnchor="middle" fill="#93c5fd" fontSize="9" fontFamily="monospace">
               {blueprint.label}
             </text>
@@ -657,13 +659,13 @@ export function CompositeSpacecraftSvg({
         opacity="0.5"
       />
       <text x="345" y="102" fill="#7dd3fc" fontSize="10" fontFamily="monospace">
-        ОРБІТА: {altKm} км ({bodyTemplate.id})
+        ORBIT: {altKm} km ({bodyTemplate.id})
       </text>
 
       {/* Ліва колонка: Ракета-носій */}
       <g transform="translate(52, 128)">
         <text x="0" y="-98" textAnchor="middle" fill="#8a90a8" fontSize="10" fontFamily="monospace">
-          НОСІЙ: {launcherTemplate.id.toUpperCase()}
+          LAUNCHER: {launcherTemplate.id.toUpperCase()}
         </text>
         {preferSprites && launcherTemplate.sprite2d?.url ? (
           <image
@@ -766,7 +768,7 @@ export function CompositeSpacecraftSvg({
           opacity="0.55"
         />
         <text x="0" y="37" textAnchor="middle" fill="#e2e8f0" fontSize="8" fontFamily="monospace">
-          ПАЛИВО: {fuelKg} кг
+          FUEL: {fuelKg} kg
         </text>
       </g>
 

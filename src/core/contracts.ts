@@ -149,6 +149,7 @@ export interface FlightResult {
   orbit: OrbitInfo;                // куди реально вийшли
   fuelLeftKg: number;
   damage: Damage[];
+  deploymentStatus?: 'deployed' | 'lost'; // відсутнє у старих результатах: вважаємо deployed
 }
 
 // ───────────────────────── 7. Вихід частини 3 ─────────────────────────

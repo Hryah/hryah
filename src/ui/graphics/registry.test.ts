@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from '../../core/stubs';
 import { parseGlbBuffer } from './glb-viewer';
-import { DEFAULT_TEMPLATES, TemplateRegistry, templateRegistry } from './registry';
+import { DEFAULT_TEMPLATES, resolveAssetUrl, TemplateRegistry, templateRegistry } from './registry';
 
 function buildTestGlbWithNodeTransforms(): ArrayBuffer {
   // Трикутник у локальних координатах [0,0,0], [1,0,0], [0,1,0]
@@ -158,6 +158,13 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     const unknownProp = templateRegistry.getTemplate('prop:custom-crate');
     expect(unknownProp.category).toBe('prop');
     expect(unknownProp.blueprint.shape).toBe('prop-custom');
+  });
+
+  it('resolveAssetUrl є ідемпотентним для повторних викликів з URL реєстру', () => {
+    const first = resolveAssetUrl('assets/icons/ui/rocket.svg');
+    expect(resolveAssetUrl(first)).toBe(first);
+    const tpl = templateRegistry.getModuleTemplate('solar', 'sol-m');
+    expect(resolveAssetUrl(tpl.sprite2d!.url)).toBe(tpl.sprite2d!.url);
   });
 
   it('parseGlbBuffer враховує трансформації вузлів glTF (scenes/nodes translation)', () => {
