@@ -179,7 +179,7 @@ async function previousReview() {
     const mine = comments.find(isMine);
     if (!mine || mine.body.includes(UNAVAILABLE)) return null;
     const sha = mine.body.match(SHA_RE)?.[1] || null;
-    const text = mine.body.replace(MARKER, "").replace(SHA_RE, "").replace(/<sub>[\s\S]*?<\/sub>/g, "").trim().slice(0, MAX_PREV);
+    const text = mine.body.replace(MARKER, "").replace(SHA_RE, "").replace(/<sub>[^<]*<\/sub>\s*$/, "").trim().slice(0, MAX_PREV);
     return { sha, text };
   } catch (e) { console.warn("минуле рев'ю недоступне:", e.message); return null; }
 }
@@ -188,7 +188,10 @@ async function previousReview() {
 function deltaSince(sha) {
   if (!sha) return null;
   try {
-    const d = git("diff", "--unified=3", `${sha}..HEAD`, "--", ".", ...IGNORE);
+    // Лише файли, які змінює сам PR: якщо автор підмержив цільову гілку між пушами, чужі зміни в дельту не потрапляють.
+    const own = git("diff", "--name-only", `origin/${env.BASE_REF}...HEAD`).split("\n").filter(Boolean);
+    if (own.length === 0) return null;
+    const d = git("diff", "--unified=3", `${sha}..HEAD`, "--", ...own, ...IGNORE);
     return d.length > MAX_DELTA ? d.slice(0, MAX_DELTA) + "\n…(обрізано)" : d;
   } catch { return null; }
 }
@@ -217,7 +220,8 @@ async function telegram(text) {
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 async function main() {
-  const { files, diff, truncated, stat } = getDiff();
+  const { files, diff, truncated: truncatedByChars, stat } = getDiff();
+  let truncated = truncatedByChars;
   if (!diff.trim()) { console.log("Порожній diff"); return; }
 
   const prev = await previousReview();
@@ -276,6 +280,7 @@ ${diff}
   if (Buffer.byteLength(prompt) > BUDGET) prompt = buildPrompt(null, diff);
   for (let cut = diff.length; Buffer.byteLength(prompt) > BUDGET && cut > 5_000; ) {
     cut = Math.floor(cut * 0.8);
+    truncated = true; // обрізано через бюджет байтів: у промпті й футері має бути позначка
     prompt = buildPrompt(null, diff.slice(0, cut) + "\n…(обрізано)");
   }
 
