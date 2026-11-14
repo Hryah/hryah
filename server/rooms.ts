@@ -30,6 +30,18 @@ export interface RoomsOptions {
 type Json = Record<string, unknown>;
 const ACTION_TYPES = new Set(["wish", "ready", "start", "leave", "play"]);
 
+// Сервер публічний: перевіряємо не лише тип дії, а й типи полів, щоб у стан кімнати не потрапляв сміт.
+function validShape(a: RoomAction): boolean {
+  const x = a as unknown as Record<string, unknown>;
+  switch (a.type) {
+    case "ready": return typeof x.ready === "boolean";
+    case "wish": return x.agencyId === null || typeof x.agencyId === "string";
+    case "play": return !!x.action && typeof x.action === "object" && typeof (x.action as { type?: unknown }).type === "string";
+    case "start": case "leave": return true;
+    default: return false;
+  }
+}
+
 export class Rooms {
   private rooms = new Map<string, Room>();
   private now: () => number;
@@ -77,7 +89,7 @@ export class Rooms {
   act(code: string, player: string, token: string, action: RoomAction): { version: number } | { error: string; status: number } {
     const room = this.auth(code, player, token);
     if (!room) return { error: "unauthorized", status: 403 };
-    if (!ACTION_TYPES.has(action.type)) return { error: "bad action", status: 400 };
+    if (!ACTION_TYPES.has(action.type) || !validShape(action)) return { error: "bad action", status: 400 };
     let next: RoomState;
     try {
       next = stepRoom(room.state, player, action, this.setup);
@@ -175,11 +187,11 @@ export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
           return reply(res, rooms.create(str(body.name)));
         }
         const code = parts[1] ?? "";
-        if (req.method === "POST" && parts[2] === "join") {
+        if (req.method === "POST" && parts[2] === "join" && parts.length === 3) {
           const body = await readJson(req);
           return reply(res, rooms.join(code, str(body.name)));
         }
-        if (req.method === "POST" && parts[2] === "action") {
+        if (req.method === "POST" && parts[2] === "action" && parts.length === 3) {
           const body = await readJson(req);
           const action = body.action;
           if (!action || typeof action !== "object") return send(res, 400, { error: "bad action" });

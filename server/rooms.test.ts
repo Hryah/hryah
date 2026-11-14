@@ -99,4 +99,15 @@ describe("сервер кімнат", () => {
     rooms.act(b.code, b.player, b.token, { type: "leave" });
     expect(rooms.size()).toBe(0);
   });
+
+  it("відхиляє дії з хибними типами полів і зайві сегменти шляху", async () => {
+    const { post } = await boot();
+    const a = (await post("/api/rooms", { name: "Ann" })).json;
+    const act = (action: unknown) => post(`/api/rooms/${a.code}/action`, { player: a.player, token: a.token, action });
+    expect((await act({ type: "ready", ready: "yes" })).status).toBe(400);
+    expect((await act({ type: "wish", agencyId: 5 })).status).toBe(400);
+    expect((await act({ type: "play", action: "x" })).status).toBe(400);
+    expect((await act({ type: "ready", ready: true })).status).toBe(200);
+    expect((await post(`/api/rooms/${a.code}/join/extra`, { name: "X" })).status).toBe(404);
+  });
 });

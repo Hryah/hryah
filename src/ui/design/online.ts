@@ -12,14 +12,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
   return body;
 }
-const post = (path: string, body: unknown) => ({ method: "POST", body: JSON.stringify(body) }) satisfies RequestInit;
+const post = (body: unknown) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }) satisfies RequestInit;
 
-export const createRoom = (name: string) => call<Session>(base(), post("", { name }));
+export const createRoom = (name: string) => call<Session>(base(), post({ name }));
 export const joinRoom = (code: string, name: string) =>
-  call<Omit<Session, "code">>(`${base()}/${encodeURIComponent(code.trim().toUpperCase())}/join`, post("", { name }))
+  call<Omit<Session, "code">>(`${base()}/${encodeURIComponent(code.trim().toUpperCase())}/join`, post({ name }))
     .then((s) => ({ ...s, code: code.trim().toUpperCase() }));
 export const sendAction = (s: Session, action: RoomAction) =>
-  call<{ version: number }>(`${base()}/${s.code}/action`, post("", { player: s.player, token: s.token, action }));
+  call<{ version: number }>(`${base()}/${s.code}/action`, post({ player: s.player, token: s.token, action }));
 export const poll = (s: Session, since: number, signal: AbortSignal) =>
   call<Snapshot>(`${base()}/${s.code}?player=${s.player}&token=${s.token}&since=${since}`, { signal });
 

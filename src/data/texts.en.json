@@ -83,6 +83,7 @@
   "ui.menu.leave": "Leave room",
   "ui.menu.roomCode": "Room {code}",
   "ui.menu.connecting": "Connecting to the room…",
+  "ui.menu.roomGone": "The room is gone: the server restarted or the room expired. Create a new one.",
   "ui.menu.error": "Error: {error}",
   "ui.lobby.waitingFor": "Waiting for {player} to move",
   "ui.lobby.playerTurn": "{player}'s turn",

@@ -39,13 +39,14 @@ export function ConsortiumScreen() {
     const saved = loadSession();
     return saved ? { kind: "online", session: saved } : { kind: "menu" };
   });
-  const leave = () => { saveSession(null); setMode({ kind: "menu" }); };
-  if (mode.kind === "local") return <LocalRoom onExit={leave} />;
+  const [notice, setNotice] = useState<string | null>(null);
+  const leave = (message?: string) => { saveSession(null); setNotice(message ?? null); setMode({ kind: "menu" }); };
+  if (mode.kind === "local") return <LocalRoom onExit={() => leave()} />;
   if (mode.kind === "online") return <OnlineRoom session={mode.session} onExit={leave} />;
-  return <Menu onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
+  return <Menu notice={notice} onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
 }
 
-function Menu({ onLocal, onOnline }: { onLocal: () => void; onOnline: (s: Session) => void }) {
+function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s: Session) => void; notice: string | null }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,7 @@ function Menu({ onLocal, onOnline }: { onLocal: () => void; onOnline: (s: Sessio
           {t("ui.menu.join")}
         </button>
       </div>
+      {notice && <div style={{ color: C.gold }}>{notice}</div>}
       {error && <div style={{ color: C.bad }}>{t("ui.menu.error", { error })}</div>}
     </div>
   );
@@ -101,7 +103,7 @@ function LocalRoom({ onExit }: { onExit: () => void }) {
   );
 }
 
-function OnlineRoom({ session, onExit }: { session: Session; onExit: () => void }) {
+function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: string) => void }) {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const exitRef = useRef(onExit);
@@ -119,7 +121,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: () => void 
         } catch (e) {
           if (ctl.signal.aborted) return;
           const message = (e as Error).message;
-          if (message === "unauthorized" || message === "no such room") { exitRef.current(); return; }
+          if (message === "unauthorized" || message === "no such room") { exitRef.current(t("ui.menu.roomGone")); return; }
           setError(message);
           await new Promise((r) => setTimeout(r, 2000));
         }
