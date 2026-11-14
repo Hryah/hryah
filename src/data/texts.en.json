@@ -147,13 +147,12 @@
   "ui.play.finishLostFlight": "Review failed flight",
   "ui.play.lostFlightHint": "The satellite was lost before deployment. Continue to the failure debrief.",
   "ui.play.orbitTitle": "Orbit operations",
-  "ui.play.orbitHint": "The playable orbit screen is still a prototype (see the Orbit tab). Here the orbit is simulated for the spacecraft you built.",
+  "ui.play.orbitHint": "Set the switches and fly each orbit. The spacecraft is the one you built.",
   "ui.play.success": "Mission accomplished",
   "ui.play.failure": "Mission failed",
   "ui.play.satelliteLostTitle": "Satellite lost before deployment",
   "ui.play.orbitNotStarted": "Orbit operations never started. Review the flight causes below before trying again.",
   "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}.",
-  "ui.play.runOrbit": "Run the orbit",
   "room.nav": "Cabin 2.5D",
   "room.loading": "Loading the cabin…"
 }

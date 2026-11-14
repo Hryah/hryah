@@ -32,3 +32,11 @@ describe("тексти екранів", () => {
 
   it("fmt округлює без шуму", () => expect(fmt(0.1 + 0.2)).toBe("0.3"));
 });
+
+describe("словники: спільний і орбіти", () => {
+  it("за збігу ключів перемагає спільний словник (тексти орбіти не переписують чужі)", async () => {
+    const shared = (await import("../data/texts.en.json")).default as Record<string, string>;
+    const orbit = (await import("./orbit/texts.en.json")).default as Record<string, string>;
+    for (const key of Object.keys(orbit).filter((k) => k in shared)) expect(t(key), key).toBe(shared[key]);
+  });
+});

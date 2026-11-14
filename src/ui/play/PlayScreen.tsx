@@ -1,11 +1,12 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { availableActions, newGame, step, type GameAction, type GameState } from "../../core/game";
+import { newGame, step, type GameAction, type GameState } from "../../core/game";
 import { causeChains } from "../../core/debrief";
 import { launchBlockers } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { DesignScreen } from "../design/DesignScreen";
 import { describeEntry } from "../design/cause";
 import { FlightScreen } from "../flight";
+import { OrbitPanel } from "./OrbitPanel";
 import { fmt, t } from "../text";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
@@ -90,21 +91,15 @@ export function PlayScreen({ game, setGame, active }: Props) {
         </>
       );
       break;
-    case "orbit": {
-      // Остання дія в списку частини завжди «відпрацювати до кінця»: на цьому тримаються боти в game.test.ts.
-      // Решту дебаг-дій справжньої орбіти гравцеві не показуємо.
-      const finish = availableActions(game).at(-1);
+    case "orbit":
       body = (
         <Panel stepper={stepper}>
           <h2 style={{ margin: 0 }}>{t("ui.play.orbitTitle")}</h2>
           <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {finish && <button style={button} onClick={() => dispatch(finish.action)}>{t("ui.play.runOrbit")}</button>}
-          </div>
+          <OrbitPanel state={game.orbit} dispatch={(action) => dispatch({ phase: "orbit", action })} />
         </Panel>
       );
       break;
-    }
     case "debrief": {
       const { outcome, log } = game.record;
       const chains = causeChains(log);
