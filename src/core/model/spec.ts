@@ -55,7 +55,7 @@ export function buildSpec(input: DesignInput, design: Design): PhaseOutput<Space
 
   const margins: Margin[] = [
     { id: 'dv', have: dvMs, need: mission.dvRequiredMs, unit: 'm/s', ok: dvMs >= mission.dvRequiredMs },
-    { id: 'energy', have: battery.capacityWh, need: needWh, unit: 'Wh', ok: battery.capacityWh > needWh },
+    { id: 'energy', have: battery.capacityWh, need: needWh, unit: 'Wh', ok: needWh <= 0 || battery.capacityWh > needWh },
     { id: 'link', have: downlinkPerOrbitMb, need: dataPerOrbitMb, unit: 'Mb/orbit', ok: downlinkPerOrbitMb >= dataPerOrbitMb },
     { id: 'science', have: resolutionM, need: mission.requiredResolutionM, unit: 'm', ok: resolutionM <= mission.requiredResolutionM },
     { id: 'mass', have: launcher.maxPayloadKg, need: wetMassKg, unit: 'kg', ok: launcher.maxPayloadKg >= wetMassKg },

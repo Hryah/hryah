@@ -86,7 +86,7 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
   const { mission, spec, flight } = input;
   const log: CauseEntry[] = [];
   const needWh = orbitEnergyNeedWh(spec, flight.orbit, mission);
-  const batteryDies = spec.batteryWh <= needWh;
+  const batteryDies = needWh > 0 && spec.batteryWh <= needWh;
 
   const perOrbitMb = Math.min(
     spec.instrumentRateMbps * mission.imagingSPerOrbit,

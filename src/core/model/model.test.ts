@@ -218,3 +218,26 @@ describe("вирівнювання з фазою орбіти", () => {
     expect(transmitSeconds(480, 100, 0, true)).toBe(0);
   });
 });
+
+describe("граничні випадки енергобалансу", () => {
+  const spec = buildSpec(input, SAMPLE_DESIGN).result;
+  const orbit = orbitInfo(m.body, 500);
+
+  it("segmentLoadW: вимкнений передавач нічого не споживає й у відрізку передачі", () => {
+    const off = { camera: true, transmitter: false, heater: true };
+    expect(segmentLoadW(spec, "transmit", off)).toBe(spec.baseLoadW);
+    expect(segmentLoadW(spec, "transmit", { ...off, transmitter: true })).toBe(spec.baseLoadW + spec.transmitterW);
+  });
+
+  it("без витків потреби нема, без тіні й з потужними панелями теж", () => {
+    expect(orbitEnergyNeedWh(spec, orbit, { ...m, durationOrbits: 0 })).toBe(0);
+    expect(orbitEnergyNeedWh(spec, { ...orbit, eclipseFraction: 0 }, m)).toBe(0);
+  });
+
+  it("порожня батарея не провал, якщо потреби нема", () => {
+    const design = { ...SAMPLE_DESIGN, modules: { ...SAMPLE_DESIGN.modules, solar: "sol-l" } };
+    const noShadow = { ...input, mission: { ...m, body: { ...m.body, radiusKm: 1 } } };
+    const built = buildSpec(noShadow, design).result;
+    expect(built.margins.find((x) => x.id === "energy")?.ok).toBe(true);
+  });
+});

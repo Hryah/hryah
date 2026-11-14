@@ -32,11 +32,9 @@ export interface OrbitTiming {
   idleSunS: number;
 }
 
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-
 // Тривалість відрізків. Зйомка й зв'язок стискаються до наявного сонця.
 export function orbitTiming(orbit: OrbitInfo, mission: Pick<Mission, 'imagingSPerOrbit' | 'passSPerOrbit'>): OrbitTiming {
-  const shadowS = orbit.periodS * clamp(orbit.eclipseFraction, 0, 1);
+  const shadowS = orbit.periodS * Math.min(1, Math.max(0, orbit.eclipseFraction));
   const sunlightS = orbit.periodS - shadowS;
   const imagingS = Math.min(Math.max(0, mission.imagingSPerOrbit), sunlightS);
   const passS = Math.min(Math.max(0, mission.passSPerOrbit), sunlightS - imagingS);
@@ -47,7 +45,7 @@ export function orbitTiming(orbit: OrbitInfo, mission: Pick<Mission, 'imagingSPe
 export function segmentLoadW(spec: Pick<EnergySpec, 'baseLoadW' | 'instrumentW' | 'transmitterW' | 'heaterW'>, kind: SegmentKind, on: ActiveSystems): number {
   switch (kind) {
     case 'imaging': return spec.baseLoadW + (on.camera ? spec.instrumentW : 0);
-    case 'transmit': return spec.baseLoadW + spec.transmitterW;
+    case 'transmit': return spec.baseLoadW + (on.transmitter ? spec.transmitterW : 0);
     case 'shadow': return spec.baseLoadW + (on.heater ? spec.heaterW : 0);
     default: return spec.baseLoadW;
   }
@@ -77,7 +75,7 @@ export function orbitEnergyNeedWh(
     worstWh = Math.max(worstWh, peakWh - cumWh);
   };
 
-  for (let i = 0; i < Math.max(1, mission.durationOrbits); i++) {
+  for (let i = 0; i < Math.max(0, mission.durationOrbits); i++) {
     run(t.idleSunS, spec.panelPowerW, segmentLoadW(spec, 'sunIdle', on));
     run(t.imagingS, spec.panelPowerW, segmentLoadW(spec, 'imaging', on));
     if (on.camera) bufferMb = Math.min(spec.bufferMb, bufferMb + spec.instrumentRateMbps * t.imagingS);
