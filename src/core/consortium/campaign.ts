@@ -119,7 +119,16 @@ const LOST: MissionOutcome = { success: false, deliveredMb: 0, survivedOrbits: 0
 export function replayOrbit(
   mission: Mission, spec: SpacecraftSpec, flight: FlightResult, log: CauseEntry[], actions: OrbitAction[], seed: number,
 ): PhaseOutput<MissionOutcome> {
-  if (flight.deploymentStatus === 'lost') return { result: LOST, log: [] };
+  if (flight.deploymentStatus === 'lost') {
+    // Звіт клієнта не несе журналу польоту, тож причину втрати записуємо тут: розбір покаже відмову.
+    return {
+      result: LOST,
+      log: [{
+        id: 'flight:lost-report', phase: 'flight', tS: 0, kind: 'failure', system: 'structure', messageKey: 'campaign.lostInFlight',
+        causedBy: log.filter((e) => e.phase === 'design' && e.kind === 'decision').map((e) => e.id).slice(0, 5).concat(log.length ? [] : ['design:engine']),
+      }],
+    };
+  }
   let state = orbitPhase.init({ mission, spec, flight, log }, seed);
   for (const action of actions.slice(0, MAX_ORBIT_ACTIONS)) {
     if (orbitPhase.isDone(state)) break;

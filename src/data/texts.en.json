@@ -176,5 +176,6 @@
   "ui.designStage": "Spacecraft on the test stand with the selected modules",
   "ui.gallery.orbitState": "Mock view: charge {charge}%, storm {storm}, link {link}, safe mode {safe}, status {status}",
   "room.nav": "Cabin 2.5D",
-  "room.loading": "Loading the cabin…"
+  "room.loading": "Loading the cabin…",
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
 }
