@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FlightResult, Mission, SpacecraftSpec } from "../../core/contracts";
-import { sanitizeFlight, type MissionReport } from "../../core/consortium";
+import { MAX_ORBIT_ACTIONS, sanitizeFlight, type MissionReport } from "../../core/consortium";
 import { flightPhase } from "../../core/flight";
 import { orbitPhase, type OrbitAction } from "../../core/orbit";
 import { FlightScreen } from "../flight";
@@ -87,7 +87,8 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
     <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 10 }} data-testid="campaign-orbit">
       <h2 style={{ margin: 0 }}>{t("ui.campaign.orbitOf", { agency: agencyName })}</h2>
       <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-      <OrbitPanel state={orbit} dispatch={(a) => !done && setOrbitActions((list) => [...list, a])} />
+      {/* Звіт приймає не більше MAX_ORBIT_ACTIONS дій: далі решта витків іде автопілотом у кімнаті. */}
+      <OrbitPanel state={orbit} dispatch={(a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a]))} />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button
           style={{ ...button, borderColor: done ? C.ok : C.line }}
