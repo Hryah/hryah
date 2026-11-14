@@ -90,22 +90,14 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     }
   });
 
-  it('у DEFAULT_TEMPLATES прописані лише наявні у репозиторії 3D та 2D SVG асети без мертвих посилань', () => {
-    const committedGlbs = new Set([
-      '/assets/models/spacecraft/satellite_bus.glb',
-      '/assets/models/modules/solar_medium.glb',
-      '/assets/models/modules/antenna_medium.glb',
-    ]);
+  it('у DEFAULT_TEMPLATES усі темплейти працюють виключно на наявних 2D SVG асетах без 3D GLB і мертвих посилань', () => {
     const publicAssetKeys = new Set(
       Object.keys(import.meta.glob('../../../public/assets/**/*', { eager: false })).map(
         (key) => `/${key.replace(/^.*\/public\//, '')}`,
       ),
     );
     for (const tpl of DEFAULT_TEMPLATES) {
-      if (tpl.model3d) {
-        expect(committedGlbs.has(tpl.model3d.url)).toBe(true);
-        expect(publicAssetKeys.has(tpl.model3d.url), `Missing model3d: ${tpl.model3d.url}`).toBe(true);
-      }
+      expect(tpl.model3d).toBeUndefined();
       expect(tpl.sprite2d?.url, `Missing sprite2d on ${tpl.id}`).toBeTruthy();
       expect(publicAssetKeys.has(tpl.sprite2d!.url), `Missing sprite2d file: ${tpl.sprite2d!.url}`).toBe(true);
       if (tpl.planetTextures?.dayMapUrl) {

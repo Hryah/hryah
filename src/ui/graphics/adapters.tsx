@@ -1,12 +1,10 @@
-// adapters.tsx — Візуальні адаптери для рендерингу темплейтів у режимах:
-// 1. '3d'        — інтерактивний 3D GLB рендер (NASA 3D Resources / Kenney Space Kit)
-// 2. 'sprite'    — 2D спрайти або текстури з public/assets/
-// 3. 'blueprint' — векторні інженерні схеми NASA-стилю (працюють без зовнішніх файлів)
-// 4. 'auto'      — автоматичний вибір доступного представлення з плавним фолбеком
+// adapters.tsx — Візуальні адаптери для рендерингу 2D SVG темплейтів:
+// 1. 'sprite'    — 2D SVG спрайти з public/assets/templates/ та bodies/
+// 2. 'blueprint' — векторні інженерні схеми NASA-стилю (фолбек без зовнішніх файлів)
+// 3. 'auto'      — автоматичний вибір доступного 2D SVG представлення з фолбеком на схему
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SlotId } from '../../core/contracts';
-import { GlbModelCanvas } from './glb-viewer';
 import { templateRegistry } from './registry';
 import type {
   BlueprintSpec,
@@ -233,39 +231,19 @@ export function TemplateUnitView({
   height = 160,
   damaged = false,
 }: TemplateUnitViewProps) {
-  const [glbFailed, setGlbFailed] = useState(false);
   const [spriteFailed, setSpriteFailed] = useState(false);
 
-  const modelUrl = template.model3d?.url;
   const imgUrl = template.sprite2d?.url ?? template.planetTextures?.dayMapUrl;
 
   // Скидаємо стан фолбеку при зміні темплейту, URL асетів або режиму відображення
   useEffect(() => {
-    setGlbFailed(false);
     setSpriteFailed(false);
-  }, [template.id, modelUrl, imgUrl, mode]);
+  }, [template.id, imgUrl, mode]);
 
-  const handleGlbFallback = useCallback(() => {
-    setGlbFailed(true);
-  }, []);
-
-  const canTry3D = (mode === 'auto' || mode === '3d') && !!modelUrl && !glbFailed;
   const canTrySprite =
-    (mode === 'sprite' || (mode === 'auto' && !canTry3D)) &&
+    mode !== 'blueprint' &&
     !!imgUrl &&
     !spriteFailed;
-
-  if (canTry3D && modelUrl) {
-    return (
-      <GlbModelCanvas
-        url={modelUrl}
-        width={width}
-        height={height}
-        accentColor={damaged ? '#ff5c7a' : template.blueprint.accentColor}
-        onFallback={handleGlbFallback}
-      />
-    );
-  }
 
   if (canTrySprite && imgUrl) {
     return (

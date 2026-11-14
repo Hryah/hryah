@@ -50,13 +50,7 @@
       "category": "spacecraft",
       "system": "structure",
       "displayName": "CubeSat / SmallSat Bus",
-      "packName": "NASA 3D / Kenney Space Kit",
-      "model3d": {
-        "url": "assets/models/spacecraft/satellite_bus.glb",
-        "format": "glb",
-        "scale": 1.0,
-        "attribution": "NASA / Kenney CC0"
-      },
+      "packName": "Team 2D Vectors",
       "sprite2d": {
         "url": "assets/templates/design/bus-standard.svg",
         "format": "svg",
@@ -145,8 +139,7 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Medium Dual Solar Array",
-      "packName": "NASA 3D / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/solar_medium.glb", "format": "glb", "scale": 1.0 },
+      "packName": "Team 2D Vectors",
       "sprite2d": { "url": "assets/templates/design/sol-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "solar-medium",
@@ -248,8 +241,7 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "X-Band Patch Array",
-      "packName": "NASA 3D / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/antenna_medium.glb", "format": "glb", "scale": 1.0 },
+      "packName": "Team 2D Vectors",
       "sprite2d": { "url": "assets/templates/design/ant-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "antenna-patch",
