@@ -14,7 +14,6 @@ import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendL
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
-import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { resolveAssetUrl } from "../graphics/registry";
 import { fmt, t } from "../text";
 import { causeChains } from "../../core/debrief";
@@ -26,7 +25,6 @@ import { DesignScreen, type Upcoming } from "./DesignScreen";
 const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", bad: "#ff5c7a", accent: "#5ca8ff", gold: "#ffd166" };
 const AGENCIES = Object.values(agenciesData) as AgencyProfile[];
 const MARKET = marketData as Market;
-const BASE = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
 // Сід кидків браку береться тут, на екрані: ядро власного рандому не має, тож кожна нова гра отримує свій.
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
@@ -312,12 +310,18 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
 export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
+  // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
+  const catalogNow = entry?.design.input.catalog;
+  const blocked = entry?.agency.blockedModules;
+  const lead = entry?.agency.marketLeadTurns ?? 0; // дослідження «ранній доступ»: новинки на кілька ходів раніше
   const upcoming: Upcoming[] = useMemo(
-    () =>
-      base.catalog.modules
-        .filter((m) => (market[m.id]?.fromTurn ?? 0) > turn)
-        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 })),
-    [base, market, turn],
+    () => {
+      const available = new Set((catalogNow?.modules ?? []).map((m) => m.id));
+      return base.catalog.modules
+        .filter((m) => market[m.id] !== undefined && (market[m.id]?.fromTurn ?? 0) - lead > turn && !available.has(m.id) && !(blocked ?? []).includes(m.id))
+        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: (market[m.id]?.fromTurn ?? 0) - lead }));
+    },
+    [base, market, turn, catalogNow, blocked, lead],
   );
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
