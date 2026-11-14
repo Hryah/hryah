@@ -2,13 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { designPhase } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
-import { newConsortium, stepConsortium, type ConsortiumAction, type Market } from "../../core/consortium";
+import { newConsortium, newRoom, stepConsortium, stepRoom, type ConsortiumAction, type Market, type RoomState } from "../../core/consortium";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
 import { describeEntry } from "./cause";
 import { Lobby } from "./Lobby";
-import { newRoom, stepRoom, type RoomState } from "../../core/consortium";
 import { ConsortiumScreen, Results, Turn } from "./ConsortiumScreen";
 import { DesignScreen } from "./DesignScreen";
 
@@ -68,7 +67,7 @@ describe("екран частини 1: розмітка", () => {
     room = stepRoom(room, "b", { type: "wish", agencyId: ids[0]! }, setup);
     if (room.phase !== "lobby") throw new Error("лобі");
     const html = renderToStaticMarkup(<Lobby room={room} agencies={profiles} send={() => undefined} onStart={() => undefined} meId="a" />);
-    for (const text of ["Ann", "Bob", "Ready", "coin toss", "Waiting for everyone to be ready."]) expect(html, text).toContain(text);
+    for (const text of ["Ann", "Bob", "Ready", "coin toss", "contested", "Waiting for everyone to be ready."]) expect(html, text).toContain(text);
     expect(html).not.toContain("ui.");
   });
 });
