@@ -70,7 +70,7 @@ function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s
         onSubmit={(e) => {
           e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
           if (!named || busy) return;
-          if (code.length === 4) run(() => joinRoom(code, name)); else run(() => createRoom(name));
+          if (code.trim().length === 4) run(() => joinRoom(code, name)); else run(() => createRoom(name));
         }}
       >
         <input value={name} maxLength={24} placeholder={t("ui.menu.name")} aria-label={t("ui.menu.name")} onChange={(e) => setName(e.target.value)} />

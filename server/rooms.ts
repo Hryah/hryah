@@ -122,15 +122,15 @@ export class Rooms {
     // Сервер публічний: перевіряємо повну форму дії (включно з вкладеними діями гравця), а не лише type.
     // join сюди не приходить: він має власний шлях, бо тоді у гравця ще нема токена.
     if (!isRoomAction(action) || action.type === "join") return { error: "bad action", status: 400 };
+    room.seen.set(player, this.now());
+    if (action.type === "leave") { this.drop(room, player); return { version: room.version }; }
     let next: RoomState;
     try {
       next = stepRoom(room.state, player, action, this.setup);
     } catch {
       return { error: "bad action", status: 400 };
     }
-    room.seen.set(player, this.now());
-    if (action.type === "leave") this.drop(room, player);
-    else if (next !== room.state) this.commit(room, next);
+    if (next !== room.state) this.commit(room, next);
     return { version: room.version };
   }
 

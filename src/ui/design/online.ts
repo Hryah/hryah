@@ -8,8 +8,12 @@ const base = () => `${import.meta.env.BASE_URL}api/rooms`;
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, init);
-  const body = (await r.json().catch(() => ({}))) as T & { error?: string };
-  if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
+  let parsed: unknown;
+  try { parsed = await r.json(); } catch { parsed = undefined; }
+  const body = (parsed && typeof parsed === "object" ? parsed : undefined) as (T & { error?: string }) | undefined;
+  if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
+  // 200 без JSON-об'єкта: зазвичай проксі ще не налаштований і віддає index.html. Це помилка, а не порожня відповідь.
+  if (!body) throw new Error("bad response");
   return body;
 }
 const post = (body: unknown) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }) satisfies RequestInit;
