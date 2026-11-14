@@ -139,4 +139,26 @@ describe("гра в кімнаті", () => {
     const s = started();
     expect(send(s, "p0", { type: "ready", ready: false })).toBe(s);
   });
+
+  it("гравець, що вийшов у грі, більше не блокує чергу: його агенція пропускає ходи", () => {
+    let s = started();
+    if (s.phase !== "play") throw new Error("очікувалась гра");
+    const g0 = s;
+    const first = g0.assignments.find((a) => a.agencyId === g0.consortium.agencies[g0.consortium.active]!.agency.id)!.playerId;
+    s = send(s, first, { type: "leave" });
+    if (s.phase !== "play") throw new Error("очікувалась гра");
+    expect(s.left).toEqual([first]);
+    const after: RoomState = s;
+    const activeOwner = after.phase === "play" ? after.assignments.find((a) => a.agencyId === after.consortium.agencies[after.consortium.active]?.agency.id)?.playerId : undefined;
+    expect(activeOwner).not.toBe(first); // хід одразу перейшов до того, хто лишився (або гра скінчилась)
+    expect(send(s, first, { type: "leave" })).toBe(s); // повторний вихід нічого не міняє
+    // той, хто лишився, закінчує гру: агенція того, хто вийшов, сама чекає кожен хід
+    for (let i = 0; i < 200; i++) {
+      const cur: RoomState = s;
+      if (cur.phase !== "play" || cur.consortium.result) break;
+      const owner = cur.assignments.find((a) => a.agencyId === cur.consortium.agencies[cur.consortium.active]!.agency.id)!.playerId;
+      s = send(cur, owner, { type: "play", action: { type: "wait" } });
+    }
+    expect(s.phase === "play" && s.consortium.result !== null).toBe(true);
+  });
 });
