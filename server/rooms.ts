@@ -3,6 +3,7 @@
 // Живе поза src/core, тож тут дозволені Node-API (crypto, таймери).
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { Buffer } from "node:buffer";
 import { randomInt, randomUUID } from "node:crypto";
 import { newRoom, stepRoom, type RoomAction, type RoomSetup, type RoomState } from "../src/core/consortium";
 
@@ -164,7 +165,9 @@ function readJson(req: IncomingMessage): Promise<Json> {
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
+  const closed = new WeakSet<ServerResponse>();
   const send = (res: ServerResponse, status: number, body: unknown) => {
+    if (closed.has(res)) return; // клієнт уже розірвав з'єднання: відповідати нікому
     res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
     res.end(JSON.stringify(body));
   };
@@ -175,6 +178,7 @@ export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
   };
 
   return createServer((req, res) => {
+    res.on("close", () => { closed.add(res); });
     void (async () => {
       try {
         const url = new URL(req.url ?? "/", "http://x");

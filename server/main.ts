@@ -3,6 +3,7 @@
 // Кімнати живуть у пам'яті, тому вихід відкладається, поки хтось тримає опитування.
 
 import { realpathSync } from "node:fs";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import agenciesData from "../src/data/agencies.json";
 import marketData from "../src/data/market.json";

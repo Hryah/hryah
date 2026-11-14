@@ -30,11 +30,16 @@ declare module "node:fs" {
 declare module "node:url" {
   export function fileURLToPath(url: string | URL): string;
 }
-declare const process: {
-  argv: string[]; env: Record<string, string | undefined>; exit(code?: number): never;
-};
-declare const Buffer: {
-  concat(chunks: Uint8Array[]): { toString(encoding: string): string };
-  from(x: string): Uint8Array;
-};
+// process і Buffer не оголошені глобально навмисно: випадкове використання в src/ має ламати tsc.
+// Сервер і конфіги імпортують їх явно.
+declare module "node:process" {
+  const process: { argv: string[]; env: Record<string, string | undefined>; exit(code?: number): never };
+  export default process;
+}
+declare module "node:buffer" {
+  export const Buffer: {
+    concat(chunks: Uint8Array[]): { toString(encoding: string): string };
+    from(x: string): Uint8Array;
+  };
+}
 interface ImportMeta { url: string }
