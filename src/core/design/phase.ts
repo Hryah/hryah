@@ -36,22 +36,20 @@ const ALT_STEP_KM = 50;
 // Запас, що блокує запуск.
 const HARD_MARGINS: MarginId[] = ['mass', 'budget'];
 
-const SLOT_SYSTEM: Record<SlotId, SystemId> = {
-  engine: 'propulsion', solar: 'power', battery: 'power', antenna: 'comms', instrument: 'science',
-};
-
 const MARGIN_SYSTEM: Record<MarginId, SystemId> = {
   dv: 'propulsion', energy: 'power', link: 'comms', science: 'science', mass: 'structure', budget: 'structure',
 };
 
+const MODULE_DECISIONS = SLOTS.map((slot) => `design:${slot}`);
+
 // Які рішення гравця стоять за кожним запасом (id записів журналу).
 const MARGIN_CAUSES: Record<MarginId, string[]> = {
   dv: ['design:engine', 'design:fuel'],
-  energy: ['design:battery', 'design:instrument'],
+  energy: ['design:battery', 'design:instrument', 'design:altitude'],
   link: ['design:antenna', 'design:instrument'],
   science: ['design:instrument', 'design:altitude'],
-  mass: ['design:launcher', 'design:fuel'],
-  budget: ['design:launcher'],
+  mass: ['design:launcher', 'design:fuel', ...MODULE_DECISIONS],
+  budget: ['design:launcher', ...MODULE_DECISIONS],
 };
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
@@ -105,12 +103,14 @@ export const designPhase: DesignPhase<DesignState, DesignAction> = {
       case 'setFuel': {
         if (!Number.isFinite(action.fuelKg)) return state;
         const maxKg = Math.max(0, ...mission.launchers.map((l) => l.maxPayloadKg));
-        return { ...state, design: { ...design, fuelKg: clamp(action.fuelKg, 0, maxKg) } };
+        const fuelKg = clamp(action.fuelKg, 0, maxKg);
+        return fuelKg === design.fuelKg ? state : { ...state, design: { ...design, fuelKg } };
       }
       case 'setAlt': {
         if (!Number.isFinite(action.altKm)) return state;
         const [lo, hi] = mission.altRangeKm;
-        return { ...state, design: { ...design, altKm: clamp(action.altKm, lo, hi) } };
+        const altKm = clamp(action.altKm, lo, hi);
+        return altKm === design.altKm ? state : { ...state, design: { ...design, altKm } };
       }
       case 'setLauncher': {
         if (!mission.launchers.some((l) => l.id === action.launcherId)) return state;

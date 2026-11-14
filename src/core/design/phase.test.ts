@@ -222,3 +222,13 @@ describe("частина 1 у складі гри", () => {
     expect(step(g, act({ type: "confirm" })).phase).toBe("design");
   });
 });
+
+describe("частина 1: дії без ефекту", () => {
+  it("setFuel і setAlt на межі не створюють новий стан", () => {
+    const [lo] = SAMPLE_MISSION.altRangeKm;
+    const atZero = run(start(), { type: "setFuel", fuelKg: 0 });
+    expect(run(atZero, { type: "setFuel", fuelKg: -2 })).toBe(atZero);
+    const s = start();
+    expect(run(s, { type: "setAlt", altKm: lo - 50 })).toBe(s);
+  });
+});
