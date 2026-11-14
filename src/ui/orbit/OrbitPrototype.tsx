@@ -62,7 +62,7 @@ export function OrbitPrototype() {
   };
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      if (window.location.hash === '#debug' || helpOpen || setupOpen || event.key.toLowerCase() !== 'n' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (window.location.hash !== '#orbit' || helpOpen || setupOpen || event.key.toLowerCase() !== 'n' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(event.target.tagName)) return;
       event.preventDefault();
       advance();
