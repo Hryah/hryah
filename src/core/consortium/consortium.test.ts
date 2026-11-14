@@ -247,3 +247,11 @@ describe("сесія: недоступні модулі", () => {
     expect(after).toBe(s);
   });
 });
+
+describe("сесія: підсумок", () => {
+  it("після дедлайну ход у стані не виходить за дедлайн", () => {
+    const s = run2(start([usa], 2), wait, wait, wait);
+    expect(s.result).not.toBeNull();
+    expect(s.turn).toBe(2);
+  });
+});

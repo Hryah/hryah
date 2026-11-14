@@ -24,7 +24,9 @@ function checkFactor(name: string, value: number): void {
 export function applyAgency(input: DesignInput, agency: AgencyProfile): DesignInput {
   checkFactor('budgetFactor', agency.budgetFactor);
   checkFactor('launcherCostFactor', agency.launcherCostFactor);
-  for (const [slot, factor] of Object.entries(agency.moduleCostFactor ?? {})) checkFactor(`moduleCostFactor.${slot}`, factor);
+  for (const [slot, factor] of Object.entries(agency.moduleCostFactor ?? {})) {
+    if (factor !== undefined) checkFactor(`moduleCostFactor.${slot}`, factor);
+  }
 
   const { mission, catalog } = input;
   const allowed = agency.launcherIds;

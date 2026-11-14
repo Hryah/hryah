@@ -109,7 +109,7 @@ function endAgencyTurn(state: ConsortiumState): ConsortiumState {
     if (active >= n) {
       active = 0;
       next = startTurn(next, next.turn + 1);
-      if (next.turn > next.deadlineTurn) return settle(next);
+      if (next.turn > next.deadlineTurn) return settle({ ...next, turn: next.deadlineTurn });
     }
     if (!next.agencies[active]?.launch) return { ...next, active };
   }

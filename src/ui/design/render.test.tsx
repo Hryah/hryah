@@ -42,3 +42,11 @@ describe("екран частини 1: розмітка", () => {
     for (const text of ["Choose the agencies", "United States", "India", "Europe", "Start the mission"]) expect(html, text).toContain(text);
   });
 });
+
+describe("екран частини 1: вичерпані дії", () => {
+  it("без змін у цей хід картки модулів заблоковані", () => {
+    const html = renderToStaticMarkup(<DesignScreen state={state} dispatch={() => undefined} editable={false} actionsLeft={0} />);
+    expect(html).toContain("0 changes left this turn");
+    expect((html.match(/disabled/g) ?? []).length).toBeGreaterThan(10);
+  });
+});

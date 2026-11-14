@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
-import { designPhase, SLOTS, type DesignAction, type DesignState } from "../../core/design";
+import { designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import { fmt, t } from "../text";
 
 // Екран частини 1. Лише читає стан і шле дії: усі розрахунки робить core/design.
@@ -46,7 +46,7 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
   const spec = designPhase.finish(state).result;
   const { mission, catalog } = state.input;
   const { design } = state;
-  const blockers = spec.margins.filter((m) => !m.ok && (m.id === "mass" || m.id === "budget")).map((m) => m.id);
+  const blockers = launchBlockers(state);
   const act = (action: DesignAction) => editable && dispatch(action);
 
   return (

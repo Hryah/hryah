@@ -60,12 +60,13 @@ function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
 
 function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
   const entry = activeAgency(state);
+  const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
     () =>
-      BASE.catalog.modules
-        .filter((m) => (MARKET[m.id]?.fromTurn ?? 0) > state.turn)
-        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: MARKET[m.id]?.fromTurn ?? 0 })),
-    [state.turn],
+      base.catalog.modules
+        .filter((m) => (market[m.id]?.fromTurn ?? 0) > turn)
+        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 })),
+    [base, market, turn],
   );
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
@@ -101,7 +102,7 @@ function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: Conso
 
   return (
     <DesignScreen
-      state={entry.design} editable actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
+      state={entry.design} editable={entry.actionsLeft > 0} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />
   );
@@ -143,7 +144,7 @@ function Results({ state, onRestart }: { state: ConsortiumState; onRestart: () =
           </table>
         </>
       )}
-      {state.agencies.filter((e) => !e.launch).map((e) => (
+      {runs.length > 0 && state.agencies.filter((e) => !e.launch).map((e) => (
         <div key={e.agency.id} style={{ color: C.bad }}>{t("ui.result.missed", { agency: t(e.agency.nameKey) })}</div>
       ))}
       <div><button style={button} onClick={onRestart}>{t("ui.result.again")}</button></div>
