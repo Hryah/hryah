@@ -308,12 +308,17 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
 export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
+  // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
+  const catalogNow = entry?.design.input.catalog;
+  const blocked = entry?.agency.blockedModules;
   const upcoming: Upcoming[] = useMemo(
-    () =>
-      base.catalog.modules
-        .filter((m) => (market[m.id]?.fromTurn ?? 0) > turn)
-        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 })),
-    [base, market, turn],
+    () => {
+      const available = new Set((catalogNow?.modules ?? []).map((m) => m.id));
+      return base.catalog.modules
+        .filter((m) => market[m.id] !== undefined && (market[m.id]?.fromTurn ?? 0) > turn && !available.has(m.id) && !(blocked ?? []).includes(m.id))
+        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 }));
+    },
+    [base, market, turn, catalogNow, blocked],
   );
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
