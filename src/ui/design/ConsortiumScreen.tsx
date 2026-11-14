@@ -7,6 +7,7 @@ import {
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
 import { MissionRunner } from "../campaign/MissionRunner";
+import { ResearchPanel } from "../campaign/ResearchPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -186,7 +187,7 @@ interface RoomViewProps {
 }
 
 function RoomView({ room, local = false, active = true, meId, send, onStart, onRestart }: RoomViewProps) {
-  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
+  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} scenarios={ROOM_SETUP.scenarios} local={local} meId={meId} send={send} onStart={onStart} />;
   const { consortium } = room;
   const bots = room.bots ?? [];
   // Чиї агенції «мої»: за одним екраном — усіх людей, онлайн — лише своя.
@@ -239,6 +240,9 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
       <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
         <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
+      {mine && entry && entry.account && (
+        <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+      )}
     </div>
   );
 }

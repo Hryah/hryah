@@ -1,4 +1,4 @@
-import { assignAgencies, startBlockers, MAX_PLAYERS, type LobbyState, type RoomAction } from "../../core/consortium";
+import { assignAgencies, startBlockers, DEFAULT_SCENARIO, MAX_PLAYERS, type LobbyState, type RoomAction, type ScenarioSetup } from "../../core/consortium";
 import type { AgencyProfile } from "../../core/design/agency";
 import { resolveAssetUrl } from "../graphics/registry";
 import { t } from "../text";
@@ -18,9 +18,10 @@ export interface LobbyProps {
   onStart: () => void;
   local?: boolean;
   meId?: string;
+  scenarios?: Record<string, ScenarioSetup>;
 }
 
-export function Lobby({ room, agencies, send, onStart, local = false, meId }: LobbyProps) {
+export function Lobby({ room, agencies, send, onStart, local = false, meId, scenarios }: LobbyProps) {
   const nameOf = (id: string) => { const a = agencies.find((x) => x.id === id); return a ? t(a.nameKey) : id; };
   const blockers = startBlockers(local ? { ...room, players: room.players.map((p) => ({ ...p, ready: true })) } : room, agencies.map((a) => a.id));
   const wishCount = (agencyId: string) => room.players.filter((p) => p.wish === agencyId).length;
@@ -36,6 +37,21 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
     <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="lobby">
       <h2 style={{ margin: 0 }}>{t("ui.lobby.title")}</h2>
       <p style={{ color: C.dim, margin: 0 }}>{t(local ? "ui.lobby.hintLocal" : "ui.lobby.hintOnline")}</p>
+      {scenarios && (() => {
+        const current = scenarios[room.scenarioId ?? DEFAULT_SCENARIO];
+        return (
+          <div style={{ display: "grid", gap: 4 }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <strong>{t("ui.lobby.scenario")}</strong>
+              <select value={room.scenarioId ?? DEFAULT_SCENARIO} disabled={!isHost} aria-label={t("ui.lobby.scenario")}
+                onChange={(e) => send(room.hostId, { type: "scenario", scenarioId: e.target.value })}>
+                {Object.values(scenarios).map((s) => <option key={s.def.id} value={s.def.id}>{t(s.def.titleKey)}</option>)}
+              </select>
+            </label>
+            {current && <span style={{ color: C.dim, fontSize: 13 }}>{t(current.def.briefKey)} · {t(current.mission.titleKey)}</span>}
+          </div>
+        );
+      })()}
       {room.players.map((p) => {
         const mine = local || p.id === meId;
         const got = preview.find((a) => a.playerId === p.id);
