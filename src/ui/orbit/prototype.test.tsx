@@ -17,6 +17,34 @@ function finishMission(initial: OrbitState): OrbitState {
 }
 
 describe('orbit prototype presentation', () => {
+  it('shows memory forecast and turn cost before a command is executed', () => {
+    const html = renderToStaticMarkup(<OrbitPrototype />);
+    for (const label of ['Energy consumed', 'Solar energy available', 'Ending memory', 'Peak memory before downlink', 'Time simulated', 'Command: ON', 'Next turn: operating']) {
+      expect(html).toContain(label);
+    }
+  });
+
+  it('renders an ON command as checked when SAFE blocks actual work', () => {
+    const initialState = orbitPhase.step(createDemoOrbit(), { type: 'toggle', id: 'safeMode' });
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={initialState} />);
+    expect(html).toContain('Blocked by SAFE');
+    expect(html).toContain('Heating requested by SAFE');
+    expect(html).toMatch(/aria-checked="true" aria-label="Camera"/);
+    expect(html).toContain('Next turn: inactive');
+    expect(html).not.toMatch(/\bclarity\.[\w.]+/);
+  });
+
+  it('renders causal paths to a concrete command and module choice in the debrief', () => {
+    const initial = orbitPhase.step(createDemoOrbit('comms'), { type: 'toggle', id: 'heater' });
+    const end = finishMission(initial);
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={end} />);
+    expect(html).toContain('Problems and player decisions');
+    expect(html).toContain('Heater command changed to Off');
+    expect(html).toContain('ant-s');
+    expect(html).toContain('cause-path');
+    expect(html).not.toMatch(/\bclarity\.[\w.]+|\borbit\.clarity\.[\w.]+/);
+  });
+
   it('renders a readable first-orbit control screen with labelled switches and no missing copy', () => {
     const html = renderToStaticMarkup(<OrbitPrototype />);
     expect(html).toContain('Orbital operations');
