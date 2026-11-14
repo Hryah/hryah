@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
-import { newConsortium, activeAgency, stepConsortium, type ConsortiumAction, type ConsortiumState, type Market } from "../../core/consortium";
+import { activeAgency, newRoom, stepRoom, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState } from "../../core/consortium";
+import { Lobby } from "./Lobby";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
@@ -17,7 +18,6 @@ const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", ba
 const AGENCIES = Object.values(agenciesData) as AgencyProfile[];
 const MARKET = marketData as Market;
 const BASE = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
-const MAX_AGENCIES = 4;
 // Сід кидків браку береться тут, на екрані: ядро власного рандому не має, тож кожна нова гра отримує свій.
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
@@ -26,39 +26,40 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 15,
 } as const;
 
+// Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
+// Онлайн-режим підставить сюди той самий RoomState від сервера (див. Lobby).
+const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES };
+const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
+
 export function ConsortiumScreen() {
-  const [state, setState] = useState<ConsortiumState | null>(null);
-  const dispatch = (action: ConsortiumAction) => setState((s) => (s ? stepConsortium(s, action) : s));
+  const [room, setRoom] = useState<RoomState>(newLocalRoom);
+  const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
 
-  if (!state) return <Setup onStart={(chosen) => setState(newConsortium(BASE, MARKET, chosen, undefined, newSeed()))} />;
-  if (state.result) return <Results state={state} onRestart={() => setState(null)} />;
-  return <Turn state={state} dispatch={dispatch} />;
-}
-
-function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
-  const [chosen, setChosen] = useState<string[]>(AGENCIES.map((a) => a.id));
-  const toggle = (id: string) =>
-    setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < MAX_AGENCIES ? [...c, id] : c));
-  const picked = AGENCIES.filter((a) => chosen.includes(a.id));
-
+  if (room.phase === "lobby") {
+    return (
+      <Lobby
+        room={room} agencies={AGENCIES} local
+        send={send}
+        onStart={() => {
+          // За одним екраном «готовий» не потрібен: гравці домовились поруч.
+          setRoom((r) => {
+            if (r.phase !== "lobby") return r;
+            const ready = r.players.reduce<RoomState>((acc, p) => stepRoom(acc, p.id, { type: "ready", ready: true }, ROOM_SETUP), r);
+            return stepRoom(ready, r.hostId, { type: "start" }, ROOM_SETUP);
+          });
+        }}
+      />
+    );
+  }
+  const { consortium } = room;
+  if (consortium.result) return <Results state={consortium} onRestart={() => setRoom(newLocalRoom())} />;
+  const entry = activeAgency(consortium);
+  const owner = room.assignments.find((a) => a.agencyId === entry?.agency.id);
+  const name = owner ? room.playerNames[owner.playerId] ?? owner.playerId : "";
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }}>
-      <h2 style={{ margin: 0 }}>{t("ui.setup.title", { max: MAX_AGENCIES })}</h2>
-      <p style={{ color: C.dim, margin: 0 }}>{t("ui.setup.hint")}</p>
-      {AGENCIES.map((a) => (
-        <label key={a.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
-          <input type="checkbox" checked={chosen.includes(a.id)} onChange={() => toggle(a.id)} />
-          <span>
-            <strong>{t(a.nameKey)}</strong>
-            <div style={{ color: C.dim, fontSize: 13 }}>{t(a.descriptionKey)}</div>
-          </span>
-        </label>
-      ))}
-      <div>
-        <button style={{ ...button, borderColor: C.accent }} disabled={picked.length === 0} onClick={() => onStart(picked)}>
-          {t("ui.setup.start")}
-        </button>
-      </div>
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ color: C.gold }}>{t("ui.lobby.playerTurn", { player: name })}</div>
+      <Turn state={consortium} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
     </div>
   );
 }
