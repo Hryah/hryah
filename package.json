@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "rooms": "vite build -c vite.server.config.ts --outDir dist/server && node dist/server/rooms.mjs --channel=dev"
   },
   "dependencies": {
     "react": "^19.3.1",
