@@ -139,6 +139,7 @@
   "ui.gallery.engine": "Engine test",
   "ui.gallery.orbit": "Orbit",
   "ui.gallery.design": "Design",
+  "ui.gallery.filters": "Filters:",
   "ui.designStage": "Spacecraft on the test stand with the selected modules",
   "ui.gallery.orbitState": "Mock view: charge {charge}%, storm {storm}, link {link}, safe mode {safe}, status {status}"
 }

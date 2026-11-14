@@ -1,6 +1,7 @@
 // stage.ts — полотно, нерухома ортографічна камера, світло, зміна розміру і цикл кадрів.
 // Нічого не знає про гру. Сцени отримують Stage і додають у нього свої об'єкти.
 import * as THREE from 'three';
+import { createFilterChain, type Filter } from './filters';
 import { palette } from './palette';
 
 /** Те, що бачить сцена. Після етапу 0 цей інтерфейс міняється лише через Олексія. */
@@ -18,6 +19,8 @@ export interface StageRunner extends Stage {
   /** Запускає цикл кадрів. onFrame викликається перед кожним малюванням. */
   start(onFrame: (dtS: number, timeS: number) => void): void;
   stop(): void;
+  /** Візуальні фільтри на весь кадр (див. filters.ts). Порожній список вимикає постобробку. */
+  setFilters(filters: readonly Filter[]): void;
   /** Зупиняє цикл і звільняє ресурси рендерера. Об'єкти сцени прибирає сама сцена. */
   dispose(): void;
 }
@@ -50,6 +53,8 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
   const ambient = new THREE.AmbientLight(palette.white, 0.45);
   root.add(sun, ambient);
 
+  const filters = createFilterChain(renderer);
+  const bufferSize = new THREE.Vector2();
   let aspect = 1;
   let widthPx = 0;
   let heightPx = 0;
@@ -65,6 +70,8 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     aspect = w / h;
     renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
+    renderer.getDrawingBufferSize(bufferSize);
+    filters.resize(bufferSize.x, bufferSize.y);
     const halfH = viewHeightUnits / 2;
     camera.left = -halfH * aspect;
     camera.right = halfH * aspect;
@@ -103,16 +110,19 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
         if (widthPx === 0 || heightPx === 0) return; // прихований екран не рахує час і не малює
         timeS += dtS;
         onFrame(dtS, timeS);
-        renderer.render(root, camera);
+        if (filters.isActive()) filters.render(root, camera, timeS);
+        else renderer.render(root, camera);
       };
       frameId = requestAnimationFrame(frame);
     },
     stop,
+    setFilters: (list) => filters.set(list),
     dispose() {
       if (disposed) return;
       disposed = true;
       stop();
       root.remove(sun, ambient);
+      filters.dispose();
       renderer.dispose();
     },
   };

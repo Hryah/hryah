@@ -43,7 +43,7 @@ export interface Planet {
 
 /** Низькополігональна планета: океан і плями суші кольором вершин, навколо напівпрозора атмосфера. */
 export function createPlanet(radius: number): Planet {
-  const geometry = new THREE.IcosahedronGeometry(radius, 3).toNonIndexed();
+  const geometry = new THREE.IcosahedronGeometry(radius, 3);
   const position = geometry.getAttribute('position');
   const colors = new Float32Array(position.count * 3);
   const ocean = new THREE.Color(palette.planetDay);

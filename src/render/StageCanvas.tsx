@@ -2,6 +2,7 @@
 // React тут лише тримає полотно. Кадри малює цикл у stage.ts, а не перемальовування компонента.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Scene } from '../scenes/types';
+import type { Filter } from './filters';
 import { createStage, type StageOptions, type StageRunner } from './stage';
 
 export interface StageCanvasProps<View> {
@@ -12,16 +13,21 @@ export interface StageCanvasProps<View> {
   /** Що показати, якщо WebGL недоступний. */
   fallback: ReactNode;
   options?: StageOptions;
+  /** Візуальні фільтри на весь кадр. Зміна списку не перемонтовує сцену. */
+  filters?: readonly Filter[];
   className?: string;
   style?: CSSProperties;
   /** Опис для екранних читачів. */
   label?: string;
 }
 
-export function StageCanvas<View>({ createScene, view, fallback, options, className, style, label }: StageCanvasProps<View>) {
+export function StageCanvas<View>({ createScene, view, fallback, options, filters, className, style, label }: StageCanvasProps<View>) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const stageRef = useRef<StageRunner | null>(null);
   const [failed, setFailed] = useState(false);
   const viewHeightUnits = options?.viewHeightUnits;
   const cameraElevationDeg = options?.cameraElevationDeg;
@@ -39,15 +45,22 @@ export function StageCanvas<View>({ createScene, view, fallback, options, classN
       setFailed(true); // WebGL недоступний
       return;
     }
+    stageRef.current = stage;
+    stage.setFilters(filtersRef.current ?? []);
     const scene = createScene();
     scene.mount(stage);
     stage.start((dtS, timeS) => scene.update(viewRef.current, dtS, timeS));
     return () => {
+      stageRef.current = null;
       stage.stop();
       scene.dispose();
       stage.dispose();
     };
   }, [createScene, viewHeightUnits, cameraElevationDeg]);
+
+  useEffect(() => {
+    stageRef.current?.setFilters(filters ?? []);
+  }, [filters]);
 
   if (failed) {
     return <div className={className} role="status" style={{ ...style, display: 'grid', placeItems: 'center', padding: 16 }}>{fallback}</div>;

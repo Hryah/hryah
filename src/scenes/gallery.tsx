@@ -1,9 +1,10 @@
 // gallery.tsx — перегляд сцен на вигаданих даних (#gallery). Вид сам змінюється в часі,
 // тож сцену можна розробляти й дивитись, не граючи в гру.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SlotId } from '../core/contracts';
 import catalog from '../data/catalog.json';
 import { StageCanvas } from '../render/StageCanvas';
+import { pixelate, posterize, scanlines, vignette, type Filter } from '../render/filters';
 import { css } from '../render/palette';
 import { t } from '../ui/text';
 import { createDesignScene } from './design-scene';
@@ -15,6 +16,8 @@ type EntryId = 'engine' | 'orbit' | 'design';
 const ENTRIES: EntryId[] = ['engine', 'orbit', 'design'];
 const ORBIT_STAGE = { viewHeightUnits: 6.5 };
 const DESIGN_STAGE = { viewHeightUnits: 8 };
+// Готові фільтри рушія: у галереї їх можна вмикати в будь-якому поєднанні, порядок як у списку.
+const FILTERS: Filter[] = [pixelate(4), posterize(8), scanlines(0.25), vignette(0.6)];
 const DESIGN_SLOTS: SlotId[] = ['engine', 'solar', 'battery', 'antenna', 'instrument'];
 
 /** Секунди від відкриття галереї; оновлюється кілька разів на секунду, цього досить для вигаданого виду. */
@@ -71,27 +74,41 @@ export function Gallery({ active }: { active: boolean }) {
   const elapsedS = useElapsedS(active);
   const fallback = t('ui.render.noWebgl');
   const orbit = fakeOrbitView(elapsedS);
+  const [enabled, setEnabled] = useState<string[]>([]);
+  const filters = useMemo(() => FILTERS.filter((f) => enabled.includes(f.name)), [enabled]);
+  const chip = (on: boolean) => ({
+    padding: '6px 12px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${css('starDim')}`,
+    background: on ? css('accent') : 'transparent', color: on ? css('outline') : css('star'),
+  });
 
   return (
     <section>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         {ENTRIES.map((id) => (
           <button key={id} type="button" onClick={() => setEntry(id)} aria-pressed={entry === id}
-            style={{ padding: '6px 12px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${css('starDim')}`,
-              background: entry === id ? css('accent') : 'transparent', color: entry === id ? css('outline') : css('star') }}>
+            style={chip(entry === id)}>
             {t(`ui.gallery.${id}`)}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+        <span style={{ color: css('starDim'), fontSize: 13 }}>{t('ui.gallery.filters')}</span>
+        {FILTERS.map((f) => (
+          <button key={f.name} type="button" aria-pressed={enabled.includes(f.name)} style={chip(enabled.includes(f.name))}
+            onClick={() => setEnabled((list) => (list.includes(f.name) ? list.filter((n) => n !== f.name) : [...list, f.name]))}>
+            {f.name}
           </button>
         ))}
       </div>
       <div style={{ height: 520, borderRadius: 8, overflow: 'hidden', border: `1px solid ${css('outline')}` }}>
         {entry === 'engine' && (
-          <StageCanvas createScene={createTestScene} view={fakeTestView(elapsedS)} fallback={fallback} label={t('ui.gallery.engine')} />
+          <StageCanvas createScene={createTestScene} view={fakeTestView(elapsedS)} fallback={fallback} filters={filters} label={t('ui.gallery.engine')} />
         )}
         {entry === 'orbit' && (
-          <StageCanvas createScene={createOrbitScene} view={orbit} fallback={fallback} options={ORBIT_STAGE} label={t('ui.gallery.orbit')} />
+          <StageCanvas createScene={createOrbitScene} view={orbit} fallback={fallback} options={ORBIT_STAGE} filters={filters} label={t('ui.gallery.orbit')} />
         )}
         {entry === 'design' && (
-          <StageCanvas createScene={createDesignScene} view={fakeDesignView(elapsedS)} fallback={fallback} options={DESIGN_STAGE} label={t('ui.gallery.design')} />
+          <StageCanvas createScene={createDesignScene} view={fakeDesignView(elapsedS)} fallback={fallback} options={DESIGN_STAGE} filters={filters} label={t('ui.gallery.design')} />
         )}
       </div>
       {entry === 'orbit' && (
