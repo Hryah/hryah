@@ -70,18 +70,39 @@ describe("наскрізна гра: екран показує поточну ч
     expect(html).toContain("Enabled by safe mode"); // обігрівач у безпечному режимі не «призупинений»
   });
 
-  it("екран орбіти попереджає про бурю заздалегідь, а заблокована система показується як «недоступна»", () => {
+  it("екран орбіти попереджає про бурю заздалегідь", () => {
     let g = newGame(SAMPLE_MISSION, SAMPLE_CATALOG, 7);
     g = step(g, { phase: "design", action: { type: "confirm" } });
     g = step(g, { phase: "flight", action: { type: "complete_phase" } });
-    const seen = new Set<string>();
+    let soon = false;
     for (let i = 0; i < 12 && g.phase === "orbit"; i++) {
-      const html = render(g);
-      if (/Solar storm in \d orbits/.test(html)) seen.add("soon");
-      if (/Solar storm expected|storm/i.test(html) && !/Solar storm in/.test(html)) seen.add("next");
+      if (/Solar storm in \d orbits/.test(render(g))) soon = true;
       g = step(g, { phase: "orbit", action: { type: "tick", dtS: g.orbit.input.flight.orbit.periodS } });
     }
-    expect(seen.has("soon")).toBe(true);
+    expect(soon).toBe(true);
+  });
+
+  it("заблокована холодом камера показується як «недоступна», а не «увімкнена»", () => {
+    let g = newGame(SAMPLE_MISSION, SAMPLE_CATALOG, 7);
+    g = step(g, { phase: "design", action: { type: "confirm" } });
+    g = step(g, { phase: "flight", action: { type: "complete_phase" } });
+    if (g.phase !== "orbit") throw new Error("очікувалась орбіта");
+    expect(render(g)).toContain("Camera: Enabled");
+    const cold: GameState = { ...g, orbit: { ...g.orbit, coldStress: 2 } };
+    const html = render(cold);
+    expect(html).toContain("Camera: Unavailable");
+    expect(html).not.toContain("Camera: Enabled");
+  });
+
+  it("безпечний режим із непрацюючим обігрівачем показує його «недоступним»", () => {
+    let g = newGame(SAMPLE_MISSION, SAMPLE_CATALOG, 7);
+    g = step(g, { phase: "design", action: { type: "confirm" } });
+    g = step(g, { phase: "flight", action: { type: "complete_phase" } });
+    g = step(g, { phase: "orbit", action: { type: "toggle", id: "safeMode" } });
+    if (g.phase !== "orbit") throw new Error("очікувалась орбіта");
+    const dead: GameState = { ...g, orbit: { ...g.orbit, input: { ...g.orbit.input, flight: { ...g.orbit.input.flight, damage: [{ system: "thermal", severity: 1 }] } } } };
+    expect(render(dead)).toContain("Heater: Unavailable");
+    expect(render(g)).toContain("Heater: Enabled");
   });
 
   it("пояснює втрату до відділення й показує справжню причину без успішної орбіти", () => {

@@ -34,7 +34,8 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
           const overridden = state.toggles.safeMode && id !== "safeMode";
           const on = overridden ? view.activeSystems[id] : state.toggles[id];
           // Увімкнено, але система не працює (холод, пошкодження з польоту): показуємо «недоступно», а не «увімкнено».
-          const unavailable = !done && !overridden && state.toggles[id] && !view.activeSystems[id];
+          // Безпечний режим форсує обігрівач: якщо він при цьому не працює (термічні пошкодження), це теж «недоступно».
+          const unavailable = !done && (overridden ? id === "heater" && !view.activeSystems.heater : state.toggles[id] && !view.activeSystems[id]);
           const note = overridden ? tr(id === "heater" ? "controls.forcedHeater" : "controls.overridden") : null;
           return (
           <button key={id} role="switch" aria-checked={on && !unavailable} disabled={done || overridden}
@@ -52,6 +53,7 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
       <div style={{ color: "#8a90a8", fontSize: 13, display: "grid", gap: 2 }} data-testid="orbit-log">
         <strong>{tr("ui.missionLog")}</strong>
         {[...state.log].reverse().slice(0, 4).map((e) => (
+          // Записи орбіти не мають параметра module, тому порожній каталог безпечний; якщо такий запис з'явиться, додати каталог у OrbitInput.
           <div key={e.id}>{describeEntry(e, { mission: state.input.mission, catalog: { modules: [] } })}</div>
         ))}
       </div>
