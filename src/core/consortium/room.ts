@@ -174,7 +174,7 @@ export function startBlockers(lobby: LobbyState, knownAgencyIds?: string[]): str
   if (knownAgencyIds && lobby.agencyIds.some((id) => !knownAgencyIds.includes(id))) out.push('lobby.unknownAgency');
   if (lobby.players.length < lobby.minPlayers) out.push('lobby.tooFew');
   if (lobby.players.length > lobby.agencyIds.length) out.push('lobby.tooMany');
-  if (lobby.players.some((p) => !p.ready && p.id !== lobby.hostId)) out.push('lobby.notReady');
+  if (lobby.players.some((p) => !p.ready && !p.bot && p.id !== lobby.hostId)) out.push('lobby.notReady');
   if (!lobby.players.some((p) => !p.bot)) out.push('lobby.onlyBots');
   return out;
 }
@@ -260,7 +260,8 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       if (action.agencyId !== null && !state.agencyIds.includes(action.agencyId)) return state;
       if (me.wish === action.agencyId) return state;
       // Зміна бажання міняє розклад для всіх (можливий новий конфлікт), тож готовність скидається в усіх.
-      return { ...state, players: state.players.map((p) => ({ ...p, wish: p.id === playerId ? action.agencyId : p.wish, ready: false })) };
+      // Бот завжди готовий: підтвердити готовність за нього нікому.
+      return { ...state, players: state.players.map((p) => ({ ...p, wish: p.id === playerId ? action.agencyId : p.wish, ready: p.bot === true })) };
     }
     case 'ready':
       if (!me) return state;

@@ -272,3 +272,33 @@ describe("фабрика в кімнаті", () => {
     expect(send(analyzed, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } })).toBe(analyzed);
   });
 });
+
+describe("рев'ю: лобі з ботами, втрата в польоті, фінальний стан", () => {
+  it("бот лишається готовим після зміни країни; онлайн-кімната стартує", () => {
+    let s: RoomState = newRoom("me", "Me", ids, 1);
+    s = send(s, "me", { type: "addBot" });
+    s = send(s, "me", { type: "wish", agencyId: "meridia" });
+    if (s.phase !== "lobby") throw new Error();
+    expect(s.players.find((p) => p.bot)!.ready).toBe(true);
+    s = send(s, "me", { type: "start" });
+    expect(s.phase).toBe("play");
+  });
+
+  it("втрата в польоті дає відмову з причиною в журналі", () => {
+    const s = launchLikeBot(soloRoom());
+    const me = s.consortium.agencies.find((e) => e.agency.id === "borealis")!;
+    const out = replayOrbit(flownMission(s.consortium), flownSpec(me)!, { ...honestReport(s).flight, deploymentStatus: "lost" }, me.launch!.log, [], 1);
+    const failure = out.log.find((e) => e.kind === "failure");
+    expect(failure?.causedBy?.length).toBeGreaterThan(0);
+  });
+
+  it("після підсумку кампанії сирих звітів у стані немає", () => {
+    let s = soloRoom();
+    for (let guard = 0; guard < 400 && !s.consortium.result; guard++) {
+      if (s.consortium.awaiting) s = send(s, "me", { type: "report", report: honestReport(s) }) as PlayState;
+      else s = launchLikeBot(s);
+    }
+    expect(s.consortium.result).not.toBeNull();
+    expect(s.consortium.agencies.every((e) => e.report === undefined)).toBe(true);
+  });
+});
