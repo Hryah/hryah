@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
+import { CompositeSpacecraftSvg } from "../graphics/adapters";
+import { resolveAssetUrl, templateRegistry } from "../graphics/registry";
 import { fmt, t } from "../text";
 import { DesignStage } from "./DesignStage";
 
@@ -56,16 +58,21 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
     if (control !== null && can(control)) dispatch(action);
   };
 
+  const assembly = templateRegistry.buildAssembly({ phase: "design", mission, design });
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
       {header}
-      <div style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
-          <strong style={{ fontSize: 18 }}>{t(mission.titleKey)}</strong>
-          <span style={{ color: C.dim }}>{t("ui.budget")}: {fmt(mission.budgetMUsd)} M$</span>
-          {actionsLeft !== undefined && <span style={{ color: C.accent }}>{t("ui.actionsLeft", { n: actionsLeft })}</span>}
+      <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center" }}>
+        <div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
+            <strong style={{ fontSize: 18 }}>{t(mission.titleKey)}</strong>
+            <span style={{ color: C.dim }}>{t("ui.budget")}: {fmt(mission.budgetMUsd)} M$</span>
+            {actionsLeft !== undefined && <span style={{ color: C.accent }}>{t("ui.actionsLeft", { n: actionsLeft })}</span>}
+          </div>
+          <p style={{ color: C.dim, margin: "8px 0 0" }}>{t(mission.briefKey)}</p>
         </div>
-        <p style={{ color: C.dim, margin: "8px 0 0" }}>{t(mission.briefKey)}</p>
+        <CompositeSpacecraftSvg assembly={assembly} altKm={design.altKm} fuelKg={design.fuelKg} />
       </div>
 
       <DesignStage state={state} active={active} />
@@ -82,7 +89,12 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
             return (
               <div key={id} title={t(`ui.marginHint.${id}`)}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                  <span>{m.ok ? "✅" : "🟥"} {t(`ui.margin.${id}`)}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 16, height: 16, borderRadius: 4, background: m.ok ? "#123828" : "#3a1724", border: `1px solid ${m.ok ? C.ok : C.bad}`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <img src={resolveAssetUrl(m.ok ? "assets/icons/ui/circle-check.svg" : "assets/icons/ui/circle-x.svg")} alt="" width={11} height={11} />
+                    </span>
+                    {t(`ui.margin.${id}`)}
+                  </span>
                   <span style={{ color: m.ok ? C.dim : C.bad }}>{fmt(m.have)} / {fmt(m.need)} {m.unit}</span>
                 </div>
                 <div style={{ height: 6, background: C.line, borderRadius: 3, marginTop: 4, overflow: "hidden" }}>
@@ -103,26 +115,41 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8 }}>
               {options.map((m) => {
                 const selected = design.modules[slot] === m.id;
+                const spriteUrl = templateRegistry.getModuleTemplate(slot, m.id).sprite2d?.url;
                 return (
                   <button
                     key={m.id} disabled={!can(`slot:${slot}`)} onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
                     style={{
                       ...button, textAlign: "left", background: C.card, opacity: can(`slot:${slot}`) ? 1 : 0.6,
                       border: `1px solid ${selected ? C.accent : C.line}`, boxShadow: selected ? `0 0 0 1px ${C.accent}` : "none",
+                      display: "flex", alignItems: "center", gap: 10,
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{t(m.nameKey)}</div>
-                    <div style={{ color: C.dim, fontSize: 12 }}>{keyStat(m)}</div>
-                    <div style={{ color: C.dim, fontSize: 12 }}>{fmt(m.massKg)} kg · {fmt(m.costMUsd)} M$</div>
+                    {spriteUrl && (
+                      <img src={spriteUrl} alt="" width={36} height={36} style={{ objectFit: "contain", flexShrink: 0 }} />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600 }}>{t(m.nameKey)}</div>
+                      <div style={{ color: C.dim, fontSize: 12 }}>{keyStat(m)}</div>
+                      <div style={{ color: C.dim, fontSize: 12 }}>{fmt(m.massKg)} kg · {fmt(m.costMUsd)} M$</div>
+                    </div>
                   </button>
                 );
               })}
-              {later.map((u) => (
-                <div key={u.id} style={{ ...button, cursor: "default", border: `1px dashed ${C.line}`, color: C.dim }}>
-                  <div style={{ fontWeight: 600 }}>{t(u.nameKey)}</div>
-                  <div style={{ fontSize: 12 }}>{t("ui.availableFrom", { turn: u.fromTurn })}</div>
-                </div>
-              ))}
+              {later.map((u) => {
+                const upcomingSpriteUrl = templateRegistry.getModuleTemplate(slot, u.id).sprite2d?.url;
+                return (
+                  <div key={u.id} style={{ ...button, cursor: "default", border: `1px dashed ${C.line}`, color: C.dim, display: "flex", alignItems: "center", gap: 10 }}>
+                    {upcomingSpriteUrl && (
+                      <img src={upcomingSpriteUrl} alt="" width={36} height={36} style={{ objectFit: "contain", opacity: 0.45, flexShrink: 0 }} />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600 }}>{t(u.nameKey)}</div>
+                      <div style={{ fontSize: 12 }}>{t("ui.availableFrom", { turn: u.fromTurn })}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -134,13 +161,22 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {mission.launchers.map((l) => {
               const selected = design.launcherId === l.id;
+              const launcherSpriteUrl = templateRegistry.getLauncherTemplate(l.id).sprite2d?.url;
               return (
                 <button
                   key={l.id} disabled={!can("launcher")} onClick={() => act({ type: "setLauncher", launcherId: l.id })}
-                  style={{ ...button, background: C.card, border: `1px solid ${selected ? C.accent : C.line}`, opacity: can("launcher") ? 1 : 0.6, textAlign: "left" }}
+                  style={{
+                    ...button, background: C.card, border: `1px solid ${selected ? C.accent : C.line}`, opacity: can("launcher") ? 1 : 0.6,
+                    textAlign: "left", display: "flex", alignItems: "center", gap: 10,
+                  }}
                 >
-                  <div style={{ fontWeight: 600 }}>{t(l.nameKey)}</div>
-                  <div style={{ color: C.dim, fontSize: 12 }}>≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$</div>
+                  {launcherSpriteUrl && (
+                    <img src={launcherSpriteUrl} alt="" width={28} height={40} style={{ objectFit: "contain", flexShrink: 0 }} />
+                  )}
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{t(l.nameKey)}</div>
+                    <div style={{ color: C.dim, fontSize: 12 }}>≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$</div>
+                  </div>
                 </button>
               );
             })}

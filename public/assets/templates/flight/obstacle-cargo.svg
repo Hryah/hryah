@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Square armored chassis -->
+    <rect x="16" y="16" width="224" height="224" rx="26" fill="#9AA8C4" stroke="#0D1736" stroke-width="10"/>
+    <!-- Cel top-left light strip & bottom-right bevel shade -->
+    <rect x="26" y="26" width="196" height="196" rx="18" fill="#C0C8DD"/>
+    <path d="M 44,218 L 210,218 Q 222,218 222,206 L 222,44 L 234,36 L 234,212 Q 234,234 212,234 L 36,234 Z"
+          fill="#788FB3" opacity="0.7"/>
+    <!-- 4 Orange armored corner guards -->
+    <path d="M 16,66 L 16,42 Q 16,16 42,16 L 66,16 L 66,40 L 40,40 L 40,66 Z" fill="#FAAC31" stroke="#0D1736" stroke-width="7"/>
+    <path d="M 190,16 L 214,16 Q 240,16 240,42 L 240,66 L 216,66 L 216,40 L 190,40 Z" fill="#FAAC31" stroke="#0D1736" stroke-width="7"/>
+    <path d="M 240,190 L 240,214 Q 240,240 214,240 L 190,240 L 190,216 L 216,216 L 216,190 Z" fill="#F3832D" stroke="#0D1736" stroke-width="7"/>
+    <path d="M 66,240 L 42,240 Q 16,240 16,214 L 16,190 L 40,190 L 40,216 L 66,216 Z" fill="#F3832D" stroke="#0D1736" stroke-width="7"/>
+    <!-- Inner lid plate & recessed ribs -->
+    <rect x="46" y="46" width="164" height="164" rx="14" fill="#E3E0E2" stroke="#0D1736" stroke-width="6"/>
+    <line x1="64" y1="64" x2="192" y2="192" stroke="#788FB3" stroke-width="10"/>
+    <line x1="192" y1="64" x2="64" y2="192" stroke="#788FB3" stroke-width="10"/>
+    <!-- Criss-cross teal EVA restraint straps & central buckle -->
+    <rect x="34" y="114" width="188" height="28" rx="6" fill="#206876" stroke="#0D1736" stroke-width="6"/>
+    <rect x="114" y="34" width="28" height="188" rx="6" fill="#206876" stroke="#0D1736" stroke-width="6"/>
+    <!-- Center steel latch clasp -->
+    <rect x="96" y="96" width="64" height="64" rx="12" fill="#32446A" stroke="#0D1736" stroke-width="6"/>
+    <rect x="108" y="108" width="40" height="40" rx="7" fill="#FAAC31" stroke="#0D1736" stroke-width="4.5"/>
+    <circle cx="128" cy="128" r="8" fill="#B2D7E8" stroke="#0D1736" stroke-width="3"/>
+    <!-- Small telemetry tag -->
+    <rect x="56" y="54" width="42" height="22" rx="4" fill="#C0C8DD" stroke="#0D1736" stroke-width="4"/>
+    <line x1="63" y1="62" x2="90" y2="62" stroke="#3EA2F6" stroke-width="3.5"/>
+    <line x1="63" y1="69" x2="82" y2="69" stroke="#0D1736" stroke-width="3"/>
+  </g>
+</svg>

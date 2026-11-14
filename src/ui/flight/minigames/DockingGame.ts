@@ -229,21 +229,16 @@ export class DockingGame {
     ctx.translate(tx, ty);
     ctx.scale(scale, scale);
 
-    // Реальна 3D GLB модель стикувального модуля (assets/models/spacecraft/satellite_bus.glb через parseGlbBuffer)
-    const busGlb = flightAssetCache.getGlbMesh(
-      "assets/models/spacecraft/satellite_bus.glb",
+    // 2D SVG силует стикувального модуля (assets/templates/design/bus-standard.svg)
+    const busImg = flightAssetCache.getImage(
+      "assets/templates/design/bus-standard.svg",
     );
-    if (busGlb) {
-      flightAssetCache.drawGlbMeshOnCanvas(
-        ctx,
-        busGlb,
-        0,
-        0,
-        52,
-        mg.offsetXPx * 0.012,
-        -0.38 + mg.offsetYPx * 0.01,
-        mg.inLockZone ? "rgba(61, 220, 132, 0.85)" : "rgba(46, 196, 182, 0.8)",
-      );
+    if (busImg) {
+      ctx.save();
+      ctx.rotate(mg.offsetXPx * 0.002);
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(busImg, -46, -46, 92, 92);
+      ctx.restore();
     }
 
     // 3D-каркас корпусу модуля в перспективі позаду стикувального кільця
