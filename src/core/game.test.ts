@@ -81,7 +81,10 @@ describe("склейка частин", () => {
     if (end.phase !== "debrief") throw new Error("Гра не дійшла до розбору");
     const ids = end.record.log.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.filter((id) => id.startsWith("design:"))).toHaveLength(5);
+    // Кожне з п'яти рішень по слотах має бути в журналі рівно один раз (частина 1 пише ще й інші записи).
+    for (const slot of ["engine", "solar", "battery", "antenna", "instrument"]) {
+      expect(ids.filter((id) => id === `design:${slot}`)).toHaveLength(1);
+    }
     expect(ids).toContain("orbit:battery-dead");
   });
 
