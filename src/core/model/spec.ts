@@ -6,7 +6,7 @@ import type {
 } from '../contracts';
 import { deltaVMs, groundResolutionM } from '../physics';
 import { orbitInfo } from './orbit';
-import { shadowNeedWh, type PowerSpec } from './power';
+import { orbitEnergyNeedWh, type EnergySpec } from './orbitEnergy';
 
 // Константи апарата, яких гравець не обирає.
 export const STRUCTURE_MASS_KG = 40;
@@ -41,20 +41,21 @@ export function buildSpec(input: DesignInput, design: Design): PhaseOutput<Space
   const dvMs = deltaVMs(engine.ispS, dryMassKg, design.fuelKg);
   const resolutionM = groundResolutionM(instrument.wavelengthM, design.altKm, instrument.apertureM);
 
-  // Енергія: батарея має прожити тінь з увімкненими камерою та обігрівом.
+  // Енергія: батарея має пережити усі витки місії зі звичайним режимом (камера, передавач, обігрів увімкнені).
   const orbit = orbitInfo(mission.body, design.altKm);
-  const power: PowerSpec = {
+  const energy: EnergySpec = {
     panelPowerW: solar.powerW, baseLoadW: BASE_LOAD_W, instrumentW: instrument.powerW,
     transmitterW: antenna.powerW, heaterW: HEATER_W,
+    instrumentRateMbps: instrument.dataRateMbps, downlinkMbps: antenna.downlinkMbps, bufferMb: BUFFER_MB,
   };
-  const needWh = shadowNeedWh(power, orbit.periodS * orbit.eclipseFraction);
+  const needWh = orbitEnergyNeedWh(energy, orbit, mission);
   // Зв'язок: за проліт треба скинути все, що камера зняла за вікно зйомки.
   const dataPerOrbitMb = instrument.dataRateMbps * mission.imagingSPerOrbit;
   const downlinkPerOrbitMb = antenna.downlinkMbps * mission.passSPerOrbit;
 
   const margins: Margin[] = [
     { id: 'dv', have: dvMs, need: mission.dvRequiredMs, unit: 'm/s', ok: dvMs >= mission.dvRequiredMs },
-    { id: 'energy', have: battery.capacityWh, need: needWh, unit: 'Wh', ok: battery.capacityWh >= needWh },
+    { id: 'energy', have: battery.capacityWh, need: needWh, unit: 'Wh', ok: battery.capacityWh > needWh },
     { id: 'link', have: downlinkPerOrbitMb, need: dataPerOrbitMb, unit: 'Mb/orbit', ok: downlinkPerOrbitMb >= dataPerOrbitMb },
     { id: 'science', have: resolutionM, need: mission.requiredResolutionM, unit: 'm', ok: resolutionM <= mission.requiredResolutionM },
     { id: 'mass', have: launcher.maxPayloadKg, need: wetMassKg, unit: 'kg', ok: launcher.maxPayloadKg >= wetMassKg },

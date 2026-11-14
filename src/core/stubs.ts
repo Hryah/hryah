@@ -6,7 +6,7 @@ import type {
   Catalog, CauseEntry, Design, DesignInput, FlightInput, FlightResult, Mission,
   MissionOutcome, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
 } from './contracts';
-import { buildSpec, orbitInfo, reachedAltKm, shadowNeedWh } from './model';
+import { buildSpec, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
 import { fuelLeftKg } from './physics';
 import catalogData from '../data/catalog.json';
 import missionsData from '../data/missions.json';
@@ -85,8 +85,8 @@ export function stubFlight(input: FlightInput): PhaseOutput<FlightResult> {
 export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
   const { mission, spec, flight } = input;
   const log: CauseEntry[] = [];
-  const needWh = shadowNeedWh(spec, flight.orbit.periodS * flight.orbit.eclipseFraction);
-  const batteryDies = spec.batteryWh < needWh;
+  const needWh = orbitEnergyNeedWh(spec, flight.orbit, mission);
+  const batteryDies = spec.batteryWh <= needWh;
 
   const perOrbitMb = Math.min(
     spec.instrumentRateMbps * mission.imagingSPerOrbit,

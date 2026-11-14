@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { DesignInput, SpacecraftSpec } from "../contracts";
 import { deltaVMs } from "../physics";
+import { orbitPhase } from "../orbit";
 import { allDesigns, summarize, sweepDesigns } from "../sim";
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION, stubFlight, stubOrbit } from "../stubs";
 import {
-  buildSpec, burnFuelKg, downlinkMb, lifetimeOrbits, netPowerW, orbitInfo, reachedAltKm, shadowNeedWh, stepCharge, type Loads, type PowerSpec,
+  buildSpec, burnFuelKg, downlinkMb, lifetimeOrbits, netPowerW, orbitInfo, orbitEnergyNeedWh, orbitTiming, reachedAltKm, segmentLoadW, stepCharge, transmitSeconds, type Loads, type PowerSpec,
 } from "./index";
 
 const input: DesignInput = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
@@ -34,12 +35,12 @@ describe("buildSpec", () => {
     expect(() => buildSpec(input, { ...SAMPLE_DESIGN, launcherId: "nope" })).toThrow(/nope/);
   });
 
-  it("регресія: перебір проєктів дає ті самі числа, що до винесення в model/", () => {
+  it("регресія: перебір проєктів, зафіксовані числа після вирівнювання енергобалансу", () => {
     const summary = summarize(sweepDesigns(m, SAMPLE_CATALOG));
     expect(summary.total).toBe(6561);
     expect(summary.launchable).toBe(4836);
     expect(summary.wins).toBe(562);
-    expect(summary.failsByMargin).toEqual({ dv: 2241, science: 3645, energy: 1458, link: 2187, mass: 936, budget: 792 });
+    expect(summary.failsByMargin).toEqual({ dv: 2241, science: 3645, energy: 2187, link: 2187, mass: 936, budget: 792 });
   });
 
   it("прогноз збігається з реальністю: запас energy червоний лише тоді, коли батарея помре на орбіті", () => {
@@ -126,11 +127,6 @@ describe("енергія й дані", () => {
     expect(netPowerW(power, off, false, 0.5)).toBe(-20);
   });
 
-  it("shadowNeedWh: камера й обігрів протягом тіні", () => {
-    expect(shadowNeedWh(power, 3600)).toBeCloseTo(65);
-    expect(shadowNeedWh(power, 0)).toBe(0);
-  });
-
   it("stepCharge: рахує Вт·год і тримається в межах 0..ємність", () => {
     expect(stepCharge(50, 100, 10, 3600)).toBe(60);
     expect(stepCharge(50, 100, 100, 3600)).toBe(100);
@@ -163,7 +159,62 @@ describe("захист від поганого входу та інші тіла
 });
 
 describe("вирівнювання з фазою орбіти", () => {
-  // Відомо, що зараз не так: запас energy у частині 1 песимістичніший за реальну орбіту (docs/MODEL.md, D1 і D2).
-  it.todo("запас energy зелений тоді й лише тоді, коли апарат виживає на орбіті без бурі");
-  it.todo("орбіта рахує заряд і передачу через stepCharge і downlinkMb");
+  // Орбітальна фаза без бурі й пошкоджень, з тумблерами за замовчуванням.
+  const flyOrbit = (design: typeof SAMPLE_DESIGN, batteryWh?: number) => {
+    const d = buildSpec(input, design);
+    const spec = batteryWh === undefined ? d.result : { ...d.result, batteryWh };
+    const f = stubFlight({ mission: m, spec, log: d.log });
+    let s = orbitPhase.init({ mission: m, spec, flight: f.result, log: d.log }, 1);
+    s = { ...s, stormOrbit: null };
+    for (let i = 0; i < 50 && !orbitPhase.isDone(s); i++) s = orbitPhase.step(s, { type: "tick", dtS: f.result.orbit.periodS });
+    return { state: s, need: orbitEnergyNeedWh(d.result, f.result.orbit, m), dvOk: d.result.dvMs >= m.dvRequiredMs };
+  };
+  const designs = allDesigns(m, SAMPLE_CATALOG, [24], [m.altRangeKm[0], 600, m.altRangeKm[1]]);
+
+  it("запас energy зелений тоді й лише тоді, коли апарат виживає на орбіті без бурі", () => {
+    let checked = 0;
+    for (const design of designs) {
+      const { state, dvOk } = flyOrbit(design);
+      if (!dvOk) continue;
+      const energyOk = buildSpec(input, design).result.margins.find((x) => x.id === "energy")?.ok;
+      expect(energyOk, JSON.stringify(design)).toBe(state.status !== "failed");
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(500);
+  });
+
+  it("потрібна ємність точна: трохи більше виживає, трохи менше ні", () => {
+    for (const design of designs.filter((_, i) => i % 40 === 0)) {
+      const { need, dvOk } = flyOrbit(design);
+      if (!dvOk || need <= 0) continue;
+      expect(flyOrbit(design, need * 1.001).state.status, `${JSON.stringify(design)} +`).not.toBe("failed");
+      expect(flyOrbit(design, need * 0.999).state.status, `${JSON.stringify(design)} -`).toBe("failed");
+    }
+  });
+
+  it("обігрів споживає лише в тіні: на сонці його тумблер нічого не коштує", () => {
+    const spec = buildSpec(input, SAMPLE_DESIGN).result;
+    const heaterOn = { camera: false, transmitter: false, heater: true };
+    const heaterOff = { camera: false, transmitter: false, heater: false };
+    expect(segmentLoadW(spec, "sunIdle", heaterOn)).toBe(segmentLoadW(spec, "sunIdle", heaterOff));
+    expect(segmentLoadW(spec, "shadow", heaterOn)).toBe(segmentLoadW(spec, "shadow", heaterOff) + spec.heaterW);
+    expect(netPowerW(power, { ...off, heater: true }, true)).toBe(netPowerW(power, off, true));
+    expect(netPowerW(power, { ...off, heater: true }, false)).toBe(netPowerW(power, off, false) - power.heaterW);
+  });
+
+  it("orbitTiming: відрізки складають виток і стискаються до наявного сонця", () => {
+    const orbit = orbitInfo(m.body, 500);
+    const t = orbitTiming(orbit, m);
+    expect(t.idleSunS + t.imagingS + t.passS + t.shadowS).toBeCloseTo(orbit.periodS, 6);
+    const tight = orbitTiming(orbit, { imagingSPerOrbit: 1e9, passSPerOrbit: 1e9 });
+    expect(tight.imagingS).toBeCloseTo(tight.sunlightS);
+    expect(tight.passS).toBe(0);
+  });
+
+  it("transmitSeconds: обмежений вікном, даними в буфері й вимкненим передавачем", () => {
+    expect(transmitSeconds(480, 100, 10, true)).toBe(10);
+    expect(transmitSeconds(480, 1e9, 10, true)).toBe(480);
+    expect(transmitSeconds(480, 100, 10, false)).toBe(0);
+    expect(transmitSeconds(480, 100, 0, true)).toBe(0);
+  });
 });

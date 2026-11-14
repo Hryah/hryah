@@ -54,7 +54,7 @@
       "nameKey": "battery.s",
       "massKg": 3,
       "costMUsd": 1,
-      "capacityWh": 30
+      "capacityWh": 20
     },
     {
       "slot": "battery",
