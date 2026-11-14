@@ -9,7 +9,7 @@ import { isRoomAction, newRoom, stepRoom, type RoomAction, type RoomSetup, type 
 
 export const POLL_MS = 25_000;
 export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
-export const MAX_ROOMS = 50;
+export const MAX_ROOMS = 200;
 // Клієнт опитує без пауз (раз на ≤25 с). Якщо гравця нема довше за це й він не тримає опитування, він зник без «Вийти».
 export const PLAYER_IDLE_MS = 90_000;
 const MAX_BODY = 8 * 1024;
