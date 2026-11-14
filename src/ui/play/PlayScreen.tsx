@@ -1,5 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { availableActions, newGame, step, type GameAction, type GameState } from "../../core/game";
+import { newGame, step, type GameAction, type GameState } from "../../core/game";
 import { causeChains } from "../../core/debrief";
 import { launchBlockers } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
