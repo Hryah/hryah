@@ -130,9 +130,8 @@
   "ui.play.flightHint": "Fix the station terminals before the timers run out. Drag to sling off the handles, E opens a terminal.",
   "ui.play.skipFlight": "Finish the flight and deploy the satellite",
   "ui.play.orbitTitle": "Orbit operations",
-  "ui.play.orbitHint": "The playable orbit screen is still a prototype (see the Orbit tab). Here the orbit is simulated for the spacecraft you built.",
+  "ui.play.orbitHint": "Set the switches and fly each orbit. The spacecraft is the one you built.",
   "ui.play.success": "Mission accomplished",
   "ui.play.failure": "Mission failed",
-  "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}.",
-  "ui.play.runOrbit": "Run the orbit"
+  "ui.play.outcome": "Delivered {mb} Mb, survived {orbits} orbits, score {score}."
 }

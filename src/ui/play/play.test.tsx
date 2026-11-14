@@ -26,11 +26,11 @@ describe("наскрізна гра: екран показує поточну ч
     g = step(g, { phase: "flight", action: { type: "complete_phase" } });
     expect(g.phase).toBe("orbit");
     expect(render(g)).toContain("Orbit operations");
-    expect(render(g)).toContain("Run the orbit");
+    expect(render(g)).toContain('data-testid="orbit-panel"');
+    expect(render(g)).toContain("Next orbit");
     expect(render(g)).not.toContain("заглушка");
 
-    const go = availableActions(g).at(-1)!;
-    g = step(g, go.action);
+    for (let i = 0; i < 50 && g.phase === "orbit"; i++) g = step(g, availableActions(g).at(-1)!.action);
     expect(g.phase).toBe("debrief");
     const html = render(g);
     expect(html).toMatch(/Mission (accomplished|failed)/);
