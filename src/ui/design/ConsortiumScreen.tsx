@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import { newConsortium, activeAgency, stepConsortium, type ConsortiumAction, type ConsortiumState, type Market } from "../../core/consortium";
+import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
@@ -60,6 +61,58 @@ function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
   );
 }
 
+const APERTURE_STEP_M = 0.05;
+
+function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+  const entry = activeAgency(state);
+  const [apertureM, setApertureM] = useState(0.3);
+  const [inspect, setInspect] = useState(false);
+  if (!entry) return null;
+  const project: DevProject | undefined = entry.projects[0];
+
+  if (project) {
+    const left = project.readyTurn - state.turn;
+    return (
+      <div style={{ color: C.dim, fontSize: 13 }}>
+        🔬 {t("ui.dev.project", { aperture: fmt(project.apertureM), cost: fmt(project.developmentCostMUsd) })}{" "}
+        <span style={{ color: left > 0 ? C.gold : C.ok }}>{left > 0 ? t("ui.dev.inTurns", { n: left }) : t("ui.dev.ready")}</span>
+        {project.inspect && ` · ${t("ui.dev.inspected")}`}
+      </div>
+    );
+  }
+
+  const order: DevOrder = { slot: "instrument", apertureM, inspect };
+  const cost = developmentCostMUsd(entry.agency, order);
+  const turns = developmentTurns(entry.agency, order);
+  const chance = defectChance(entry.agency, order);
+  const affordable = cost < entry.design.input.mission.budgetMUsd;
+  const canOrder = entry.actionsLeft > 0 && affordable;
+  return (
+    <div style={{ display: "grid", gap: 6, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+      <strong>🔬 {t("ui.dev.title")}</strong>
+      <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.dev.hint")}</div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <label>
+          {t("ui.dev.aperture", { aperture: fmt(apertureM) })}{" "}
+          <input type="range" min={MIN_APERTURE_M} max={MAX_APERTURE_M} step={APERTURE_STEP_M} value={apertureM}
+            onChange={(e) => setApertureM(Math.round(Number(e.target.value) * 100) / 100)} />
+        </label>
+        <label>
+          <input type="checkbox" checked={inspect} onChange={(e) => setInspect(e.target.checked)} /> {t("ui.dev.inspect")}
+        </label>
+      </div>
+      <div style={{ color: C.dim, fontSize: 13 }}>
+        {t("ui.dev.estimate", { cost: fmt(cost), turns, chance: fmt(chance * 100, 0) })}
+      </div>
+      <div>
+        <button style={{ ...button, opacity: canOrder ? 1 : 0.5 }} disabled={!canOrder} onClick={() => dispatch({ type: "develop", order })}>
+          {t("ui.dev.order")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
@@ -99,6 +152,7 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
         <button style={button} onClick={() => dispatch({ type: "wait" })}>⏳ {t("ui.wait")}</button>
       </div>
       <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.waitHint")}</div>
+      <DevelopPanel state={state} dispatch={dispatch} />
     </div>
   );
 
