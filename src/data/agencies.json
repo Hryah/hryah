@@ -5,7 +5,9 @@
     "descriptionKey": "agency.borealis.description",
     "budgetFactor": 1.5,
     "launcherCostFactor": 1,
-    "moduleCostFactor": {}
+    "devCostFactor": 1,
+    "devSpeedFactor": 1,
+    "industries": { "metallurgy": 0.35, "electronics": 0.9, "software": 0.95, "chemistry": 0.7, "optics": 0.85, "manufacturing": 0.6 }
   },
   "monsoon": {
     "id": "monsoon",
@@ -14,7 +16,9 @@
     "budgetFactor": 0.75,
     "launcherCostFactor": 0.6,
     "launcherIds": ["small", "medium"],
-    "moduleCostFactor": { "engine": 0.7, "solar": 0.8 }
+    "devCostFactor": 0.9,
+    "devSpeedFactor": 1.1,
+    "industries": { "metallurgy": 0.6, "electronics": 0.5, "software": 0.8, "chemistry": 0.7, "optics": 0.45, "manufacturing": 0.55 }
   },
   "meridia": {
     "id": "meridia",
@@ -22,6 +26,19 @@
     "descriptionKey": "agency.meridia.description",
     "budgetFactor": 1,
     "launcherCostFactor": 1,
-    "moduleCostFactor": { "instrument": 0.8, "antenna": 0.8 }
+    "devCostFactor": 1.1,
+    "devSpeedFactor": 1.2,
+    "industries": { "metallurgy": 0.7, "electronics": 0.8, "software": 0.75, "chemistry": 0.75, "optics": 0.9, "manufacturing": 0.75 }
+  },
+  "kestrel": {
+    "id": "kestrel",
+    "nameKey": "agency.kestrel.name",
+    "descriptionKey": "agency.kestrel.description",
+    "budgetFactor": 1.1,
+    "launcherCostFactor": 0.8,
+    "devCostFactor": 0.8,
+    "devSpeedFactor": 0.8,
+    "blockedModules": ["cam-l", "ant-l"],
+    "industries": { "metallurgy": 0.9, "electronics": 0.55, "software": 0.6, "chemistry": 0.8, "optics": 0.65, "manufacturing": 0.95 }
   }
 }

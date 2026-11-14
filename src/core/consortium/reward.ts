@@ -43,7 +43,8 @@ export interface Settlement {
 }
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
-const money = (x: number) => Math.round(x * 100) / 100;
+// «+ 0» прибирає мінус-нуль, який JSON і тести вважають іншим числом.
+const money = (x: number) => Math.round(x * 100) / 100 + 0;
 
 // Різкість знімка проти вимоги науковців: удвічі різкіший дає ×2, удвічі гірший ×0.5.
 export function qualityFactor(mission: Mission, spec: SpacecraftSpec, t: Tuning = TUNING): number {
@@ -96,5 +97,5 @@ export function settleRewards(mission: Mission, runs: AgencyRun[], t: Tuning = T
     payoutMUsd: money(r.payout),
     winner: r.winner,
   }));
-  return { diversity: money(diversity), poolMUsd: money(paid), bonusMUsd: money(paid - basePool), payouts };
+  return { diversity: money(diversity), poolMUsd: money(paid), bonusMUsd: money(Math.max(0, paid - basePool)), payouts };
 }
