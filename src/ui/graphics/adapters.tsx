@@ -3,7 +3,7 @@
 // 2. 'blueprint' — векторні інженерні схеми NASA-стилю (фолбек без зовнішніх файлів)
 // 3. 'auto'      — автоматичний вибір доступного 2D SVG представлення з фолбеком на схему
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { SlotId } from '../../core/contracts';
 import { templateRegistry } from './registry';
 import type {
@@ -257,13 +257,15 @@ export function TemplateUnitView({
           background: '#090c15',
           borderRadius: 8,
           overflow: 'hidden',
-          border: `1px solid ${template.blueprint.accentColor}33`,
+          border: `1px solid ${damaged ? '#ff5c7a' : template.blueprint.accentColor}33`,
         }}
       >
         <img
           src={imgUrl}
           alt={template.displayName}
           onError={() => setSpriteFailed(true)}
+          loading="lazy"
+          decoding="async"
           style={{
             maxWidth: '90%',
             maxHeight: '90%',
@@ -335,6 +337,10 @@ export function CompositeSpacecraftSvg({
 }: CompositeSpacecraftSvgProps) {
   const { attachedModules, launcherTemplate, bodyTemplate, busTemplate } = assembly;
   const busCenter = attachedModules.solar.socket.pos2d;
+  // Кілька збірок на сторінці (зокрема в прихованих екранах) не мають ділити id у <defs>.
+  const uid = useId().replace(/:/g, '');
+  const gridId = `bp-grid-${uid}`;
+  const clipId = `planet-corner-clip-${uid}`;
 
   // Сортуємо слоти за порядком шарів (socket.layerOrder) із visual-templates.json
   const sortedSlots = (Object.keys(attachedModules) as SlotId[]).sort(
@@ -595,14 +601,14 @@ export function CompositeSpacecraftSvg({
     >
       {/* Фонова сітка креслення */}
       <defs>
-        <pattern id="bp-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <pattern id={gridId} width="20" height="20" patternUnits="userSpaceOnUse">
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(92,168,255,0.06)" strokeWidth="1" />
         </pattern>
-        <clipPath id="planet-corner-clip">
+        <clipPath id={clipId}>
           <circle cx="420" cy="230" r="95" />
         </clipPath>
       </defs>
-      <rect width="460" height="250" fill="url(#bp-grid)" />
+      <rect width="460" height="250" fill={`url(#${gridId})`} />
 
       {/* Кривизна планети та орбіти справа знизу */}
       <circle
@@ -621,7 +627,7 @@ export function CompositeSpacecraftSvg({
           y="135"
           width="190"
           height="190"
-          clipPath="url(#planet-corner-clip)"
+          clipPath={`url(#${clipId})`}
           opacity="0.72"
           preserveAspectRatio="xMidYMid slice"
         />

@@ -71,6 +71,13 @@ function buildTestGlbWithNodeTransforms(): ArrayBuffer {
   return buf;
 }
 
+// URL у реєстрі вже з префіксом BASE_URL (напр. /experimental/): для звірки з файлами public/ знімаємо його.
+const fromBase = (url: string): string => {
+  const base = import.meta.env.BASE_URL || '/';
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return url.startsWith(prefix) ? `/${url.slice(prefix.length)}` : url;
+};
+
 describe('TemplateRegistry (Графічний адаптер)', () => {
   it('має прив’язані темплейти для всіх модулів SAMPLE_CATALOG', () => {
     for (const mod of SAMPLE_CATALOG.modules) {
@@ -99,10 +106,10 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     for (const tpl of DEFAULT_TEMPLATES) {
       expect(tpl.model3d).toBeUndefined();
       expect(tpl.sprite2d?.url, `Missing sprite2d on ${tpl.id}`).toBeTruthy();
-      expect(publicAssetKeys.has(tpl.sprite2d!.url), `Missing sprite2d file: ${tpl.sprite2d!.url}`).toBe(true);
+      expect(publicAssetKeys.has(fromBase(tpl.sprite2d!.url)), `Missing sprite2d file: ${tpl.sprite2d!.url}`).toBe(true);
       if (tpl.planetTextures?.dayMapUrl) {
         expect(
-          publicAssetKeys.has(tpl.planetTextures.dayMapUrl),
+          publicAssetKeys.has(fromBase(tpl.planetTextures.dayMapUrl)),
           `Missing planetTextures file: ${tpl.planetTextures.dayMapUrl}`,
         ).toBe(true);
       }

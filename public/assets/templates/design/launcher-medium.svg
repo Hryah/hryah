@@ -1,54 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Derived from Wikimedia Commons File:Falcon_9_&_Heavy.svg (Attribution), restyled to hryah 2D cel palette -->
-  <g stroke-linecap="round" stroke-linejoin="round">
-    <!-- 3 Engine Nozzles -->
-    <polygon points="236.29,470.60 243.31,470.60 245.47,488.00 234.13,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/>
-    <polygon points="252.49,470.60 259.51,470.60 261.67,488.00 250.33,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/>
-    <polygon points="268.69,470.60 275.71,470.60 277.87,488.00 266.53,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/>
-
-    <!-- Core Stage 1 Tank -->
-    <rect x="229.33" y="241.96" width="53.34" height="228.65"
-          fill="#E3E0E2" stroke="#0D1736" stroke-width="8"/>
-    <rect x="256" y="241.96" width="26.67" height="228.65"
-          fill="#C0C8DD"/>
-    <!-- Aft Skirt & Vertical Landing Leg Fillets -->
-    <rect x="229.33" y="445.57" width="53.34" height="25.04"
-          fill="#32446A" stroke="#0D1736" stroke-width="7"/>
-    <polygon points="229.33,416.60 219.88,470.60 229.33,470.60"
-             fill="#F3832D" stroke="#0D1736" stroke-width="6"/>
-    <polygon points="282.67,416.60 292.12,470.60 282.67,470.60"
-             fill="#C4703C" stroke="#0D1736" stroke-width="6"/>
-
-    <!-- Dark Navy Interstage -->
-    <rect x="229.33" y="191.58" width="53.34" height="50.38"
-          fill="#2F4173" stroke="#0D1736" stroke-width="8"/>
-    <!-- Interstage Collar Accent -->
-    <rect x="229.33" y="191.58" width="53.34" height="10" fill="#F3832D"/>
-
-    <!-- Stage 2 Tank -->
-    <rect x="229.33" y="164.93" width="53.34" height="26.65"
-          fill="#E3E0E2" stroke="#0D1736" stroke-width="8"/>
-    <rect x="256" y="164.93" width="26.67" height="26.65"
-          fill="#C0C8DD"/>
-
-    <!-- Payload Adapter Boat-Tail -->
-    <polygon points="229.33,164.93 282.67,164.93 296.12,152.76 215.88,152.76"
-             fill="#9AA8C4" stroke="#0D1736" stroke-width="8"/>
-
-    <!-- Ogive Payload Fairing -->
-    <path d="M 215.88,152.76 L 215.88,78.79 C 215.88,66.19 233.23,26.00 256.00,26.00 C 278.77,26.00 296.12,65.70 296.12,78.79 L 296.12,152.76 Z" fill="#E3E0E2"/>
-    <path d="M 256.00,26.00 C 278.77,26.00 296.12,65.70 296.12,78.79 L 296.12,152.76 L 256.00,152.76 Z" fill="#C0C8DD"/>
-    <line x1="256" y1="28.00" x2="256" y2="152.76" stroke="#0D1736" stroke-width="4" opacity="0.45"/>
-    <path d="M 215.88,152.76 L 215.88,78.79 C 215.88,66.19 233.23,26.00 256.00,26.00 C 278.77,26.00 296.12,65.70 296.12,78.79 L 296.12,152.76 Z" fill="none" stroke="#0D1736" stroke-width="9"/>
-
-    <!--Telemetry Window & Hull Outline -->
-    <circle cx="256" cy="115.78" r="11" fill="#B2D7E8" stroke="#0D1736" stroke-width="6"/>
-    <circle cx="252" cy="112.78" r="3.5" fill="#FFFFFF"/>
-    <rect x="229.33" y="241.96" width="53.34" height="228.65"
-          fill="none" stroke="#0D1736" stroke-width="9"/>
-    <rect x="229.33" y="191.58" width="53.34" height="50.38"
-          fill="none" stroke="#0D1736" stroke-width="9"/>
-    <rect x="229.33" y="164.93" width="53.34" height="26.65"
-          fill="none" stroke="#0D1736" stroke-width="9"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><!-- Derived from Wikimedia Commons File:Falcon_9_&_Heavy.svg (Attribution), restyled to hryah 2D cel palette --><g stroke-linecap="round" stroke-linejoin="round"><!-- 3 Engine Nozzles --><polygon points="236.29,470.60 243.31,470.60 245.47,488.00 234.13,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/><polygon points="252.49,470.60 259.51,470.60 261.67,488.00 250.33,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/><polygon points="268.69,470.60 275.71,470.60 277.87,488.00 266.53,488.00" fill="#32446A" stroke="#0D1736" stroke-width="5.5" stroke-linejoin="round"/><!-- Core Stage 1 Tank --><rect x="229.33" y="241.96" width="53.34" height="228.65"
+          fill="#E3E0E2" stroke="#0D1736" stroke-width="8"/><rect x="256" y="241.96" width="26.67" height="228.65"
+          fill="#C0C8DD"/><!-- Aft Skirt & Vertical Landing Leg Fillets --><rect x="229.33" y="445.57" width="53.34" height="25.04"
+          fill="#32446A" stroke="#0D1736" stroke-width="7"/><polygon points="229.33,416.60 219.88,470.60 229.33,470.60"
+             fill="#F3832D" stroke="#0D1736" stroke-width="6"/><polygon points="282.67,416.60 292.12,470.60 282.67,470.60"
+             fill="#C4703C" stroke="#0D1736" stroke-width="6"/><!-- Dark Navy Interstage --><rect x="229.33" y="191.58" width="53.34" height="50.38"
+          fill="#2F4173" stroke="#0D1736" stroke-width="8"/><!-- Interstage Collar Accent --><rect x="229.33" y="191.58" width="53.34" height="10" fill="#F3832D"/><!-- Stage 2 Tank --><rect x="229.33" y="164.93" width="53.34" height="26.65"
+          fill="#E3E0E2" stroke="#0D1736" stroke-width="8"/><rect x="256" y="164.93" width="26.67" height="26.65"
+          fill="#C0C8DD"/><!-- Payload Adapter Boat-Tail --><polygon points="229.33,164.93 282.67,164.93 296.12,152.76 215.88,152.76"
+             fill="#9AA8C4" stroke="#0D1736" stroke-width="8"/><!-- Ogive Payload Fairing --><path d="M 215.9,152.8 L 215.9,78.8 C 215.9,66.2 233.2,26 256,26 C 278.8,26 296.1,65.7 296.1,78.8 L 296.1,152.8 Z" fill="#E3E0E2"/><path d="M 256,26 C 278.8,26 296.1,65.7 296.1,78.8 L 296.1,152.8 L 256,152.8 Z" fill="#C0C8DD"/><line x1="256" y1="28.00" x2="256" y2="152.76" stroke="#0D1736" stroke-width="4" opacity="0.45"/><path d="M 215.9,152.8 L 215.9,78.8 C 215.9,66.2 233.2,26 256,26 C 278.8,26 296.1,65.7 296.1,78.8 L 296.1,152.8 Z" fill="none" stroke="#0D1736" stroke-width="9"/><!--Telemetry Window & Hull Outline --><circle cx="256" cy="115.78" r="11" fill="#B2D7E8" stroke="#0D1736" stroke-width="6"/><circle cx="252" cy="112.78" r="3.5" fill="#FFFFFF"/><rect x="229.33" y="241.96" width="53.34" height="228.65"
+          fill="none" stroke="#0D1736" stroke-width="9"/><rect x="229.33" y="191.58" width="53.34" height="50.38"
+          fill="none" stroke="#0D1736" stroke-width="9"/><rect x="229.33" y="164.93" width="53.34" height="26.65"
+          fill="none" stroke="#0D1736" stroke-width="9"/></g></svg>

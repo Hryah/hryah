@@ -109,7 +109,7 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
             }}
           />
 
-          {/* Швидкий вибір вузла для огляду в 3D */}
+          {/* Швидкий вибір вузла для огляду */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             {SLOT_ORDER.map((slot) => {
               const mod = assembly.attachedModules[slot];

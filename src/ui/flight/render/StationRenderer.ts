@@ -1171,11 +1171,13 @@ export class StationRenderer {
       const hmx = (handle.ax + handle.bx) * 0.5;
       const hmy = (handle.ay + handle.by) * 0.5;
 
-      if (isAnchoredHere || isTargetLocked) {
+      // Підкладка кольору поручня: базовий колір теми видно і з картинкою, підсвітка робить її ширшою.
+      {
+        const highlighted = isAnchoredHere || isTargetLocked;
         ctx.strokeStyle = railColor;
-        ctx.lineWidth = 11;
+        ctx.lineWidth = highlighted ? 11 : 7;
         ctx.lineCap = "round";
-        ctx.globalAlpha = 0.35;
+        ctx.globalAlpha = highlighted ? 0.35 : 0.3;
         ctx.beginPath();
         ctx.moveTo(handle.ax, handle.ay);
         ctx.lineTo(handle.bx, handle.by);
