@@ -1,0 +1,136 @@
+{
+  "modules": [
+    {
+      "slot": "engine",
+      "id": "eng-cold",
+      "nameKey": "engine.cold",
+      "massKg": 4,
+      "costMUsd": 1,
+      "ispS": 220
+    },
+    {
+      "slot": "engine",
+      "id": "eng-chem",
+      "nameKey": "engine.chem",
+      "massKg": 8,
+      "costMUsd": 3,
+      "ispS": 300
+    },
+    {
+      "slot": "engine",
+      "id": "eng-ion",
+      "nameKey": "engine.ion",
+      "massKg": 20,
+      "costMUsd": 9,
+      "ispS": 1500
+    },
+    {
+      "slot": "solar",
+      "id": "sol-s",
+      "nameKey": "solar.s",
+      "massKg": 5,
+      "costMUsd": 1,
+      "powerW": 80
+    },
+    {
+      "slot": "solar",
+      "id": "sol-m",
+      "nameKey": "solar.m",
+      "massKg": 10,
+      "costMUsd": 2,
+      "powerW": 160
+    },
+    {
+      "slot": "solar",
+      "id": "sol-l",
+      "nameKey": "solar.l",
+      "massKg": 20,
+      "costMUsd": 4,
+      "powerW": 320
+    },
+    {
+      "slot": "battery",
+      "id": "bat-s",
+      "nameKey": "battery.s",
+      "massKg": 3,
+      "costMUsd": 1,
+      "capacityWh": 30
+    },
+    {
+      "slot": "battery",
+      "id": "bat-m",
+      "nameKey": "battery.m",
+      "massKg": 6,
+      "costMUsd": 2,
+      "capacityWh": 60
+    },
+    {
+      "slot": "battery",
+      "id": "bat-l",
+      "nameKey": "battery.l",
+      "massKg": 12,
+      "costMUsd": 4,
+      "capacityWh": 120
+    },
+    {
+      "slot": "antenna",
+      "id": "ant-s",
+      "nameKey": "antenna.s",
+      "massKg": 2,
+      "costMUsd": 1,
+      "downlinkMbps": 2,
+      "powerW": 10
+    },
+    {
+      "slot": "antenna",
+      "id": "ant-m",
+      "nameKey": "antenna.m",
+      "massKg": 6,
+      "costMUsd": 3,
+      "downlinkMbps": 10,
+      "powerW": 30
+    },
+    {
+      "slot": "antenna",
+      "id": "ant-l",
+      "nameKey": "antenna.l",
+      "massKg": 15,
+      "costMUsd": 7,
+      "downlinkMbps": 50,
+      "powerW": 80
+    },
+    {
+      "slot": "instrument",
+      "id": "cam-s",
+      "nameKey": "camera.s",
+      "massKg": 5,
+      "costMUsd": 3,
+      "apertureM": 0.1,
+      "wavelengthM": 5.5e-7,
+      "dataRateMbps": 2,
+      "powerW": 10
+    },
+    {
+      "slot": "instrument",
+      "id": "cam-m",
+      "nameKey": "camera.m",
+      "massKg": 20,
+      "costMUsd": 10,
+      "apertureM": 0.2,
+      "wavelengthM": 5.5e-7,
+      "dataRateMbps": 8,
+      "powerW": 30
+    },
+    {
+      "slot": "instrument",
+      "id": "cam-l",
+      "nameKey": "camera.l",
+      "massKg": 70,
+      "costMUsd": 25,
+      "apertureM": 0.4,
+      "wavelengthM": 5.5e-7,
+      "dataRateMbps": 30,
+      "powerW": 60
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-// stubs.ts — заглушки всіх трьох частин + тестові дані.
+// stubs.ts — заглушки всіх трьох частин + імпорт тестових даних.
 // Кожна група бере заглушки двох ІНШИХ частин і одразу працює в наскрізній грі.
 // Усі цифри тут умовні: справжні збирає той, хто веде каталог.
 
@@ -7,56 +7,18 @@ import type {
   MissionOutcome, ModuleDef, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
 } from './contracts';
 import { deltaVMs, eclipseFraction, fuelLeftKg, groundResolutionM, orbitalPeriodS } from './physics';
+import catalogData from '../data/catalog.json';
+import missionsData from '../data/missions.json';
+import sampleDesignData from '../data/sample-design.json';
 
 // ───────────────────────── Тестові дані ─────────────────────────
 
-export const SAMPLE_MISSION: Mission = {
-  id: 'earth-observer',
-  titleKey: 'mission.earthObserver.title',
-  briefKey: 'mission.earthObserver.brief',
-  body: { name: 'Earth', radiusKm: 6371, muKm3S2: 398600 },
-  budgetMUsd: 60,
-  dvRequiredMs: 300,
-  altRangeKm: [400, 800],
-  requiredResolutionM: 2,
-  requiredDataMb: 10000,
-  durationOrbits: 10,
-  imagingSPerOrbit: 300,
-  passSPerOrbit: 480,
-  launchers: [
-    { id: 'small', nameKey: 'launcher.small', maxPayloadKg: 120, costMUsd: 8 },
-    { id: 'medium', nameKey: 'launcher.medium', maxPayloadKg: 200, costMUsd: 15 },
-    { id: 'heavy', nameKey: 'launcher.heavy', maxPayloadKg: 400, costMUsd: 30 },
-  ],
-};
+export const SAMPLE_MISSION: Mission = missionsData['earth-observer'] as Mission;
 
 // По три варіанти на слот, кожен зі своїм характером.
-export const SAMPLE_CATALOG: Catalog = {
-  modules: [
-    { slot: 'engine', id: 'eng-cold', nameKey: 'engine.cold', massKg: 4, costMUsd: 1, ispS: 220 },
-    { slot: 'engine', id: 'eng-chem', nameKey: 'engine.chem', massKg: 8, costMUsd: 3, ispS: 300 },
-    { slot: 'engine', id: 'eng-ion', nameKey: 'engine.ion', massKg: 20, costMUsd: 9, ispS: 1500 },
-    { slot: 'solar', id: 'sol-s', nameKey: 'solar.s', massKg: 5, costMUsd: 1, powerW: 80 },
-    { slot: 'solar', id: 'sol-m', nameKey: 'solar.m', massKg: 10, costMUsd: 2, powerW: 160 },
-    { slot: 'solar', id: 'sol-l', nameKey: 'solar.l', massKg: 20, costMUsd: 4, powerW: 320 },
-    { slot: 'battery', id: 'bat-s', nameKey: 'battery.s', massKg: 3, costMUsd: 1, capacityWh: 30 },
-    { slot: 'battery', id: 'bat-m', nameKey: 'battery.m', massKg: 6, costMUsd: 2, capacityWh: 60 },
-    { slot: 'battery', id: 'bat-l', nameKey: 'battery.l', massKg: 12, costMUsd: 4, capacityWh: 120 },
-    { slot: 'antenna', id: 'ant-s', nameKey: 'antenna.s', massKg: 2, costMUsd: 1, downlinkMbps: 2, powerW: 10 },
-    { slot: 'antenna', id: 'ant-m', nameKey: 'antenna.m', massKg: 6, costMUsd: 3, downlinkMbps: 10, powerW: 30 },
-    { slot: 'antenna', id: 'ant-l', nameKey: 'antenna.l', massKg: 15, costMUsd: 7, downlinkMbps: 50, powerW: 80 },
-    { slot: 'instrument', id: 'cam-s', nameKey: 'camera.s', massKg: 5, costMUsd: 3, apertureM: 0.1, wavelengthM: 550e-9, dataRateMbps: 2, powerW: 10 },
-    { slot: 'instrument', id: 'cam-m', nameKey: 'camera.m', massKg: 20, costMUsd: 10, apertureM: 0.2, wavelengthM: 550e-9, dataRateMbps: 8, powerW: 30 },
-    { slot: 'instrument', id: 'cam-l', nameKey: 'camera.l', massKg: 70, costMUsd: 25, apertureM: 0.4, wavelengthM: 550e-9, dataRateMbps: 30, powerW: 60 },
-  ],
-};
+export const SAMPLE_CATALOG: Catalog = catalogData as Catalog;
 
-export const SAMPLE_DESIGN: Design = {
-  modules: { engine: 'eng-chem', solar: 'sol-m', battery: 'bat-m', antenna: 'ant-m', instrument: 'cam-m' },
-  fuelKg: 12,
-  altKm: 500,
-  launcherId: 'small',
-};
+export const SAMPLE_DESIGN: Design = sampleDesignData;
 
 // Константи апарата, яких гравець не обирає.
 const STRUCTURE_MASS_KG = 40;
@@ -67,13 +29,35 @@ const BUFFER_MB = 4000;
 // ───────────────────────── Заглушка частини 1 ─────────────────────────
 // Бере готовий Design (без інтерфейсу вибору) і рахує опис апарата та запаси.
 
+// Зберігаємо демонстраційний вибір, якщо він є у вході; інакше беремо перший доступний.
+export function initialDesign({ mission, catalog }: DesignInput): Design {
+  const moduleId = (slot: SlotId): string => {
+    const preferred = catalog.modules.find((m) => m.slot === slot && m.id === SAMPLE_DESIGN.modules[slot]);
+    const module = preferred ?? catalog.modules.find((m) => m.slot === slot);
+    if (!module) throw new Error(`У каталозі немає модуля для слота ${slot}`);
+    return module.id;
+  };
+  const launcher = mission.launchers.find((l) => l.id === SAMPLE_DESIGN.launcherId) ?? mission.launchers[0];
+  if (!launcher) throw new Error('У місії немає жодного носія');
+  const [lo, hi] = mission.altRangeKm;
+  return {
+    modules: {
+      engine: moduleId('engine'), solar: moduleId('solar'), battery: moduleId('battery'),
+      antenna: moduleId('antenna'), instrument: moduleId('instrument'),
+    },
+    fuelKg: SAMPLE_DESIGN.fuelKg,
+    altKm: Math.min(hi, Math.max(lo, SAMPLE_DESIGN.altKm)),
+    launcherId: launcher.id,
+  };
+}
+
 function pick<S extends SlotId>(catalog: Catalog, design: Design, slot: S): Extract<ModuleDef, { slot: S }> {
   const found = catalog.modules.find((m) => m.slot === slot && m.id === design.modules[slot]);
   if (!found) throw new Error(`У каталозі немає модуля ${design.modules[slot]} для слота ${slot}`);
   return found as Extract<ModuleDef, { slot: S }>;
 }
 
-export function stubDesign(input: DesignInput, design: Design = SAMPLE_DESIGN): PhaseOutput<SpacecraftSpec> {
+export function stubDesign(input: DesignInput, design: Design = initialDesign(input)): PhaseOutput<SpacecraftSpec> {
   const { mission, catalog } = input;
   const engine = pick(catalog, design, 'engine');
   const solar = pick(catalog, design, 'solar');
@@ -186,7 +170,28 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     });
   }
 
-  const success = !batteryDies && deliveredMb >= mission.requiredDataMb;
+  const enoughData = deliveredMb >= mission.requiredDataMb;
+  const enoughResolution = spec.resolutionM <= mission.requiredResolutionM;
+  const endS = flight.orbit.periodS * survivedOrbits;
+
+  // Розряд батареї вже пояснює передчасне завершення й недоставлені дані.
+  if (!batteryDies && !enoughData) {
+    log.push({
+      id: 'orbit:insufficient-data', phase: 'orbit', tS: endS, kind: 'failure', system: 'science',
+      messageKey: 'orbit.insufficientData', params: { deliveredMb, requiredMb: mission.requiredDataMb },
+      causedBy: ['design:instrument', 'design:antenna'],
+    });
+  }
+  if (!enoughResolution) {
+    log.push({
+      id: 'orbit:insufficient-resolution', phase: 'orbit', tS: endS, kind: 'failure', system: 'science',
+      messageKey: 'orbit.insufficientResolution',
+      params: { resolutionM: spec.resolutionM, requiredM: mission.requiredResolutionM },
+      causedBy: ['design:instrument'],
+    });
+  }
+
+  const success = !batteryDies && enoughData && enoughResolution;
   return { result: { success, deliveredMb, survivedOrbits, score: Math.round(deliveredMb / 100) }, log };
 }
 

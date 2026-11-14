@@ -1,0 +1,12 @@
+{
+  "modules": {
+    "engine": "eng-chem",
+    "solar": "sol-m",
+    "battery": "bat-m",
+    "antenna": "ant-m",
+    "instrument": "cam-m"
+  },
+  "fuelKg": 12,
+  "altKm": 500,
+  "launcherId": "small"
+}
