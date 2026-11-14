@@ -10,8 +10,10 @@ export function disposeObject(object: THREE.Object3D): void {
     const item = node as Partial<THREE.Mesh>;
     item.geometry?.dispose();
     const material = item.material;
-    if (Array.isArray(material)) material.forEach((m) => m.dispose());
-    else material?.dispose();
+    for (const m of Array.isArray(material) ? material : material ? [material] : []) {
+      for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();
+      m.dispose();
+    }
   });
 }
 

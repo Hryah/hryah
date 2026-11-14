@@ -18,6 +18,18 @@ export interface Stage {
    * Результат пише в `out` і повертає його; нових об'єктів не створює, тож можна викликати щокадру.
    */
   toScreen(point: THREE.Vector3, out: { x: number; y: number }): { x: number; y: number };
+  /**
+   * Камера плавно їде за об'єктом (її нахил і масштаб не міняються). `null` знімає слідкування
+   * і повертає камеру на початкове місце. Сцени з нерухомою камерою цього не викликають.
+   */
+  follow(target: THREE.Object3D | null, options?: FollowOptions): void;
+}
+
+export interface FollowOptions {
+  /** Зсув камери від цілі; типово такий, як у нерухомої камери відносно початку координат. */
+  offset?: { x: number; y: number; z: number };
+  /** Швидкість наздоганяння, 1/с. Типово 5. */
+  rate?: number;
 }
 
 export interface StageRunner extends Stage {
@@ -34,6 +46,14 @@ export interface StageOptions {
   viewHeightUnits?: number;
   /** Нахил камери над горизонтом у градусах: «вигляд спереду трохи згори». */
   cameraElevationDeg?: number;
+  /** Тіні від типового сонця (воно кидає тінь; меші сцени мають мати castShadow/receiveShadow). Типово вимкнені. */
+  shadows?: boolean;
+  /** Відображення яскравості. Типово 'none' (без змін кольорів палітри). */
+  toneMapping?: 'none' | 'aces';
+  /** Експозиція для toneMapping. Типово 1. */
+  exposure?: number;
+  /** 'custom': stage не додає своє світло, сцена ставить власне в `root` і сама його прибирає. */
+  lighting?: 'default' | 'custom';
 }
 
 const MAX_FRAME_S = 0.1; // після паузи вкладки не робимо стрибок на кілька секунд
@@ -46,6 +66,12 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.setClearColor(palette.space, 1);
+  if (options.toneMapping === 'aces') renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = options.exposure ?? 1;
+  if (options.shadows) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+  }
 
   const root = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, CAMERA_DISTANCE * 2);
@@ -53,10 +79,50 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
   camera.lookAt(0, 0, 0);
 
   // Правило вигляду 2: одне спрямоване світло (зліва згори) і м'яке розсіяне, без тіней.
-  const sun = new THREE.DirectionalLight(palette.white, 2.4);
-  sun.position.set(-6, 5, 4);
-  const ambient = new THREE.AmbientLight(palette.white, 0.45);
-  root.add(sun, ambient);
+  const lights: THREE.Object3D[] = [];
+  let sun: THREE.DirectionalLight | null = null;
+  const sunOffset = new THREE.Vector3(-6, 5, 4);
+  if (options.lighting !== 'custom') {
+    sun = new THREE.DirectionalLight(palette.white, 2.4);
+    sun.position.copy(sunOffset);
+    if (options.shadows) {
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      const half = viewHeightUnits;
+      Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: 30 });
+      sun.shadow.camera.updateProjectionMatrix();
+      sun.shadow.normalBias = 0.03;
+    }
+    lights.push(sun, sun.target, new THREE.AmbientLight(palette.white, 0.45));
+    root.add(...lights);
+  }
+
+  const basePosition = camera.position.clone();
+  let followTarget: THREE.Object3D | null = null;
+  let followOffset = basePosition.clone();
+  let followRate = 5;
+  const followPoint = new THREE.Vector3();
+  const follow: Stage['follow'] = (target, opts) => {
+    followTarget = target;
+    if (!target) {
+      camera.position.copy(basePosition);
+      camera.updateMatrixWorld();
+      if (sun) { sun.position.copy(sunOffset); sun.target.position.set(0, 0, 0); }
+      return;
+    }
+    followOffset = opts?.offset ? new THREE.Vector3(opts.offset.x, opts.offset.y, opts.offset.z) : basePosition.clone();
+    followRate = opts?.rate !== undefined && opts.rate > 0 ? opts.rate : 5;
+  };
+  const updateFollow = (dtS: number): void => {
+    if (!followTarget) return;
+    followTarget.getWorldPosition(followPoint).add(followOffset);
+    camera.position.lerp(followPoint, 1 - Math.exp(-dtS * followRate));
+    if (sun) {
+      // Сонце й область його тіні їдуть разом із ціллю, інакше тіні зникли б за межами початкового вікна.
+      followTarget.getWorldPosition(sun.target.position);
+      sun.position.copy(sun.target.position).add(sunOffset);
+    }
+  };
 
   const filters = createFilterChain(renderer);
   const bufferSize = new THREE.Vector2();
@@ -111,6 +177,7 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     viewHeightUnits,
     viewWidthUnits: () => viewHeightUnits * aspect,
     toScreen,
+    follow,
     start(onFrame) {
       if (disposed || running) return;
       running = true;
@@ -124,6 +191,7 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
         if (widthPx === 0 || heightPx === 0) return; // прихований екран не рахує час і не малює
         timeS += dtS;
         onFrame(dtS, timeS);
+        updateFollow(dtS);
         if (filters.isActive()) filters.render(root, camera, timeS);
         else renderer.render(root, camera);
       };
@@ -135,7 +203,8 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
       if (disposed) return;
       disposed = true;
       stop();
-      root.remove(sun, ambient);
+      followTarget = null;
+      root.remove(...lights);
       filters.dispose();
       renderer.dispose();
     },

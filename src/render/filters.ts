@@ -31,6 +31,7 @@ varying vec2 vUv;
 ${glsl}
 void main() {
   gl_FragColor = filterColor(tFrame, vUv);
+  #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
 
