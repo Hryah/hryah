@@ -138,5 +138,7 @@
   "ui.render.noWebgl": "3D view is unavailable: this browser or device does not support WebGL. The game still works with the controls below.",
   "ui.gallery.engine": "Engine test",
   "ui.gallery.orbit": "Orbit",
+  "ui.gallery.design": "Design",
+  "ui.designStage": "Spacecraft on the test stand with the selected modules",
   "ui.gallery.orbitState": "Mock view: charge {charge}%, storm {storm}, link {link}, safe mode {safe}, status {status}"
 }

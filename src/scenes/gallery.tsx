@@ -1,16 +1,21 @@
 // gallery.tsx — перегляд сцен на вигаданих даних (#gallery). Вид сам змінюється в часі,
 // тож сцену можна розробляти й дивитись, не граючи в гру.
 import { useEffect, useState } from 'react';
+import type { SlotId } from '../core/contracts';
+import catalog from '../data/catalog.json';
 import { StageCanvas } from '../render/StageCanvas';
 import { css } from '../render/palette';
 import { t } from '../ui/text';
+import { createDesignScene } from './design-scene';
 import { createOrbitScene } from './orbit-scene';
 import { createTestScene, type TestView } from './test-scene';
-import type { OrbitView } from './views';
+import type { DesignView, OrbitView } from './views';
 
-type EntryId = 'engine' | 'orbit';
-const ENTRIES: EntryId[] = ['engine', 'orbit'];
+type EntryId = 'engine' | 'orbit' | 'design';
+const ENTRIES: EntryId[] = ['engine', 'orbit', 'design'];
 const ORBIT_STAGE = { viewHeightUnits: 6.5 };
+const DESIGN_STAGE = { viewHeightUnits: 8 };
+const DESIGN_SLOTS: SlotId[] = ['engine', 'solar', 'battery', 'antenna', 'instrument'];
 
 /** Секунди від відкриття галереї; оновлюється кілька разів на секунду, цього досить для вигаданого виду. */
 function useElapsedS(active: boolean): number {
@@ -45,6 +50,22 @@ export function fakeOrbitView(tS: number): OrbitView {
   };
 }
 
+/** Вигаданий вид проєктування: кожні 3 с один слот переходить до наступного модуля з каталогу. */
+export function fakeDesignView(tS: number): DesignView {
+  const cycleS = tS % 40;
+  const step = Math.floor(tS / 3);
+  const modules = {} as Record<SlotId, string>;
+  const alerts = {} as Record<SlotId, boolean>;
+  DESIGN_SLOTS.forEach((slot, i) => {
+    const ids = catalog.modules.filter((m) => m.slot === slot).map((m) => m.id);
+    const changes = step >= i ? Math.floor((step - i) / DESIGN_SLOTS.length) + 1 : 0;
+    modules[slot] = ids[changes % Math.max(1, ids.length)] ?? '';
+    // Тривога в кожного слота свого вікна: слоти по черзі червоніють на 6 с.
+    alerts[slot] = cycleS >= 4 + i * 6 && cycleS < 10 + i * 6 && cycleS < 34;
+  });
+  return { modules, alerts, launchBlocked: cycleS >= 10 && cycleS < 16, confirmed: cycleS >= 35 };
+}
+
 export function Gallery({ active }: { active: boolean }) {
   const [entry, setEntry] = useState<EntryId>('engine');
   const elapsedS = useElapsedS(active);
@@ -68,6 +89,9 @@ export function Gallery({ active }: { active: boolean }) {
         )}
         {entry === 'orbit' && (
           <StageCanvas createScene={createOrbitScene} view={orbit} fallback={fallback} options={ORBIT_STAGE} label={t('ui.gallery.orbit')} />
+        )}
+        {entry === 'design' && (
+          <StageCanvas createScene={createDesignScene} view={fakeDesignView(elapsedS)} fallback={fallback} options={DESIGN_STAGE} label={t('ui.gallery.design')} />
         )}
       </div>
       {entry === 'orbit' && (

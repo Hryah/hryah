@@ -1,6 +1,8 @@
 // views.ts — чисті функції «стан ядра → вид»: що саме треба показати, без Three.js.
 // Сцена нічого не вирішує, вона лише наближає картинку до виду. Тут немає ігрової логіки:
 // усе береться з ядра готовим.
+import type { MarginId, SlotId } from '../core/contracts';
+import { designPhase, launchBlockers, SLOTS, type DesignState } from '../core/design';
 import { orbitView, type OrbitState } from '../core/orbit';
 
 const clamp01 = (x: number): number => (Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
@@ -34,5 +36,40 @@ export function orbitSceneView(state: OrbitState): OrbitView {
     safeMode: view.activeSystems.safeMode,
     storm: view.stormNext,
     status: state.status,
+  };
+}
+
+// ───────────────────────── Проєктування (частина 1) ─────────────────────────
+
+export interface DesignView {
+  /** id модуля в кожному слоті: він же ключ спрайта в маніфесті. */
+  modules: Record<SlotId, string>;
+  /** Слот підсвічується тривогою, бо запас, за який він відповідає, червоний. */
+  alerts: Record<SlotId, boolean>;
+  /** Червоний жорсткий запас (маса або бюджет): запуск неможливий. */
+  launchBlocked: boolean;
+  /** Проєкт підтверджено, апарат пішов на запуск. */
+  confirmed: boolean;
+}
+
+// Який модуль підсвітити за червоного запасу. Маса й бюджет стосуються всього апарата, тому слота не мають.
+const MARGIN_SLOTS: Record<MarginId, SlotId[]> = {
+  dv: ['engine'],
+  energy: ['solar', 'battery'],
+  link: ['antenna'],
+  science: ['instrument'],
+  mass: [],
+  budget: [],
+};
+
+export function designSceneView(state: DesignState): DesignView {
+  const red = designPhase.finish(state).result.margins.filter((m) => !m.ok).map((m) => m.id);
+  const alerts = {} as Record<SlotId, boolean>;
+  for (const slot of SLOTS) alerts[slot] = red.some((id) => MARGIN_SLOTS[id].includes(slot));
+  return {
+    modules: { ...state.design.modules },
+    alerts,
+    launchBlocked: launchBlockers(state).length > 0,
+    confirmed: state.confirmed,
   };
 }

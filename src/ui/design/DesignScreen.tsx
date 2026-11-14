@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import { fmt, t } from "../text";
+import { DesignStage } from "./DesignStage";
 
 // Екран частини 1. Лише читає стан і шле дії: усі розрахунки робить core/design.
 
@@ -65,6 +66,8 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
         </div>
         <p style={{ color: C.dim, margin: "8px 0 0" }}>{t(mission.briefKey)}</p>
       </div>
+
+      <DesignStage state={state} />
 
       <div style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
         <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>{t("ui.margins")}</div>
