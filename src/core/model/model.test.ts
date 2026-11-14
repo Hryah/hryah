@@ -146,3 +146,24 @@ describe("енергія й дані", () => {
     expect(downlinkMb(0, 10, 0, 5, true)).toBe(0);
   });
 });
+
+describe("захист від поганого входу та інші тіла", () => {
+  it("lifetimeOrbits: для не-Землі опору нема", () => {
+    expect(lifetimeOrbits(100, { name: "Moon" })).toBe(1_000_000);
+    expect(lifetimeOrbits(400, { name: "Earth" })).toBe(25);
+    expect(lifetimeOrbits(400)).toBe(25);
+  });
+
+  it("пошкодження поза 0..1 тримається в межах", () => {
+    expect(netPowerW(power, off, true, -1)).toBe(netPowerW(power, off, true, 0));
+    expect(netPowerW(power, off, true, 5)).toBe(netPowerW(power, off, true, 1));
+    expect(downlinkMb(100, 10, -1, 5, true)).toBe(downlinkMb(100, 10, 0, 5, true));
+    expect(downlinkMb(100, 10, 2, 5, true)).toBe(0);
+  });
+});
+
+describe("вирівнювання з фазою орбіти", () => {
+  // Відомо, що зараз не так: запас energy у частині 1 песимістичніший за реальну орбіту (docs/MODEL.md, D1 і D2).
+  it.todo("запас energy зелений тоді й лише тоді, коли апарат виживає на орбіті без бурі");
+  it.todo("орбіта рахує заряд і передачу через stepCharge і downlinkMb");
+});
