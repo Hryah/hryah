@@ -2,6 +2,10 @@
 
 Гра для NASA Space Apps 2026. TypeScript + Vite + React.
 
+- Початок роботи й актуальна передача: [AGENTS.md](AGENTS.md)
+- План і критерії готовності: [ROADMAP](docs/ROADMAP.md)
+- Історія завершених змін: [DEVLOG](docs/DEVLOG.md)
+- Будова гри та контракти: [ARCHITECTURE](docs/ARCHITECTURE.md)
 - Як працюємо з гілками й PR: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Правила для коду й AI-рев'ю: [REVIEW_RULES.md](REVIEW_RULES.md)
 
@@ -10,5 +14,34 @@ npm ci
 npm run dev        # локально
 npm test           # тести
 npm run typecheck  # типи
+npm run build      # виробнича збірка
 ```
+
+За замовчуванням `#play` веде від проєктування через політ до розбору, але орбіта
+в ньому поки заглушка. `#orbit` — окремий справжній прототип орбіти з пресетами;
+`#design` — консорціум, `#debug` — інструмент розробки. Наскрізна місія з усіма
+справжніми фазами є завданням етапу 2.
+
+## Моделі та космонавт
+
+Редаговані джерела: [tools/asset-workshop](tools/asset-workshop/README.md).
+З нового клону всього репозиторію (Node.js 22.12+ і npm):
+
+```sh
+node art/astronaut/validate-sources.mjs
+node tools/asset-workshop/scripts/reproduce.mjs
+```
+
+Друга команда встановлює за lockfile ізольовані залежності майстерні, перевіряє
+джерела, генерує моделі, збирає переглядач і повний ZIP, оновлює знімок
+[`nikita models/`](<nikita models/README.md>). Root-пакет гри залишається окремим.
+Докладні команди локального перегляду та експорту є в README майстерні.
+
+Оригінальні п'ять SVG з контрольними сумами збережені в
+[art/astronaut](art/astronaut/README.md). Це сирі джерела з фоном; підготовка
+прозорих чотирьох ракурсів і справжніх анімацій описана в roadmap.
+
+[Публічна майстерня моделей](https://hryah-nikita-models.racingbadger2.chatgpt.site/)
+відкривається без входу. Це окремий опублікований сайт; локальна генерація або
+коміт знімка автоматично його не оновлюють.
 
