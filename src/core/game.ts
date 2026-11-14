@@ -68,6 +68,15 @@ function advance(state: GameState): GameState {
   if (state.phase === 'flight' && flightPhase.isDone(state.flight)) {
     const out = flightPhase.finish(state.flight);
     const log = [...state.log, ...out.log];
+    if (out.result.deploymentStatus === 'lost') {
+      return {
+        phase: 'debrief', seed, mission,
+        record: {
+          seed, missionId: mission.id, spec: state.spec, flight: out.result, log,
+          outcome: { success: false, deliveredMb: 0, survivedOrbits: 0, score: 0 },
+        },
+      };
+    }
     return advance({
       phase: 'orbit', seed, mission, spec: state.spec, flightResult: out.result, log,
       orbit: orbitPhase.init({ mission, spec: state.spec, flight: out.result, log }, seed + 2),
