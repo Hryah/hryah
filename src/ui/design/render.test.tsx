@@ -2,14 +2,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { designPhase } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
-import { newConsortium, stepConsortium, type ConsortiumAction, type Market } from "../../core/consortium";
+import { newConsortium, newRoom, stepConsortium, stepRoom, type ConsortiumAction, type Market, type RoomState } from "../../core/consortium";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
 import { describeEntry } from "./cause";
+import { Lobby } from "./Lobby";
 import { ConsortiumScreen, Results, Turn } from "./ConsortiumScreen";
 import { DesignScreen } from "./DesignScreen";
 
+const profiles = Object.values(agenciesData) as AgencyProfile[];
 const state = designPhase.init({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, 1);
 
 describe("екран частини 1: розмітка", () => {
@@ -42,9 +44,23 @@ describe("екран частини 1: розмітка", () => {
     expect(html).toContain("disabled");
   });
 
-  it("екран консорціуму починає з вибору агенцій", () => {
+  it("екран консорціуму починає з лобі: гравець, вибір країни, старт", () => {
     const html = renderToStaticMarkup(<ConsortiumScreen />);
-    for (const text of ["Choose the agencies", "Borealis Federation", "Monsoon Union", "Meridia Concord", "Start the mission"]) expect(html, text).toContain(text);
+    for (const text of ["Consortium lobby", "Player 1", "Any country", "Borealis Federation", "Monsoon Union", "Meridia Concord", "Add player", "Start the mission"]) expect(html, text).toContain(text);
+    expect(html).not.toContain("ui.");
+  });
+
+  it("лобі: монета при конфлікті, онлайн-режим із готовністю", () => {
+    const ids = profiles.map((a) => a.id);
+    let room: RoomState = newRoom("a", "Ann", ids, 5);
+    const setup = { base: { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, market: marketData as unknown as Market, agencies: profiles };
+    room = stepRoom(room, "b", { type: "join", name: "Bob" }, setup);
+    room = stepRoom(room, "a", { type: "wish", agencyId: ids[0]! }, setup);
+    room = stepRoom(room, "b", { type: "wish", agencyId: ids[0]! }, setup);
+    if (room.phase !== "lobby") throw new Error("лобі");
+    const html = renderToStaticMarkup(<Lobby room={room} agencies={profiles} send={() => undefined} onStart={() => undefined} meId="a" />);
+    for (const text of ["Ann", "Bob", "Ready", "coin toss", "contested", "Waiting for everyone to be ready."]) expect(html, text).toContain(text);
+    expect(html).not.toContain("ui.");
   });
 });
 
