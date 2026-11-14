@@ -1,5 +1,6 @@
 import { assignAgencies, startBlockers, MAX_PLAYERS, type LobbyState, type RoomAction } from "../../core/consortium";
 import type { AgencyProfile } from "../../core/design/agency";
+import { resolveAssetUrl } from "../graphics/registry";
 import { t } from "../text";
 
 // Лобі: місця, бажані країни, підказка про монету. Один компонент для обох режимів.
@@ -47,14 +48,24 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
               <option value="">{t("ui.lobby.anyAgency")}</option>
               {agencies.filter((a) => room.agencyIds.includes(a.id)).map((a) => <option key={a.id} value={a.id}>{t(a.nameKey)}</option>)}
             </select>
-            {contested && <span style={{ color: C.gold, fontSize: 13 }}>🪙 {t("ui.lobby.coinPending")}</span>}
+            {contested && (
+              <span style={{ color: C.gold, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <img src={resolveAssetUrl("assets/icons/ui/coins.svg")} alt="" width={14} height={14} />
+                {t("ui.lobby.coinPending")}
+              </span>
+            )}
             {got && got.how === "free" && <span style={{ color: C.dim, fontSize: 13 }}>→ {nameOf(got.agencyId)}</span>}
             {!local && <label><input type="checkbox" checked={p.ready} disabled={!mine} onChange={(e) => send(p.id, { type: "ready", ready: e.target.checked })} /> {t("ui.lobby.ready")}</label>}
             {mine && room.players.length > 1 && <button style={button} onClick={() => send(p.id, { type: "leave" })}>✕</button>}
           </div>
         );
       })}
-      {room.agencyIds.some((id) => wishCount(id) > 1) && <div style={{ color: C.gold, fontSize: 13 }}>🪙 {t("ui.lobby.coinHint")}</div>}
+      {room.agencyIds.some((id) => wishCount(id) > 1) && (
+        <div style={{ color: C.gold, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+          <img src={resolveAssetUrl("assets/icons/ui/coins.svg")} alt="" width={14} height={14} />
+          {t("ui.lobby.coinHint")}
+        </div>
+      )}
       {local && (
         <div>
           <button style={button} disabled={full} onClick={() => send(nextId, { type: "join", name: `Player ${nextN}` })}>

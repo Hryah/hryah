@@ -21,6 +21,7 @@ export {
   DEFAULT_TEMPLATES,
   SATELLITE_SOCKETS,
   TemplateRegistry,
+  resolveAssetUrl,
   templateRegistry,
 } from './registry';
 
@@ -31,5 +32,4 @@ export {
   TemplateUnitView,
 } from './adapters';
 
-export { GlbModelCanvas, parseGlbBuffer } from './glb-viewer';
 export { SpacecraftViewport } from './SpacecraftViewport';
