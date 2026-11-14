@@ -1,14 +1,15 @@
 import {
   ALL_GRAB_HANDLES,
-  ALL_WALL_SEGMENTS,
+  buildOctagonWallsFromChamfer,
   closestPointOnSegment,
   computeTrajectoryPreview,
   type FlightState,
-  getActiveHandles,
+  getModuleOctagonPolygon,
   type GrabHandle,
-  STATION_MODULES,
-  type StationModuleBlueprint,
+  type ModuleBlueprint,
+  STATION_LEVEL_CONFIG,
   type TerminalNode,
+  type WallSegment,
 } from "../../../core/flight";
 import type { Camera2D } from "../Camera2D";
 
@@ -34,6 +35,15 @@ const STARFIELD: StarPoint[] = Array.from({ length: 140 }, (_, i) => {
   };
 });
 
+const TERMINAL_BADGE_LABELS: Record<string, string> = {
+  SOLAR: "⚡ СОНЯЧНІ ПАНЕЛІ",
+  DOCKING_1: "⚓ ШЛЮЗ ПІВНІЧ",
+  DOCKING_2: "⚓ ШЛЮЗ СХІД",
+  DOCKING_3: "⚓ ШЛЮЗ ПІВДЕНЬ",
+  OXYGEN: "🫧 РЕГЕНЕРАЦІЯ O₂",
+  THERMAL: "🌡 ТЕРМОКОНТУР",
+};
+
 export class StationRenderer {
   public render(
     ctx: CanvasRenderingContext2D,
@@ -50,7 +60,7 @@ export class StationRenderer {
 
     // 2. Зоряне небо на паралаксі
     for (const star of STARFIELD) {
-      const parallax = 0.12 * star.layer;
+      const parallax = 0.08 * star.layer;
       const sx =
         (((star.x - camera.x * parallax) % viewportW) + viewportW) % viewportW;
       const sy =
@@ -61,239 +71,270 @@ export class StationRenderer {
       ctx.fill();
     }
 
-    // 3. Перехід у World Space через матрицю Camera2D
+    // 3. World Space через RoomCameraController
     ctx.save();
     camera.applyTransform(ctx, viewportW, viewportH);
 
-    // Малюємо модулі станції (спочатку заблоковані як голографічний контур, потім активні)
-    for (const mod of STATION_MODULES) {
+    const focusModuleId =
+      state.gameMode === "MODULE_EXPANSION_CUTSCENE" &&
+      state.cutsceneTargetModuleId
+        ? state.cutsceneTargetModuleId
+        : state.activeModuleId;
+
+    const completedDockings = state.openedSeals.length;
+
+    // Рендеримо кожен відкритий модуль: поточний на 100% яскравості, сусідні під FogOfWar (opacity: 0.25)
+    for (const mod of STATION_LEVEL_CONFIG) {
       const unlocked = state.unlockedModuleIds.includes(mod.id);
-      this.renderModuleHull(ctx, mod, unlocked, state);
-    }
+      if (!unlocked) continue;
 
-    // Малюємо сегменти стін та гермошлюзи стикування
-    this.renderWallsAndSeals(ctx, state);
+      const isFocus = mod.id === focusModuleId;
+      ctx.save();
+      ctx.globalAlpha = isFocus ? 1.0 : 0.25;
 
-    // Малюємо термінали (трапецієподібні пульти з ескізу)
-    for (const term of state.terminals) {
-      const unlocked = state.unlockedModuleIds.includes(term.moduleId);
-      if (unlocked) {
-        this.renderTerminal(ctx, term, state.timeElapsedS);
+      this.renderModuleOctagonHull(ctx, mod, state);
+
+      const walls = buildOctagonWallsFromChamfer(mod, completedDockings);
+      this.renderModuleWallsAndDoors(ctx, walls);
+
+      // Комп'ютерні стійки цього модуля (ComputerBlueprint окремо від ручок!)
+      const modTerminals = state.terminals.filter((t) => t.moduleId === mod.id);
+      for (const term of modTerminals) {
+        this.renderComputerConsole(ctx, term, state.timeElapsedS);
       }
+
+      // Поручні цього модуля (HandleBlueprint)
+      const modHandles = ALL_GRAB_HANDLES.filter((h) => h.moduleId === mod.id);
+      for (const handle of modHandles) {
+        this.renderGrabHandle(ctx, handle, state);
+      }
+
+      ctx.restore();
     }
 
-    // Малюємо червоні поручні-капсули (GrabHandle)
-    const activeHandles = getActiveHandles(state.unlockedModuleIds);
-    for (const handle of activeHandles) {
-      this.renderGrabHandle(ctx, handle, state);
-    }
-
-    // Малюємо пунктир траєкторії та вектор натягу рогатки, якщо гравець цілиться
+    // Вектор рогатки і 10 точок балістичної траєкторії
     this.renderSlingshotPreview(ctx, state);
 
-    // Малюємо космонавта
+    // Космонавт
     this.renderAstronaut(ctx, state);
 
     ctx.restore();
 
-    // 4. Атмосферні штрафи FNAF-режисера (падіння енергії гасить світло, падіння O2 звужує поле зору віньєткою)
+    // 4. Атмосферні штрафи FNAF-режисера
     this.renderEnvironmentalPenalties(ctx, state, viewportW, viewportH);
 
     ctx.restore();
   }
 
-  private renderModuleHull(
+  private renderModuleOctagonHull(
     ctx: CanvasRenderingContext2D,
-    mod: StationModuleBlueprint,
-    unlocked: boolean,
+    mod: ModuleBlueprint,
     state: FlightState,
   ): void {
-    const { minX, minY, maxX, maxY } = mod.bounds;
-    const w = maxX - minX;
-    const h = maxY - minY;
+    const poly = getModuleOctagonPolygon(mod);
+    const wx = mod.worldPos.x;
+    const wy = mod.worldPos.y;
+    const w = mod.size.width;
+    const h = mod.size.height;
 
     ctx.save();
 
-    if (!unlocked) {
-      // Заблокований модуль — напівпрозорий креслярський контур за шлюзом
-      ctx.strokeStyle = "rgba(72, 130, 210, 0.22)";
-      ctx.fillStyle = "rgba(12, 20, 38, 0.28)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 8]);
-      ctx.strokeRect(minX, minY, w, h);
-      ctx.fillRect(minX, minY, w, h);
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = "rgba(110, 165, 240, 0.42)";
-      ctx.font = "700 15px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        `[ОЧІКУЄ СТИКУВАННЯ · ${mod.id}]`,
-        mod.cameraCenter.x,
-        mod.cameraCenter.y,
-      );
-      ctx.restore();
-      return;
+    // Восьмикутний контур підлоги модуля
+    ctx.beginPath();
+    for (let i = 0; i < poly.length; i++) {
+      const pt = poly[i]!;
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
     }
+    ctx.closePath();
 
-    // Світність обшивки залежить від рівня енергії станції
-    const lightRatio = Math.max(0.22, state.energyPct / 100);
-    const hullBg =
-      lightRatio > 0.55 ? "#121a2d" : lightRatio > 0.35 ? "#111322" : "#140c14";
+    ctx.fillStyle = mod.theme.floorColor;
+    ctx.fill();
 
-    ctx.fillStyle = hullBg;
+    // Обрізаємо внутрішній декор восьмикутником модуля
+    ctx.clip();
 
-    if (mod.type === "INTERSECTION") {
-      // Восьмикутний хаб зі скошеними під 45° кутами (як на скетчі Intersection)
+    // Внутрішній технічний патерн підлоги (TECH_RIBS, HEX, PANELS)
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
+    ctx.lineWidth = 2;
+    if (mod.theme.gridPattern === "TECH_RIBS") {
+      for (let rx = wx + 80; rx < wx + w; rx += 95) {
+        ctx.beginPath();
+        ctx.moveTo(rx, wy);
+        ctx.lineTo(rx, wy + h);
+        ctx.stroke();
+      }
       ctx.beginPath();
-      ctx.moveTo(-260, -90);
-      ctx.lineTo(-90, -260);
-      ctx.lineTo(90, -260);
-      ctx.lineTo(260, -90);
-      ctx.lineTo(260, 90);
-      ctx.lineTo(90, 260);
-      ctx.lineTo(-90, 260);
-      ctx.lineTo(-260, 90);
-      ctx.closePath();
-      ctx.fill();
-
-      // Внутрішня розмітка хабу
-      ctx.strokeStyle = "rgba(92, 168, 255, 0.14)";
-      ctx.lineWidth = 2;
+      ctx.moveTo(wx, wy + h * 0.5);
+      ctx.lineTo(wx + w, wy + h * 0.5);
+      ctx.stroke();
+    } else if (mod.theme.gridPattern === "HEX") {
+      const cx = wx + w * 0.5;
+      const cy = wy + h * 0.5;
+      for (const r of [120, 210, 290]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.beginPath();
-      ctx.arc(0, 0, 145, 0, Math.PI * 2);
+      ctx.moveTo(wx, cy);
+      ctx.lineTo(wx + w, cy);
+      ctx.moveTo(cx, wy);
+      ctx.lineTo(cx, wy + h);
       ctx.stroke();
     } else {
-      ctx.fillRect(minX, minY, w, h);
-
-      // Ребра жорсткості обшивки (як на скетчах Vertical / Horizontal)
-      ctx.strokeStyle = "rgba(120, 155, 210, 0.1)";
-      ctx.lineWidth = 2;
-      if (mod.type === "HORIZONTAL") {
-        for (let rx = minX + 90; rx < maxX; rx += 110) {
-          ctx.beginPath();
-          ctx.moveTo(rx, minY + 12);
-          ctx.lineTo(rx, maxY - 12);
-          ctx.stroke();
-        }
-      } else {
-        for (let ry = minY + 90; ry < maxY; ry += 110) {
-          ctx.beginPath();
-          ctx.moveTo(minX + 12, ry);
-          ctx.lineTo(maxX - 12, ry);
-          ctx.stroke();
-        }
+      for (let ry = wy + 80; ry < wy + h; ry += 95) {
+        ctx.beginPath();
+        ctx.moveTo(wx, ry);
+        ctx.lineTo(wx + w, ry);
+        ctx.stroke();
       }
     }
 
-    // Ілюмінатори (круглі вікна 'O' зі скетчу з зорями всередині)
-    for (const port of mod.portholes) {
+    // Ілюмінатори (круглі вікна з зорями всередині)
+    for (const port of mod.theme.portholes) {
+      const px = wx + port.x;
+      const py = wy + port.y;
       const grad = ctx.createRadialGradient(
-        port.x - port.radius * 0.2,
-        port.y - port.radius * 0.2,
+        px - port.r * 0.2,
+        py - port.r * 0.2,
         4,
-        port.x,
-        port.y,
-        port.radius,
+        px,
+        py,
+        port.r,
       );
-      grad.addColorStop(0, "#102848");
-      grad.addColorStop(0.7, "#071124");
-      grad.addColorStop(1, "#040812");
+      grad.addColorStop(0, "#0f294a");
+      grad.addColorStop(0.7, "#061020");
+      grad.addColorStop(1, "#030710");
 
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(port.x, port.y, port.radius, 0, Math.PI * 2);
+      ctx.arc(px, py, port.r, 0, Math.PI * 2);
       ctx.fill();
 
-      // Рама ілюмінатора з заклепками
-      ctx.strokeStyle = "#3a4f76";
-      ctx.lineWidth = 5;
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 6;
       ctx.stroke();
 
-      // Блік скла
-      ctx.strokeStyle = "rgba(130, 205, 255, 0.28)";
+      ctx.strokeStyle = "rgba(125, 211, 252, 0.25)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(
-        port.x,
-        port.y,
-        port.radius * 0.76,
-        -Math.PI * 0.75,
-        -Math.PI * 0.2,
-      );
+      ctx.arc(px, py, port.r * 0.78, -Math.PI * 0.75, -Math.PI * 0.2);
       ctx.stroke();
     }
 
-    // Центральна перешкода у Модулі 3 ([///] квадратний блок посередині кімнати зі скетчу)
+    // Перешкоди всередині модуля (PILLAR_CIRCLE та CARGO_BOX)
     for (const obs of mod.obstacles) {
-      const ow = obs.maxX - obs.minX;
-      const oh = obs.maxY - obs.minY;
-      ctx.fillStyle = "#1d263b";
-      ctx.fillRect(obs.minX, obs.minY, ow, oh);
+      const ox = wx + obs.pos.x;
+      const oy = wy + obs.pos.y;
+      if (obs.kind === "PILLAR_CIRCLE") {
+        const r = obs.radiusOrSize.w;
+        const pGrad = ctx.createRadialGradient(ox - r * 0.25, oy - r * 0.25, 4, ox, oy, r);
+        pGrad.addColorStop(0, "#334155");
+        pGrad.addColorStop(0.75, "#1e293b");
+        pGrad.addColorStop(1, "#0f172a");
 
-      // Діагональна штриховка [///] як на скетчі
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(obs.minX + 6, obs.minY + 6, ow - 12, oh - 12);
-      ctx.clip();
-      ctx.strokeStyle = "rgba(255, 162, 61, 0.24)";
-      ctx.lineWidth = 4;
-      for (let d = -oh; d < ow + oh; d += 22) {
+        ctx.fillStyle = pGrad;
         ctx.beginPath();
-        ctx.moveTo(obs.minX + d, obs.minY);
-        ctx.lineTo(obs.minX + d - oh, obs.maxY);
-        ctx.stroke();
-      }
-      ctx.restore();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.strokeStyle = "#5f759e";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(obs.minX, obs.minY, ow, oh);
+        // Кільце безпеки колони
+        ctx.strokeStyle = "rgba(245, 158, 11, 0.55)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r - 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (obs.kind === "CARGO_BOX") {
+        const bw = obs.radiusOrSize.w;
+        const bh = obs.radiusOrSize.h;
+        const bx = ox - bw * 0.5;
+        const by = oy - bh * 0.5;
+
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(bx, by, bw, bh);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bx + 6, by + 6, bw - 12, bh - 12);
+        ctx.clip();
+        ctx.strokeStyle = "rgba(245, 158, 11, 0.22)";
+        ctx.lineWidth = 4;
+        for (let d = -bh; d < bw + bh; d += 22) {
+          ctx.beginPath();
+          ctx.moveTo(bx + d, by);
+          ctx.lineTo(bx + d - bh, by + bh);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(bx, by, bw, bh);
+      }
     }
 
-    // Підпис модуля на обшивці
-    ctx.fillStyle = "rgba(148, 175, 215, 0.22)";
-    ctx.font = "700 12px monospace";
+    // Технічне маркування назви відсіку на обшивці
+    ctx.fillStyle = "rgba(148, 163, 184, 0.24)";
+    ctx.font = "700 13px monospace";
     ctx.textAlign = "center";
-    ctx.fillText(mod.id, mod.cameraCenter.x, minY + 24);
+    ctx.fillText(mod.title, wx + w * 0.5, wy + 28);
+
+    // Підсвітка зелених вогнів відкритих шлюзів (DoorTransitionZone)
+    for (const door of mod.doors) {
+      if (door.unlockedAtDockingWave <= state.openedSeals.length) {
+        let dx = wx;
+        let dy = wy;
+        if (door.side === "RIGHT") {
+          dx = wx + w;
+          dy = wy + door.offset;
+        } else if (door.side === "LEFT") {
+          dx = wx;
+          dy = wy + door.offset;
+        } else if (door.side === "TOP") {
+          dx = wx + door.offset;
+          dy = wy;
+        } else {
+          dx = wx + door.offset;
+          dy = wy + h;
+        }
+        ctx.fillStyle = "rgba(61, 220, 132, 0.12)";
+        ctx.beginPath();
+        ctx.arc(dx, dy, door.width * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     ctx.restore();
   }
 
-  private renderWallsAndSeals(
+  private renderModuleWallsAndDoors(
     ctx: CanvasRenderingContext2D,
-    state: FlightState,
+    walls: readonly WallSegment[],
   ): void {
     ctx.save();
-    for (const wall of ALL_WALL_SEGMENTS) {
-      if (!state.unlockedModuleIds.includes(wall.moduleId)) continue;
-
+    for (const wall of walls) {
       if (wall.isDockingSeal !== null) {
-        const isOpened = state.openedSeals.includes(wall.isDockingSeal);
-        if (isOpened) {
-          // Відкритий гермошлюз — зелені вогні проходу
-          ctx.strokeStyle = "rgba(61, 220, 132, 0.4)";
-          ctx.lineWidth = 3;
-          ctx.setLineDash([6, 12]);
-          ctx.beginPath();
-          ctx.moveTo(wall.ax, wall.ay);
-          ctx.lineTo(wall.bx, wall.by);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          continue;
-        }
-
-        // Закритий шлюз стикування (масивні гермодвері)
-        ctx.strokeStyle = "#ff7847";
-        ctx.lineWidth = 10;
+        // Броньовані стулки закритого гермошлюзу
+        ctx.strokeStyle = "#ea580c";
+        ctx.lineWidth = 12;
+        ctx.lineCap = "butt";
         ctx.beginPath();
         ctx.moveTo(wall.ax, wall.ay);
         ctx.lineTo(wall.bx, wall.by);
         ctx.stroke();
 
-        ctx.strokeStyle = "#ffd166";
+        ctx.strokeStyle = "#fde047";
         ctx.lineWidth = 3;
-        ctx.setLineDash([12, 8]);
+        ctx.setLineDash([10, 8]);
         ctx.beginPath();
         ctx.moveTo(wall.ax, wall.ay);
         ctx.lineTo(wall.bx, wall.by);
@@ -302,17 +343,17 @@ export class StationRenderer {
         continue;
       }
 
-      // Звичайна силова стіна станції
-      ctx.strokeStyle = "#6e86b3";
-      ctx.lineWidth = 7;
+      // Товста силова обшивка восьмикутника
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 14;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(wall.ax, wall.ay);
       ctx.lineTo(wall.bx, wall.by);
       ctx.stroke();
 
-      ctx.strokeStyle = "#a6c0ee";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(wall.ax, wall.ay);
       ctx.lineTo(wall.bx, wall.by);
@@ -321,70 +362,206 @@ export class StationRenderer {
     ctx.restore();
   }
 
-  private renderTerminal(
+  /**
+   * 4. Відокремлений рендер ComputerBlueprint:
+   * Деталізована стійка/консоль, вмонтована в стіну модуля (монітор, клавіатура, світлодіоди, кабелі, антена/труби/радар).
+   */
+  private renderComputerConsole(
     ctx: CanvasRenderingContext2D,
     term: TerminalNode,
     timeElapsedS: number,
   ): void {
-    ctx.save();
-    ctx.translate(term.pos.x, term.pos.y);
+    const linkedHandle = ALL_GRAB_HANDLES.find((h) => h.id === term.handleId);
+    const preset = term.visualPreset;
+    const cw = preset.chassisWidth;
+    const ch = preset.chassisHeight;
 
-    const pulse = 0.5 + 0.5 * Math.sin(timeElapsedS * 7);
-    let baseColor = "#3c82f6";
-    let glowColor = "rgba(60, 130, 246, 0.25)";
+    const pulse = 0.5 + 0.5 * Math.sin(timeElapsedS * 7.5);
+    const isAlarm = term.state === "WARNING" || term.state === "CRITICAL";
+
+    let screenColor = preset.screenColor;
     if (term.state === "WARNING") {
-      baseColor = "#ffa23d";
-      glowColor = `rgba(255, 162, 61, ${0.3 + pulse * 0.35})`;
+      screenColor = pulse > 0.45 ? "#f59e0b" : "#b45309";
     } else if (term.state === "CRITICAL") {
-      baseColor = "#ff4766";
-      glowColor = `rgba(255, 71, 102, ${0.4 + pulse * 0.45})`;
+      screenColor = pulse > 0.35 ? "#ef4444" : "#7f1d1d";
     } else if (term.state === "COMPLETED") {
-      baseColor = "#3ddc84";
-      glowColor = "rgba(61, 220, 132, 0.28)";
+      screenColor = "#10b981";
     }
 
-    // Світіння пульта
-    ctx.fillStyle = glowColor;
-    ctx.beginPath();
-    ctx.arc(0, 0, 38, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.save();
 
-    // Синя трапеція пульта (\___/ як на ескізі)
-    ctx.fillStyle = "#162442";
-    ctx.strokeStyle = baseColor;
-    ctx.lineWidth = 3;
+    // Силові кабелі по стіні від консолі до прив'язаної ручки-фіксатора
+    if (linkedHandle) {
+      const hx = (linkedHandle.ax + linkedHandle.bx) * 0.5;
+      const hy = (linkedHandle.ay + linkedHandle.by) * 0.5;
+      ctx.strokeStyle = isAlarm ? "rgba(245, 158, 11, 0.45)" : "rgba(56, 189, 248, 0.28)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(term.pos.x - 10, term.pos.y);
+      ctx.lineTo(hx - 10, hy);
+      ctx.moveTo(term.pos.x + 10, term.pos.y);
+      ctx.lineTo(hx + 10, hy);
+      ctx.stroke();
+    }
+
+    // М'яке світлове гало (radialGradient), коли на комп'ютері тривога
+    if (isAlarm) {
+      const haloR = cw * 1.15;
+      const grad = ctx.createRadialGradient(
+        term.pos.x,
+        term.pos.y,
+        8,
+        term.pos.x,
+        term.pos.y,
+        haloR,
+      );
+      if (term.state === "CRITICAL") {
+        grad.addColorStop(0, `rgba(239, 68, 68, ${0.28 + pulse * 0.25})`);
+        grad.addColorStop(1, "rgba(239, 68, 68, 0)");
+      } else {
+        grad.addColorStop(0, `rgba(245, 158, 11, ${0.22 + pulse * 0.2})`);
+        grad.addColorStop(1, "rgba(245, 158, 11, 0)");
+      }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(term.pos.x, term.pos.y, haloR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Корпус комп'ютерної стійки з урахуванням mountAngle
+    ctx.save();
+    ctx.translate(term.pos.x, term.pos.y);
+    ctx.rotate((term.mountAngle * Math.PI) / 180);
+
+    // Візуальні труби охолодження (hasCoolingPipes)
+    if (preset.hasCoolingPipes) {
+      ctx.strokeStyle = "#0ea5e9";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-cw * 0.5 - 14, -ch * 0.25);
+      ctx.lineTo(cw * 0.5 + 14, -ch * 0.25);
+      ctx.moveTo(-cw * 0.5 - 14, ch * 0.15);
+      ctx.lineTo(cw * 0.5 + 14, ch * 0.15);
+      ctx.stroke();
+    }
+
+    // Візуальна антена (hasAntenna)
+    if (preset.hasAntenna) {
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(cw * 0.32, -ch * 0.5);
+      ctx.lineTo(cw * 0.32, -ch * 0.5 - 22);
+      ctx.stroke();
+      ctx.fillStyle = isAlarm ? "#ef4444" : "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(cw * 0.32, -ch * 0.5 - 24, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Візуальна тарілка радара для Docking комп'ютера (hasRadarDish)
+    if (preset.hasRadarDish) {
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(-cw * 0.3, -ch * 0.5 - 10, 12, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+
+    // Металева шафа-корпус консолі
+    ctx.fillStyle = "#1e293b";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(-28, -14);
-    ctx.lineTo(28, -14);
-    ctx.lineTo(20, 14);
-    ctx.lineTo(-20, 14);
-    ctx.closePath();
+    ctx.roundRect(-cw * 0.5, -ch * 0.5, cw, ch, 7);
     ctx.fill();
     ctx.stroke();
 
-    // Екранчик термінала
-    ctx.fillStyle = baseColor;
-    ctx.font = "700 10px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(term.id, 0, -2);
+    // Монітор консолі (блимає сам екран під час тривоги!)
+    const mw = cw * 0.62;
+    const mh = ch * 0.54;
+    ctx.fillStyle = screenColor;
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-cw * 0.42, -ch * 0.38, mw, mh, 4);
+    ctx.fill();
+    ctx.stroke();
 
-    if (term.state === "WARNING" || term.state === "CRITICAL") {
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "700 11px monospace";
-      ctx.fillText(`${Math.ceil(term.urgencyTimer)}s`, 0, 10);
+    // Телеметрія на екрані монітора
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-cw * 0.36, -ch * 0.12);
+    ctx.lineTo(-cw * 0.22, -ch * 0.22);
+    ctx.lineTo(-cw * 0.08, -ch * 0.06);
+    ctx.lineTo(cw * 0.12, -ch * 0.18);
+    ctx.stroke();
 
-      // Кільце таймера аварії
-      const ratio = Math.max(0, term.urgencyTimer / Math.max(1, term.maxUrgencyTimer));
-      ctx.strokeStyle = baseColor;
-      ctx.lineWidth = 3;
+    // Світлодіоди стану праворуч від монітора
+    const leds = [
+      isAlarm ? "#ef4444" : "#10b981",
+      term.state === "WARNING" ? "#f59e0b" : "#38bdf8",
+      "#94a3b8",
+    ];
+    for (let i = 0; i < leds.length; i++) {
+      ctx.fillStyle = leds[i]!;
       ctx.beginPath();
-      ctx.arc(0, 0, 33, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
-      ctx.stroke();
+      ctx.arc(cw * 0.32, -ch * 0.26 + i * 10, 3, 0, Math.PI * 2);
+      ctx.fill();
     }
+
+    // Клавіатурна дека внизу стійки
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.roundRect(-cw * 0.42, ch * 0.22, cw * 0.84, ch * 0.18, 3);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Голографічний бейдж над консоллю (завжди горизонтальний для читабельності)
+    const labelTitle = TERMINAL_BADGE_LABELS[term.id] ?? term.id;
+    const badgeText = isAlarm
+      ? `[${labelTitle}: ${Math.ceil(term.urgencyTimer)}с]`
+      : term.state === "COMPLETED"
+        ? `[✓ ${labelTitle}]`
+        : `[${labelTitle}]`;
+
+    ctx.font = "700 11px monospace";
+    const textW = ctx.measureText(badgeText).width;
+    const bw = textW + 18;
+    const bh = 22;
+    const bx = term.pos.x - bw * 0.5;
+    const by = term.pos.y - ch * 0.5 - 32;
+
+    ctx.fillStyle = isAlarm
+      ? term.state === "CRITICAL"
+        ? "rgba(127, 29, 29, 0.92)"
+        : "rgba(120, 53, 15, 0.92)"
+      : "rgba(15, 23, 42, 0.85)";
+    ctx.strokeStyle = isAlarm
+      ? term.state === "CRITICAL"
+        ? "#ef4444"
+        : "#f59e0b"
+      : "rgba(56, 189, 248, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = isAlarm ? "#ffffff" : "#bae6fd";
+    ctx.textAlign = "center";
+    ctx.fillText(badgeText, term.pos.x, by + 15);
 
     ctx.restore();
   }
 
+  /**
+   * 4. Рендер HandleBlueprint:
+   * Без «зеленого огірка»! Радіус захвату малюється лише як тонкий пунктирний технічний контур
+   * (1px dashed rgba(56, 189, 248, 0.35)), і тільки коли космонавт поруч.
+   */
   private renderGrabHandle(
     ctx: CanvasRenderingContext2D,
     handle: GrabHandle,
@@ -403,45 +580,53 @@ export class StationRenderer {
       handle.by,
     );
     const dist = Math.hypot(astro.pos.x - closest.x, astro.pos.y - closest.y);
-    const inGrabRange = dist <= handle.grabRadius * 1.45;
+    const isNear = dist <= handle.grabRadius * 1.65;
 
     ctx.save();
 
-    // Підсвітка радіуса захвату капсули (R_grab = 32px)
-    if (isAnchoredHere || inGrabRange || astro.activeGrabHeld) {
-      ctx.strokeStyle = isAnchoredHere
-        ? "rgba(61, 220, 132, 0.45)"
-        : inGrabRange
-          ? "rgba(92, 168, 255, 0.35)"
-          : "rgba(255, 92, 122, 0.14)";
-      ctx.lineWidth = handle.grabRadius * 2;
-      ctx.lineCap = "round";
+    // Тонкий пунктирний технічний контур зони захвату (1px dashed rgba(56, 189, 248, 0.35)) тільки коли поруч
+    if (isNear && !isAnchoredHere) {
+      const dx = handle.bx - handle.ax;
+      const dy = handle.by - handle.ay;
+      const len = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+      const r = handle.grabRadius;
+
+      ctx.save();
+      ctx.translate(handle.ax, handle.ay);
+      ctx.rotate(angle);
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(handle.ax, handle.ay);
-      ctx.lineTo(handle.bx, handle.by);
+      ctx.arc(0, 0, r, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.arc(len, 0, r, -Math.PI * 0.5, Math.PI * 0.5);
+      ctx.closePath();
       ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
     }
 
-    // Ніжки кріплення поручня
-    ctx.strokeStyle = "#8a99b8";
-    ctx.lineWidth = 4;
+    // Кронштейни кріплення поручня до стіни
+    ctx.fillStyle = "#64748b";
     ctx.beginPath();
-    ctx.arc(handle.ax, handle.ay, 4.5, 0, Math.PI * 2);
-    ctx.arc(handle.bx, handle.by, 4.5, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.arc(handle.ax, handle.ay, 5, 0, Math.PI * 2);
+    ctx.arc(handle.bx, handle.by, 5, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Червона перекладина поручня (як на скетчах [===])
-    ctx.strokeStyle = isAnchoredHere ? "#3ddc84" : "#e63946";
-    ctx.lineWidth = 7;
+    // Основна перекладина поручня (синя/бірюзова для комп'ютерів, червона для стінових)
+    const railColor = isAnchoredHere ? "#38bdf8" : handle.colorTheme;
+    ctx.strokeStyle = railColor;
+    ctx.lineWidth = 6.5;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(handle.ax, handle.ay);
     ctx.lineTo(handle.bx, handle.by);
     ctx.stroke();
 
-    // Відблиск на поручні
-    ctx.strokeStyle = isAnchoredHere ? "#b8f7d4" : "#ff8fa3";
-    ctx.lineWidth = 2;
+    // Тонкий металевий блік на трубі поручня
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(handle.ax, handle.ay);
     ctx.lineTo(handle.bx, handle.by);
@@ -472,9 +657,20 @@ export class StationRenderer {
 
     ctx.save();
 
-    // Лінія натягу рогатки позаду космонавта (візуальна тятива)
-    const pullDx = astro.slingshot.dragCurrentScreen.x - astro.slingshot.dragStartScreen.x;
-    const pullDy = astro.slingshot.dragCurrentScreen.y - astro.slingshot.dragStartScreen.y;
+    // Тонке технологічне кільце прицілу навколо космонавта
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(astro.pos.x, astro.pos.y, astro.radius + 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Лінія натягу рогатки позаду космонавта
+    const pullDx =
+      astro.slingshot.dragCurrentScreen.x - astro.slingshot.dragStartScreen.x;
+    const pullDy =
+      astro.slingshot.dragCurrentScreen.y - astro.slingshot.dragStartScreen.y;
     const pullLen = Math.min(180, Math.hypot(pullDx, pullDy));
     if (pullLen > 4) {
       const pullAngle = Math.atan2(pullDy, pullDx);
@@ -482,7 +678,7 @@ export class StationRenderer {
       const bandEndY = astro.pos.y + Math.sin(pullAngle) * pullLen * 0.65;
 
       ctx.strokeStyle = "rgba(255, 107, 107, 0.75)";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(astro.pos.x, astro.pos.y);
       ctx.lineTo(bandEndX, bandEndY);
@@ -490,15 +686,15 @@ export class StationRenderer {
 
       ctx.fillStyle = "#ff6b6b";
       ctx.beginPath();
-      ctx.arc(bandEndX, bandEndY, 6, 0, Math.PI * 2);
+      ctx.arc(bandEndX, bandEndY, 5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 10 точок попереднього перегляду балістичної траєкторії: P_i = P_player + V_launch * (i * 0.04s)
+    // 10 точок попереднього перегляду балістичної траєкторії
     for (let i = 0; i < points.length; i++) {
       const pt = points[i]!;
       const alpha = 0.9 - (i / points.length) * 0.65;
-      const radius = 4.5 - (i / points.length) * 2.2;
+      const radius = 4.2 - (i / points.length) * 2.0;
       ctx.fillStyle =
         powerRatio > 0.74
           ? `rgba(255, 162, 61, ${alpha})`
@@ -508,11 +704,10 @@ export class StationRenderer {
       ctx.fill();
     }
 
-    // Синя стрілка вектора імпульсу (як на скетчі image copy.png "--->")
     const endPt = points[Math.min(4, points.length - 1)]!;
     const angle = Math.atan2(lv.vy, lv.vx);
-    ctx.strokeStyle = "#4cc9f0";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 2.5;
     ctx.setLineDash([6, 4]);
     ctx.beginPath();
     ctx.moveTo(astro.pos.x, astro.pos.y);
@@ -520,30 +715,24 @@ export class StationRenderer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Наконечник стрілки
-    ctx.fillStyle = "#4cc9f0";
+    ctx.fillStyle = "#38bdf8";
     ctx.beginPath();
     ctx.moveTo(endPt.x, endPt.y);
     ctx.lineTo(
-      endPt.x - Math.cos(angle - 0.45) * 14,
-      endPt.y - Math.sin(angle - 0.45) * 14,
+      endPt.x - Math.cos(angle - 0.45) * 13,
+      endPt.y - Math.sin(angle - 0.45) * 13,
     );
     ctx.lineTo(
-      endPt.x - Math.cos(angle + 0.45) * 14,
-      endPt.y - Math.sin(angle + 0.45) * 14,
+      endPt.x - Math.cos(angle + 0.45) * 13,
+      endPt.y - Math.sin(angle + 0.45) * 13,
     );
     ctx.closePath();
     ctx.fill();
 
-    // Підпис швидкості вильоту
     ctx.fillStyle = "#e8f3ff";
     ctx.font = "700 11px monospace";
     ctx.textAlign = "center";
-    ctx.fillText(
-      `${Math.round(speed)} px/s`,
-      astro.pos.x,
-      astro.pos.y + 38,
-    );
+    ctx.fillText(`${Math.round(speed)} px/s`, astro.pos.x, astro.pos.y + 38);
 
     ctx.restore();
   }
@@ -557,13 +746,13 @@ export class StationRenderer {
     ctx.save();
     ctx.translate(astro.pos.x, astro.pos.y);
 
-    // Аура активного захвату (коли затиснуто Space / ЛКМ у польоті)
+    // Тонке технологічне кільце при активному захваті в польоті
     if (astro.state === "FLYING" && astro.activeGrabHeld) {
-      ctx.strokeStyle = "rgba(61, 220, 132, 0.7)";
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(0, 0, astro.radius + 9, 0, Math.PI * 2);
+      ctx.arc(0, 0, astro.radius + 7, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -571,7 +760,7 @@ export class StationRenderer {
     ctx.save();
     ctx.rotate(astro.angle);
 
-    // PLSS ранець життєзабезпечення за спиною (як на скетчі)
+    // Ранець життєзабезпечення PLSS
     ctx.fillStyle = "#cbd5e1";
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 2;
@@ -580,7 +769,6 @@ export class StationRenderer {
     ctx.fill();
     ctx.stroke();
 
-    // Індикатор на ранці
     ctx.fillStyle =
       astro.state === "STUNNED"
         ? "#ff4766"
@@ -591,7 +779,7 @@ export class StationRenderer {
     ctx.arc(-14, -5, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ноги космонавта
+    // Ноги
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 5.5;
     ctx.lineCap = "round";
@@ -602,7 +790,7 @@ export class StationRenderer {
     ctx.lineTo(-19, 11);
     ctx.stroke();
 
-    // Торс скафандра
+    // Торс
     ctx.fillStyle = "#f8fafc";
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 2;
@@ -611,7 +799,7 @@ export class StationRenderer {
     ctx.fill();
     ctx.stroke();
 
-    // Руки космонавта (витягнуті вперед для захвату поручня)
+    // Руки
     ctx.strokeStyle = "#f1f5f9";
     ctx.lineWidth = 5;
     ctx.beginPath();
@@ -621,14 +809,14 @@ export class StationRenderer {
     ctx.lineTo(19, 6);
     ctx.stroke();
 
-    // Червоні рукавички
+    // Рукавички
     ctx.fillStyle = "#e63946";
     ctx.beginPath();
     ctx.arc(20, -6, 3.2, 0, Math.PI * 2);
     ctx.arc(20, 6, 3.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Шолом і золотисто-блакитний візор
+    // Шолом і візор
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 2;
@@ -644,7 +832,6 @@ export class StationRenderer {
 
     ctx.restore();
 
-    // Зірочки оглушення при STUNNED після удару об стіну на швидкості > 480 px/s
     if (astro.state === "STUNNED") {
       for (let i = 0; i < 3; i++) {
         const a = state.timeElapsedS * 8 + (i * Math.PI * 2) / 3;
@@ -661,28 +848,33 @@ export class StationRenderer {
       ctx.fillText("STUNNED!", 0, -34);
     }
 
-    // Дієгетична підказка взаємодії прямо над космонавтом, якщо тримається за ручку з терміналом
+    // Дієгетична кнопка взаємодії [E], коли тримається за ручку біля комп'ютера
     if (
       state.gameMode === "STATION_ROAM" &&
       astro.state === "ANCHORED" &&
       astro.anchoredHandleId
     ) {
-      const handle = ALL_GRAB_HANDLES.find((h) => h.id === astro.anchoredHandleId);
+      const handle = ALL_GRAB_HANDLES.find(
+        (h) => h.id === astro.anchoredHandleId,
+      );
       if (handle && handle.terminalId) {
         const term = state.terminals.find((t) => t.id === handle.terminalId);
-        const isUrgent = term && (term.state === "WARNING" || term.state === "CRITICAL");
-        ctx.fillStyle = isUrgent ? "rgba(255, 130, 45, 0.94)" : "rgba(30, 64, 175, 0.92)";
+        const isUrgent =
+          term && (term.state === "WARNING" || term.state === "CRITICAL");
+        ctx.fillStyle = isUrgent
+          ? "rgba(234, 88, 12, 0.94)"
+          : "rgba(3, 105, 161, 0.92)";
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.roundRect(-84, -52, 168, 24, 6);
+        ctx.roundRect(-86, -48, 172, 22, 5);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "700 11px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(`[E] ПУЛЬТ: ${handle.terminalId}`, 0, -36);
+        ctx.fillText(`[E] УВІМКНУТИ: ${handle.terminalId}`, 0, -33);
       }
     }
 
@@ -695,17 +887,18 @@ export class StationRenderer {
     viewportW: number,
     viewportH: number,
   ): void {
-    // 1. Падіння енергії гасить світло в рендері
     if (state.energyPct < 75) {
       const darkness = Math.min(0.68, ((75 - state.energyPct) / 75) * 0.68);
       ctx.fillStyle = `rgba(3, 5, 12, ${darkness})`;
       ctx.fillRect(0, 0, viewportW, viewportH);
     }
 
-    // 2. Падіння O2 звужує поле зору віньєткою (гіпоксія)
     if (state.oxygenPct < 75) {
       const severity = Math.min(1, (75 - state.oxygenPct) / 75);
-      const innerR = Math.max(90, Math.min(viewportW, viewportH) * (0.48 - severity * 0.28));
+      const innerR = Math.max(
+        90,
+        Math.min(viewportW, viewportH) * (0.48 - severity * 0.28),
+      );
       const outerR = Math.max(viewportW, viewportH) * 0.72;
       const grad = ctx.createRadialGradient(
         viewportW * 0.5,
@@ -721,7 +914,6 @@ export class StationRenderer {
       ctx.fillRect(0, 0, viewportW, viewportH);
     }
 
-    // 3. Перегрів станції додає червоне теплове марево по краях
     if (state.tempC > 34) {
       const heatAlpha = Math.min(0.32, ((state.tempC - 34) / 45) * 0.32);
       ctx.fillStyle = `rgba(255, 65, 35, ${heatAlpha})`;

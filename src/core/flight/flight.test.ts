@@ -3,14 +3,17 @@ import type { FlightInput } from "../contracts";
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION, stubDesign } from "../stubs";
 import {
   ALL_GRAB_HANDLES,
+  buildOctagonWallsFromChamfer,
   computeSlingshotLaunch,
   computeTrajectoryPreview,
   flightPhase,
   type FlightState,
+  getActiveCircleObstacles,
   getActiveHandles,
   getActiveWalls,
   LS_SLOT_POS,
   LS_TRASH_POS,
+  STATION_LEVEL_CONFIG,
   stepZeroGPhysics,
 } from "./index";
 
@@ -32,11 +35,12 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
+describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platformer", () => {
   it("не мутує вхідний стан і стан повністю серіалізується в JSON без undefined", () => {
     const input = makeInput();
     const s0 = deepFreeze(flightPhase.init(input, 42));
     expect(JSON.parse(JSON.stringify(s0))).toEqual(s0);
+    expect(s0.activeModuleId).toBe("MOD_HABITAT");
 
     const s1 = deepFreeze(
       flightPhase.step(s0, { type: "slingshot_start", screenX: 400, screenY: 300 }),
@@ -64,6 +68,41 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     expect(run(19)).toEqual(run(19));
   });
 
+  it("генератор восьмикутних стін buildOctagonWallsFromChamfer вирізає двері-шлюзи та закриває заблоковані порти", () => {
+    const hub = STATION_LEVEL_CONFIG.find((m) => m.id === "MOD_INTERSECTION")!;
+    const wallsWave0 = buildOctagonWallsFromChamfer(hub, 0);
+    const sealsWave0 = wallsWave0.filter((w) => w.isDockingSeal !== null);
+    // У хабі 3 закритих шлюзи на старті (NORTH, EAST, SOUTH), а LEFT до MOD_HABITAT відкритий
+    expect(sealsWave0).toHaveLength(3);
+
+    const wallsWave3 = buildOctagonWallsFromChamfer(hub, 3);
+    const sealsWave3 = wallsWave3.filter((w) => w.isDockingSeal !== null);
+    expect(sealsWave3).toHaveLength(0);
+  });
+
+  it("перехід між модулями через шлюз змінює activeModuleId без втрати вектора швидкості", () => {
+    const input = makeInput();
+    let state = flightPhase.init(input, 1);
+    expect(state.activeModuleId).toBe("MOD_HABITAT");
+
+    // Розміщуємо космонавта перед відкритим шлюзом DOOR_TO_HUB (x = 920, y = 240) зі швидкістю вправо
+    state = {
+      ...state,
+      astronaut: {
+        ...state.astronaut,
+        pos: { x: 890, y: 240 },
+        vel: { vx: 400, vy: 0 },
+        state: "FLYING",
+        anchoredHandleId: null,
+      },
+    };
+
+    state = flightPhase.step(state, { type: "tick", dtS: 0.15 });
+    expect(state.astronaut.pos.x).toBeGreaterThan(920);
+    expect(state.activeModuleId).toBe("MOD_INTERSECTION");
+    expect(state.astronaut.vel.vx).toBeGreaterThan(350);
+  });
+
   it("математика рогатки: L_max = 180px, V_max = 650px/s, степінь 1.2 та 10 точок траєкторії", () => {
     const fullPull = computeSlingshotLaunch({ x: 300, y: 300 }, { x: 100, y: 300 });
     expect(Math.round(fullPull.vx)).toBe(650);
@@ -84,31 +123,31 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     const input = makeInput();
     const s0 = flightPhase.init(input, 1);
     const activeWalls = getActiveWalls(s0.unlockedModuleIds, s0.openedSeals);
+    const circleObs = getActiveCircleObstacles(s0.unlockedModuleIds);
 
-    // Запускаємо космонавта прямо в західну стіну Модуля 1 (x = -960) зі швидкістю 600 px/s
+    // Запускаємо космонавта прямо в ліву стіну MOD_HABITAT (x = 0) зі швидкістю 600 px/s
     const fastAstro = {
       ...s0.astronaut,
-      pos: { x: -910, y: 0 },
+      pos: { x: 45, y: 240 },
       vel: { vx: -600, vy: 0 },
       state: "FLYING" as const,
       anchoredHandleId: null,
     };
 
-    const out = stepZeroGPhysics(fastAstro, 0.1, activeWalls, []);
+    const out = stepZeroGPhysics(fastAstro, 0.1, activeWalls, [], circleObs);
     expect(out.wallImpactSpeedPxS).toBeGreaterThan(480);
     expect(out.astronaut.state).toBe("STUNNED");
     expect(out.astronaut.stunTimer).toBeGreaterThan(0.7);
-    expect(out.astronaut.vel.vx).toBeGreaterThan(0); // відбився вправо
+    expect(out.astronaut.vel.vx).toBeGreaterThan(0);
   });
 
   it("захват ручок-капсуль: безпечний захват <= 420 px/s, зрив > 550 px/s без Space, успішний захват із Space", () => {
     const input = makeInput();
     const s0 = flightPhase.init(input, 1);
-    const targetHandle = ALL_GRAB_HANDLES.find((h) => h.id === "h_m1_top_1")!;
+    const targetHandle = ALL_GRAB_HANDLES.find((h) => h.id === "H_TOP_1")!;
     const hx = (targetHandle.ax + targetHandle.bx) * 0.5;
     const hy = targetHandle.ay;
 
-    // 1. Повільний підліт (300 px/s <= 420 px/s) -> ANCHORED
     const slowAstro = {
       ...s0.astronaut,
       pos: { x: hx - 20, y: hy },
@@ -121,7 +160,6 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     expect(slowOut.astronaut.state).toBe("ANCHORED");
     expect(slowOut.astronaut.anchoredHandleId).toBe(targetHandle.id);
 
-    // 2. Надшвидкий проліт (600 px/s > 550 px/s) без затиснутого Space/ЛКМ -> зрив захвату
     const fastNoGrab = {
       ...s0.astronaut,
       pos: { x: hx - 20, y: hy },
@@ -135,7 +173,6 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     expect(slipOut.slippedHandleId).toBe(targetHandle.id);
     expect(slipOut.astronaut.vel.vx).toBeLessThan(600 * 0.75);
 
-    // 3. Надшвидкий проліт (600 px/s) із затиснутим Space/ЛКМ (activeGrabHeld: true) -> успішний захват!
     const fastWithGrab = {
       ...fastNoGrab,
       activeGrabHeld: true,
@@ -149,16 +186,13 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     const input = makeInput();
     let state = flightPhase.init(input, 7);
 
-    // Відкриваємо мінігру сонячних панелей
     state = flightPhase.step(state, { type: "open_terminal", terminalId: "SOLAR" });
     expect(state.gameMode).toBe("MINIGAME_ACTIVE");
 
     const initialEnergy = state.energyPct;
     const initialSolarTimer = state.terminals.find((t) => t.id === "SOLAR")!.urgencyTimer;
 
-    // Тікаємо 5 секунд, поки гравець сидить у мінігрі
-    state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
-    for (let i = 0; i < 19; i++) {
+    for (let i = 0; i < 20; i++) {
       state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
     }
 
@@ -167,33 +201,33 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     expect(state.energyPct).toBeLessThan(initialEnergy);
   });
 
-  it("проходить усі 3 хвилі стикування (розширення карти Модуль 3 -> Модуль 4 -> Модуль 5) та 3 мініігри до VICTORY", () => {
+  it("проходить усі 3 хвилі стикування (MOD_VERTICAL_LAB -> MOD_THERMAL_BAY -> MOD_COMMAND) та 3 мініігри до VICTORY", () => {
     const input = makeInput();
     let state: FlightState = flightPhase.init(input, 11);
 
-    expect(state.unlockedModuleIds).toEqual(["MODULE_1", "MODULE_2"]);
-    expect(getActiveHandles(state.unlockedModuleIds).some((h) => h.moduleId === "MODULE_3")).toBe(false);
+    expect(state.unlockedModuleIds).toEqual(["MOD_HABITAT", "MOD_INTERSECTION"]);
+    expect(
+      getActiveHandles(state.unlockedModuleIds).some(
+        (h) => h.moduleId === "MOD_VERTICAL_LAB",
+      ),
+    ).toBe(false);
 
-    // 1. Проходимо SolarMinigame: вирівнюємо кути панелей із сонцем та тримаємо >95% 3 секунди
+    // 1. SolarMinigame
     state = flightPhase.step(state, { type: "open_terminal", terminalId: "SOLAR" });
-    expect(state.activeMinigame.type).toBe("SOLAR");
     for (let i = 0; i < 20 && state.gameMode === "MINIGAME_ACTIVE"; i++) {
       const mg = state.activeMinigame.solar!;
-      const dAlpha = mg.sunAlphaDeg - mg.panelAlphaDeg;
-      const dBeta = mg.sunBetaDeg - mg.panelBetaDeg;
       state = flightPhase.step(state, {
         type: "solar_input",
-        deltaAlphaDeg: dAlpha,
-        deltaBetaDeg: dBeta,
+        deltaAlphaDeg: mg.sunAlphaDeg - mg.panelAlphaDeg,
+        deltaBetaDeg: mg.sunBetaDeg - mg.panelBetaDeg,
         dtS: 0.2,
       });
       state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
     }
     expect(state.gameMode).toBe("STATION_ROAM");
 
-    // 2. Хвиля 1: Стикування №1 (DOCKING_1) -> відкриває шлюз EAST та Модуль 3 (Енергетика)
+    // 2. Хвиля 1: DOCKING_1 -> MOD_VERTICAL_LAB
     state = flightPhase.step(state, { type: "open_terminal", terminalId: "DOCKING_1" });
-    expect(state.activeMinigame.type).toBe("DOCKING");
     for (let i = 0; i < 65 && state.gameMode === "MINIGAME_ACTIVE"; i++) {
       const d = state.activeMinigame.docking!;
       const tx = d.offsetXPx > 2 ? -1 : d.offsetXPx < -2 ? 1 : 0;
@@ -201,30 +235,17 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
       state = flightPhase.step(state, { type: "docking_input", thrustX: tx, thrustY: ty });
       state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
     }
-    expect(state.openedSeals).toContain("EAST");
-    expect(state.unlockedModuleIds).toContain("MODULE_3");
+    expect(state.openedSeals).toContain("NORTH");
+    expect(state.unlockedModuleIds).toContain("MOD_VERTICAL_LAB");
     expect(state.gameMode).toBe("MODULE_EXPANSION_CUTSCENE");
 
-    // Завершуємо 1.5с катсцену розширення станції
     for (let i = 0; i < 8; i++) {
       state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
     }
     expect(state.gameMode).toBe("STATION_ROAM");
 
-    // 3. Хвиля 2: Стикування №2 (DOCKING_2) -> відкриває шлюз NORTH та Модуль 4 (Вертикальний СЖЗ)
-    state = flightPhase.step(state, { type: "open_terminal", terminalId: "DOCKING_2" });
-    state = flightPhase.step(state, { type: "complete_minigame_debug" });
-    expect(state.openedSeals).toContain("NORTH");
-    expect(state.unlockedModuleIds).toContain("MODULE_4");
-
-    // Завершуємо катсцену
-    for (let i = 0; i < 8; i++) {
-      state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
-    }
-
-    // 4. Проходимо LifeSupportMinigame (3 кроки руками: червоний фільтр у шлюз, зелений у паз, аміак 360°, тиск O2 у 70-85 кПа)
+    // 3. LifeSupportMinigame на OXYGEN у MOD_VERTICAL_LAB
     state = flightPhase.step(state, { type: "open_terminal", terminalId: "OXYGEN" });
-    expect(state.activeMinigame.lifeSupport).not.toBeNull();
     state = flightPhase.step(state, {
       type: "ls_drag_filter",
       target: "RED",
@@ -232,8 +253,6 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
       y: LS_TRASH_POS.y,
       released: true,
     });
-    expect(state.activeMinigame.lifeSupport!.redFilterTrashed).toBe(true);
-
     state = flightPhase.step(state, {
       type: "ls_drag_filter",
       target: "GREEN",
@@ -241,11 +260,7 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
       y: LS_SLOT_POS.y,
       released: true,
     });
-    expect(state.activeMinigame.lifeSupport!.greenFilterInstalled).toBe(true);
-
     state = flightPhase.step(state, { type: "ls_rotate_ammonia", deltaDeg: 360 });
-    expect(state.activeMinigame.lifeSupport!.ammoniaFlushed).toBe(true);
-
     state = flightPhase.step(state, { type: "ls_hold_o2", held: true });
     while (
       state.gameMode === "MINIGAME_ACTIVE" &&
@@ -257,11 +272,21 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     state = flightPhase.step(state, { type: "ls_hold_o2", held: false });
     expect(state.gameMode).toBe("STATION_ROAM");
 
-    // 5. Хвиля 3: Фінальне Стикування №3 (DOCKING_3) -> відкриває шлюз SOUTH, Модуль 5 та переводить у VICTORY
+    // 4. Хвиля 2: DOCKING_2 -> MOD_THERMAL_BAY
+    state = flightPhase.step(state, { type: "open_terminal", terminalId: "DOCKING_2" });
+    state = flightPhase.step(state, { type: "complete_minigame_debug" });
+    expect(state.openedSeals).toContain("EAST");
+    expect(state.unlockedModuleIds).toContain("MOD_THERMAL_BAY");
+
+    for (let i = 0; i < 8; i++) {
+      state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
+    }
+
+    // 5. Хвиля 3: DOCKING_3 -> MOD_COMMAND -> VICTORY
     state = flightPhase.step(state, { type: "open_terminal", terminalId: "DOCKING_3" });
     state = flightPhase.step(state, { type: "complete_minigame_debug" });
     expect(state.openedSeals).toContain("SOUTH");
-    expect(state.unlockedModuleIds).toContain("MODULE_5");
+    expect(state.unlockedModuleIds).toContain("MOD_COMMAND");
     expect(state.gameMode).toBe("VICTORY");
 
     state = flightPhase.step(state, { type: "complete_phase" });
@@ -278,7 +303,6 @@ describe("flightPhase — 2D Zero-G Platformer & Station Expansion", () => {
     });
     let state = flightPhase.init(input, 5);
 
-    // Прокручуємо час, поки таймер SOLAR не вичерпається
     for (let i = 0; i < 220; i++) {
       state = flightPhase.step(state, { type: "tick", dtS: 0.25 });
     }

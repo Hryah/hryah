@@ -1,5 +1,6 @@
 import {
   type AstronautEntity,
+  type CircleObstacleWorld,
   type GrabHandle,
   PHYSICS_CONSTANTS,
   type WallSegment,
@@ -40,12 +41,6 @@ export function closestPointOnSegment(
   };
 }
 
-/**
- * 4.1. Розрахунок натягу рогатки (Slingshot Math):
- * D = P_start - P_current
- * L = min(||D||, 180), d_hat = D / ||D||
- * V_launch = d_hat * (L / L_max)^1.2 * V_max (650 px/s)
- */
 export function computeSlingshotLaunch(
   dragStartScreen: { x: number; y: number },
   dragCurrentScreen: { x: number; y: number },
@@ -62,7 +57,9 @@ export function computeSlingshotLaunch(
   const nx = dx / rawLen;
   const ny = dy / rawLen;
   const pullRatio = clampedLen / maxPull;
-  const speed = Math.pow(pullRatio, PHYSICS_CONSTANTS.pullExponent) * PHYSICS_CONSTANTS.maxLaunchSpeedPxS;
+  const speed =
+    Math.pow(pullRatio, PHYSICS_CONSTANTS.pullExponent) *
+    PHYSICS_CONSTANTS.maxLaunchSpeedPxS;
 
   return {
     vx: nx * speed,
@@ -71,10 +68,6 @@ export function computeSlingshotLaunch(
   };
 }
 
-/**
- * 4.1.4. Рендер траєкторії: N = 10 точок попереднього перегляду
- * P_i = P_player + V_launch * (i * 0.04 s)
- */
 export function computeTrajectoryPreview(
   playerPos: { x: number; y: number },
   launchVector: { vx: number; vy: number },
@@ -92,14 +85,12 @@ export function computeTrajectoryPreview(
   return points;
 }
 
-/**
- * 4.2 & 4.3. Політ, колізії зі стінами (Circle-to-Segment) та захват ручок-капсуль.
- */
 export function stepZeroGPhysics(
   astronaut: AstronautEntity,
   dtS: number,
   activeWalls: readonly WallSegment[],
   activeHandles: readonly GrabHandle[],
+  circleObstacles: readonly CircleObstacleWorld[] = [],
 ): PhysicsStepOutput {
   if (dtS <= 0 || astronaut.state === "ANCHORED") {
     return {
@@ -110,7 +101,6 @@ export function stepZeroGPhysics(
     };
   }
 
-  // Розбиваємо крок на підкроки <= 8мс, щоб виключити тунелювання крізь стіни та ручки на швидкості 650 px/s
   const subSteps = Math.max(1, Math.ceil(dtS / 0.008));
   const subDt = dtS / subSteps;
 
@@ -143,7 +133,6 @@ export function stepZeroGPhysics(
       }
     }
 
-    // 1. Інтеграція позиції та мікро-тертя повітря: V_new = V * (1 - 0.08 * dt)
     pos = {
       x: pos.x + vel.vx * subDt,
       y: pos.y + vel.vy * subDt,
@@ -155,19 +144,28 @@ export function stepZeroGPhysics(
     };
     angle += angularVel * subDt;
 
-    // Якщо космонавт летить без оглушення, плавно вирівнюємо кут за вектором руху або легким обертанням
     if (state === "FLYING" && Math.abs(angularVel) < 0.25) {
       const speed = Math.hypot(vel.vx, vel.vy);
       if (speed > 15) {
         const targetAngle = Math.atan2(vel.vy, vel.vx);
-        const diff = Math.atan2(Math.sin(targetAngle - angle), Math.cos(targetAngle - angle));
+        const diff = Math.atan2(
+          Math.sin(targetAngle - angle),
+          Math.cos(targetAngle - angle),
+        );
         angle += diff * Math.min(1, subDt * 6);
       }
     }
 
-    // 2. Перевірка зіткнення зі стінами (Circle-to-Segment Collision)
+    // 1. Колізії зі стінами восьмикутника та CARGO_BOX (Circle-to-Segment)
     for (const wall of activeWalls) {
-      const closest = closestPointOnSegment(pos.x, pos.y, wall.ax, wall.ay, wall.bx, wall.by);
+      const closest = closestPointOnSegment(
+        pos.x,
+        pos.y,
+        wall.ax,
+        wall.ay,
+        wall.bx,
+        wall.by,
+      );
       const dx = pos.x - closest.x;
       const dy = pos.y - closest.y;
       const dist = Math.hypot(dx, dy);
@@ -180,14 +178,12 @@ export function stepZeroGPhysics(
           ny = dy / dist;
         }
 
-        // Виштовхуємо гравця з колізії вздовж нормалі N
         const overlap = astronaut.radius - dist + 0.5;
         pos = {
           x: pos.x + nx * overlap,
           y: pos.y + ny * overlap,
         };
 
-        // Нормальна складова швидкості удару
         const vn = vel.vx * nx + vel.vy * ny;
         if (vn < 0) {
           const impactSpeed = Math.abs(vn);
@@ -195,18 +191,15 @@ export function stepZeroGPhysics(
             maxWallImpactSpeed = impactSpeed;
           }
 
-          // Відбиваємо вектор швидкості (коефіцієнт пружності e = 0.65)
-          const e = PHYSICS_CONSTANTS.wallRestitution;
+          const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
           vel = {
             vx: (vel.vx - 2 * vn * nx) * e,
             vy: (vel.vy - 2 * vn * ny) * e,
           };
 
-          // Додаємо обертання після рикошету
           const tangentDot = vel.vx * -ny + vel.vy * nx;
           angularVel = clamp(tangentDot * 0.015, -5.5, 5.5);
 
-          // Штраф за паніку (High-Speed Impact): |V . N| > 480 px/s -> STUNNED на 0.8 с
           if (impactSpeed > PHYSICS_CONSTANTS.highSpeedStunThresholdPxS) {
             state = "STUNNED";
             stunTimer = PHYSICS_CONSTANTS.stunDurationS;
@@ -216,19 +209,68 @@ export function stepZeroGPhysics(
       }
     }
 
-    // 3. Механіка ціпляння за ручки (Grab Resolution - капсула AB з радіусом R_grab)
+    // 2. Колізії з круглими колонами PILLAR_CIRCLE (Circle-to-Circle)
+    for (const col of circleObstacles) {
+      const dx = pos.x - col.wx;
+      const dy = pos.y - col.wy;
+      const dist = Math.hypot(dx, dy);
+      const minDist = astronaut.radius + col.radius;
+
+      if (dist < minDist) {
+        const nx = dist > 1e-4 ? dx / dist : 1;
+        const ny = dist > 1e-4 ? dy / dist : 0;
+        const overlap = minDist - dist + 0.5;
+        pos = {
+          x: pos.x + nx * overlap,
+          y: pos.y + ny * overlap,
+        };
+
+        const vn = vel.vx * nx + vel.vy * ny;
+        if (vn < 0) {
+          const impactSpeed = Math.abs(vn);
+          if (impactSpeed > maxWallImpactSpeed) {
+            maxWallImpactSpeed = impactSpeed;
+          }
+
+          const e = col.bounciness;
+          vel = {
+            vx: (vel.vx - 2 * vn * nx) * e,
+            vy: (vel.vy - 2 * vn * ny) * e,
+          };
+
+          const tangentDot = vel.vx * -ny + vel.vy * nx;
+          angularVel = clamp(tangentDot * 0.018, -5.5, 5.5);
+
+          if (impactSpeed > PHYSICS_CONSTANTS.highSpeedStunThresholdPxS) {
+            state = "STUNNED";
+            stunTimer = PHYSICS_CONSTANTS.stunDurationS;
+            angularVel = (tangentDot >= 0 ? 1 : -1) * 6.2;
+          }
+        }
+      }
+    }
+
+    // 3. Захват ручок-капсуль (Grab Resolution)
     if (state === "FLYING") {
       for (const handle of activeHandles) {
         if (handle.id === lastHandleId && ignoreHandleTimer > 0) {
           continue;
         }
-        const closestH = closestPointOnSegment(pos.x, pos.y, handle.ax, handle.ay, handle.bx, handle.by);
+        const closestH = closestPointOnSegment(
+          pos.x,
+          pos.y,
+          handle.ax,
+          handle.ay,
+          handle.bx,
+          handle.by,
+        );
         const distH = Math.hypot(pos.x - closestH.x, pos.y - closestH.y);
 
         if (distH <= handle.grabRadius) {
           const speed = Math.hypot(vel.vx, vel.vy);
           const canGrab =
-            speed <= PHYSICS_CONSTANTS.safeGrabSpeedPxS || astronaut.activeGrabHeld;
+            speed <= PHYSICS_CONSTANTS.safeGrabSpeedPxS ||
+            astronaut.activeGrabHeld;
 
           if (canGrab) {
             pos = { x: closestH.x, y: closestH.y };
@@ -239,7 +281,6 @@ export function stepZeroGPhysics(
             grabbedHandleId = handle.id;
             break;
           } else {
-            // Зрив захвату при високій швидкості без реакції: V <- V * 0.7
             vel = {
               vx: vel.vx * PHYSICS_CONSTANTS.slipDampingFactor,
               vy: vel.vy * PHYSICS_CONSTANTS.slipDampingFactor,

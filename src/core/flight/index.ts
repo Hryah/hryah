@@ -35,12 +35,14 @@ import {
   ALL_GRAB_HANDLES,
   type AstronautEntity,
   createInitialTerminals,
+  findModuleForPosition,
   type GameMode,
+  getActiveCircleObstacles,
   getActiveHandles,
   getActiveWalls,
   getHandleMidpoint,
   PHYSICS_CONSTANTS,
-  STATION_MODULES,
+  STATION_LEVEL_CONFIG,
   type TerminalNode,
 } from "./StationBlueprint";
 import {
@@ -72,8 +74,9 @@ export interface FlightState {
   waveClockS: number;
   dockingWaveIndex: number;
 
-  // Сутність космонавта (AstronautEntity)
+  // Сутність космонавта (AstronautEntity) та активна кімната для RoomCameraController
   astronaut: AstronautEntity;
+  activeModuleId: string;
 
   // Розширювана геометрія станції (StationTopology)
   unlockedModuleIds: string[];
@@ -83,7 +86,7 @@ export interface FlightState {
   // Активна ізольована мінігра
   activeMinigame: ActiveMinigameContainer;
 
-  // Ресурси станції та параметри польоту (з одиницями виміру)
+  // Ресурси станції та параметри польоту
   oxygenPct: number;
   energyPct: number;
   tempC: number;
@@ -320,11 +323,11 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
     const crisisMultiplier = computeDesignCrisisMultiplier(input);
     const { baseAltKm, baseFuelLeftKg, initialLog } = computeBaseFlightMetrics(input);
 
-    const unlockedModuleIds = STATION_MODULES.filter((m) => m.unlockedAtStart).map((m) => m.id);
+    const unlockedModuleIds = STATION_LEVEL_CONFIG.filter((m) => m.unlockedAtWave === 0).map(
+      (m) => m.id,
+    );
     const terminals = createInitialTerminals(crisisMultiplier).map((t) =>
-      t.id === "SOLAR"
-        ? { ...t, state: "WARNING" as const }
-        : t,
+      t.id === "SOLAR" ? { ...t, state: "WARNING" as const } : t,
     );
 
     const astronaut: AstronautEntity = {
@@ -356,6 +359,7 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
       waveClockS: 0,
       dockingWaveIndex: 0,
       astronaut,
+      activeModuleId: startHandle.moduleId,
       unlockedModuleIds,
       openedSeals: [],
       terminals,
@@ -706,10 +710,17 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
         const dtS = clamp(action.dtS, 0, 0.25);
         if (dtS <= 0) return state;
 
-        // 1. Оновлюємо фізику невагомості
+        // 1. Оновлюємо фізику невагомості (восьмикутні стіни + круглі колони + капсули поручнів)
         const activeWalls = getActiveWalls(state.unlockedModuleIds, state.openedSeals);
         const activeHandles = getActiveHandles(state.unlockedModuleIds);
-        const physOut = stepZeroGPhysics(state.astronaut, dtS, activeWalls, activeHandles);
+        const circleObstacles = getActiveCircleObstacles(state.unlockedModuleIds);
+        const physOut = stepZeroGPhysics(
+          state.astronaut,
+          dtS,
+          activeWalls,
+          activeHandles,
+          circleObstacles,
+        );
 
         let screenShakePx = Math.max(0, state.screenShakePx - 18 * dtS);
         if (physOut.wallImpactSpeedPxS > 160) {
@@ -720,7 +731,7 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
           screenShakePx = Math.min(22, screenShakePx + addShake);
         }
 
-        // 2. Оновлюємо FNAF-режисер криз і хвиль стикування (НЕ зупиняється під час мініігор!)
+        // 2. Оновлюємо FNAF-режисер криз і хвиль стикування
         const isCutscene = state.gameMode === "MODULE_EXPANSION_CUTSCENE";
         const dirOut = stepCrisisAndDockingDirector(
           {
@@ -747,6 +758,13 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
         );
 
         screenShakePx = Math.min(22, screenShakePx + dirOut.screenShakeAddPx);
+
+        // Визначаємо поточний активний модуль космонавта для кімнатної камери (RoomCameraController)
+        const activeModuleId = findModuleForPosition(
+          physOut.astronaut.pos,
+          dirOut.unlockedModuleIds,
+          state.activeModuleId,
+        );
 
         let gameMode: GameMode = state.gameMode;
         if (isCutscene && dirOut.cutsceneTimerS <= 0) {
@@ -832,6 +850,7 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
           waveClockS: dirOut.waveClockS,
           dockingWaveIndex: dirOut.dockingWaveIndex,
           astronaut: physOut.astronaut,
+          activeModuleId,
           unlockedModuleIds: dirOut.unlockedModuleIds,
           openedSeals: dirOut.openedSeals,
           terminals: dirOut.terminals,
@@ -915,7 +934,6 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
       });
     }
 
-    // Остання дія завершує фазу за 1 крок (потрібно для наскрізного бота playToEnd у game.test.ts)
     actions.push({
       label: "Завершити політ і розгорнути супутник →",
       group: "Відділення",

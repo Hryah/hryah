@@ -26,8 +26,12 @@ export class GameLoop {
     this.lastTimestampMs = performance.now();
 
     const initial = getState();
-    this.camera.x = initial.astronaut.pos.x;
-    this.camera.y = initial.astronaut.pos.y;
+    const initRect = canvas.getBoundingClientRect();
+    this.camera.snapToModule(
+      initial.activeModuleId,
+      Math.max(320, Math.round(initRect.width)),
+      Math.max(240, Math.round(initRect.height)),
+    );
 
     const frame = (nowMs: number) => {
       const rawDtS = (nowMs - this.lastTimestampMs) / 1000;
@@ -43,13 +47,13 @@ export class GameLoop {
         dispatch({ type: "tick", dtS });
       }
 
-      const updatedState = getState();
-      this.camera.updateFromState(updatedState, dtS);
-
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       const viewportW = Math.max(320, Math.round(rect.width));
       const viewportH = Math.max(240, Math.round(rect.height));
+
+      const updatedState = getState();
+      this.camera.updateFromState(updatedState, dtS, viewportW, viewportH);
 
       if (
         canvas.width !== Math.round(viewportW * dpr) ||

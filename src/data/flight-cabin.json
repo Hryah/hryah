@@ -24,215 +24,357 @@
     "wave3TimeS": 210,
     "initialSolarWarningTimeS": 4
   },
-  "modules": [
+  "levelConfig": [
     {
-      "id": "MODULE_1",
-      "type": "HORIZONTAL",
-      "labelKey": "flight.module.starter",
-      "unlockedAtStart": true,
-      "bounds": { "minX": -960, "minY": -170, "maxX": -260, "maxY": 170 },
-      "cameraCenter": { "x": -610, "y": 0 },
-      "portholes": [
-        { "x": -780, "y": -55, "radius": 36 },
-        { "x": -440, "y": -55, "radius": 36 }
-      ],
-      "obstacles": []
-    },
-    {
-      "id": "MODULE_2",
-      "type": "INTERSECTION",
-      "labelKey": "flight.module.hub",
-      "unlockedAtStart": true,
-      "bounds": { "minX": -260, "minY": -260, "maxX": 260, "maxY": 260 },
-      "cameraCenter": { "x": 0, "y": 0 },
-      "portholes": [
-        { "x": 0, "y": 0, "radius": 52 }
-      ],
-      "obstacles": []
-    },
-    {
-      "id": "MODULE_3",
-      "type": "HORIZONTAL",
-      "labelKey": "flight.module.power",
-      "unlockedAtStart": false,
-      "requiredSeal": "EAST",
-      "bounds": { "minX": 260, "minY": -190, "maxX": 1020, "maxY": 190 },
-      "cameraCenter": { "x": 640, "y": 0 },
-      "portholes": [
-        { "x": 420, "y": -85, "radius": 34 },
-        { "x": 850, "y": -85, "radius": 34 }
+      "id": "MOD_HABITAT",
+      "title": "ВІДСІК 01 // ЕНЕРГОБЛОК (HORIZONTAL)",
+      "orientation": "HORIZONTAL",
+      "unlockedAtWave": 0,
+      "worldPos": { "x": 0, "y": 0 },
+      "size": { "width": 920, "height": 480 },
+      "chamfer": { "topLeft": 70, "topRight": 70, "bottomRight": 70, "bottomLeft": 70 },
+      "theme": {
+        "floorColor": "#111827",
+        "wallThickness": 14,
+        "gridPattern": "TECH_RIBS",
+        "portholes": [
+          { "x": 280, "y": 145, "r": 46 },
+          { "x": 640, "y": 145, "r": 46 }
+        ]
+      },
+      "doors": [
+        {
+          "id": "DOOR_TO_HUB",
+          "side": "RIGHT",
+          "offset": 240,
+          "width": 120,
+          "connectsToModuleId": "MOD_INTERSECTION",
+          "unlockedAtDockingWave": 0
+        }
       ],
       "obstacles": [
-        { "id": "OBS_CORE_3", "minX": 560, "minY": -70, "maxX": 700, "maxY": 70 }
+        {
+          "id": "OBS_1",
+          "kind": "PILLAR_CIRCLE",
+          "pos": { "x": 280, "y": 240 },
+          "radiusOrSize": { "w": 44, "h": 44 },
+          "bounciness": 0.7
+        },
+        {
+          "id": "OBS_2",
+          "kind": "PILLAR_CIRCLE",
+          "pos": { "x": 640, "y": 240 },
+          "radiusOrSize": { "w": 44, "h": 44 },
+          "bounciness": 0.7
+        }
+      ],
+      "handles": [
+        { "id": "H_START", "start": { "x": 48, "y": 180 }, "end": { "x": 48, "y": 300 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TOP_1", "start": { "x": 180, "y": 38 }, "end": { "x": 420, "y": 38 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TOP_2", "start": { "x": 520, "y": 38 }, "end": { "x": 760, "y": 38 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_BOT_1", "start": { "x": 160, "y": 442 }, "end": { "x": 360, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_SOLAR_TERM", "start": { "x": 480, "y": 442 }, "end": { "x": 620, "y": 442 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
+        { "id": "H_HAB_DOOR", "start": { "x": 855, "y": 140 }, "end": { "x": 855, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
+      ],
+      "computers": [
+        {
+          "id": "SOLAR",
+          "type": "SOLAR",
+          "linkedHandleId": "H_SOLAR_TERM",
+          "mountPosition": { "x": 550, "y": 398 },
+          "mountAngle": 0,
+          "causedBy": "design:solar",
+          "baseUrgencyS": 45,
+          "visualPreset": {
+            "chassisWidth": 96,
+            "chassisHeight": 54,
+            "screenColor": "#0284c7",
+            "hasAntenna": true,
+            "hasCoolingPipes": false,
+            "hasRadarDish": false
+          }
+        }
       ]
     },
     {
-      "id": "MODULE_4",
-      "type": "VERTICAL",
-      "labelKey": "flight.module.lifesupport",
-      "unlockedAtStart": false,
-      "requiredSeal": "NORTH",
-      "bounds": { "minX": -170, "minY": -960, "maxX": 170, "maxY": -260 },
-      "cameraCenter": { "x": 0, "y": -610 },
-      "portholes": [
-        { "x": 0, "y": -460, "radius": 34 },
-        { "x": 0, "y": -740, "radius": 34 }
+      "id": "MOD_INTERSECTION",
+      "title": "ВУЗОЛ 02 // ЦЕНТРАЛЬНИЙ ХАБ (INTERSECTION)",
+      "orientation": "INTERSECTION",
+      "unlockedAtWave": 0,
+      "worldPos": { "x": 920, "y": -110 },
+      "size": { "width": 700, "height": 700 },
+      "chamfer": { "topLeft": 160, "topRight": 160, "bottomRight": 160, "bottomLeft": 160 },
+      "theme": {
+        "floorColor": "#0f172a",
+        "wallThickness": 14,
+        "gridPattern": "HEX",
+        "portholes": [
+          { "x": 350, "y": 350, "r": 75 }
+        ]
+      },
+      "doors": [
+        {
+          "id": "DOOR_FROM_HAB",
+          "side": "LEFT",
+          "offset": 350,
+          "width": 120,
+          "connectsToModuleId": "MOD_HABITAT",
+          "unlockedAtDockingWave": 0
+        },
+        {
+          "id": "DOOR_NORTH_DOCK",
+          "side": "TOP",
+          "offset": 350,
+          "width": 120,
+          "connectsToModuleId": "MOD_VERTICAL_LAB",
+          "unlockedAtDockingWave": 1
+        },
+        {
+          "id": "DOOR_EAST_DOCK",
+          "side": "RIGHT",
+          "offset": 350,
+          "width": 120,
+          "connectsToModuleId": "MOD_THERMAL_BAY",
+          "unlockedAtDockingWave": 2
+        },
+        {
+          "id": "DOOR_SOUTH_DOCK",
+          "side": "BOTTOM",
+          "offset": 350,
+          "width": 120,
+          "connectsToModuleId": "MOD_COMMAND",
+          "unlockedAtDockingWave": 3
+        }
       ],
-      "obstacles": []
-    },
-    {
-      "id": "MODULE_5",
-      "type": "COMMAND",
-      "labelKey": "flight.module.command",
-      "unlockedAtStart": false,
-      "requiredSeal": "SOUTH",
-      "bounds": { "minX": -220, "minY": 260, "maxX": 220, "maxY": 760 },
-      "cameraCenter": { "x": 0, "y": 510 },
-      "portholes": [
-        { "x": -95, "y": 520, "radius": 40 },
-        { "x": 95, "y": 520, "radius": 40 }
+      "obstacles": [],
+      "handles": [
+        { "id": "H_CORNER_TL", "start": { "x": 75, "y": 195 }, "end": { "x": 195, "y": 75 }, "grabRadius": 36, "visualStyle": "CORNER_45", "colorTheme": "#ef4444" },
+        { "id": "H_CORNER_TR", "start": { "x": 505, "y": 75 }, "end": { "x": 625, "y": 195 }, "grabRadius": 36, "visualStyle": "CORNER_45", "colorTheme": "#ef4444" },
+        { "id": "H_CORNER_BL", "start": { "x": 75, "y": 505 }, "end": { "x": 195, "y": 625 }, "grabRadius": 36, "visualStyle": "CORNER_45", "colorTheme": "#ef4444" },
+        { "id": "H_DOCK_CONSOLE", "start": { "x": 505, "y": 625 }, "end": { "x": 625, "y": 505 }, "grabRadius": 38, "visualStyle": "CORNER_45", "colorTheme": "#f59e0b" },
+        { "id": "H_HUB_NORTH", "start": { "x": 290, "y": 55 }, "end": { "x": 410, "y": 55 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" },
+        { "id": "H_HUB_EAST", "start": { "x": 645, "y": 290 }, "end": { "x": 645, "y": 410 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" }
       ],
-      "obstacles": []
-    }
-  ],
-  "walls": [
-    { "id": "m1_w_west", "moduleId": "MODULE_1", "ax": -960, "ay": -170, "bx": -960, "by": 170, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m1_w_north", "moduleId": "MODULE_1", "ax": -960, "ay": -170, "bx": -260, "by": -170, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-    { "id": "m1_w_south", "moduleId": "MODULE_1", "ax": -960, "ay": 170, "bx": -260, "by": 170, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
-    { "id": "m1_w_east_top", "moduleId": "MODULE_1", "ax": -260, "ay": -170, "bx": -260, "by": -90, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m1_w_east_bot", "moduleId": "MODULE_1", "ax": -260, "ay": 90, "bx": -260, "by": 170, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-
-    { "id": "m2_w_nw", "moduleId": "MODULE_2", "ax": -260, "ay": -90, "bx": -90, "by": -260, "normal": { "nx": 0.7071, "ny": 0.7071 }, "isDockingSeal": null },
-    { "id": "m2_w_ne", "moduleId": "MODULE_2", "ax": 90, "ay": -260, "bx": 260, "by": -90, "normal": { "nx": -0.7071, "ny": 0.7071 }, "isDockingSeal": null },
-    { "id": "m2_w_se", "moduleId": "MODULE_2", "ax": 260, "ay": 90, "bx": 90, "by": 260, "normal": { "nx": -0.7071, "ny": -0.7071 }, "isDockingSeal": null },
-    { "id": "m2_w_sw", "moduleId": "MODULE_2", "ax": -90, "ay": 260, "bx": -260, "by": 90, "normal": { "nx": 0.7071, "ny": -0.7071 }, "isDockingSeal": null },
-    { "id": "m2_seal_east", "moduleId": "MODULE_2", "ax": 260, "ay": -90, "bx": 260, "by": 90, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": "EAST" },
-    { "id": "m2_seal_north", "moduleId": "MODULE_2", "ax": -90, "ay": -260, "bx": 90, "by": -260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": "NORTH" },
-    { "id": "m2_seal_south", "moduleId": "MODULE_2", "ax": -90, "ay": 260, "bx": 90, "by": 260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": "SOUTH" },
-
-    { "id": "m3_w_west_top", "moduleId": "MODULE_3", "ax": 260, "ay": -190, "bx": 260, "by": -90, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m3_w_west_bot", "moduleId": "MODULE_3", "ax": 260, "ay": 90, "bx": 260, "by": 190, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m3_w_north", "moduleId": "MODULE_3", "ax": 260, "ay": -190, "bx": 1020, "by": -190, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-    { "id": "m3_w_south", "moduleId": "MODULE_3", "ax": 260, "ay": 190, "bx": 1020, "by": 190, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
-    { "id": "m3_w_east", "moduleId": "MODULE_3", "ax": 1020, "ay": -190, "bx": 1020, "by": 190, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m3_obs_north", "moduleId": "MODULE_3", "ax": 560, "ay": -70, "bx": 700, "by": -70, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
-    { "id": "m3_obs_south", "moduleId": "MODULE_3", "ax": 560, "ay": 70, "bx": 700, "by": 70, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-    { "id": "m3_obs_west", "moduleId": "MODULE_3", "ax": 560, "ay": -70, "bx": 560, "by": 70, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m3_obs_east", "moduleId": "MODULE_3", "ax": 700, "ay": -70, "bx": 700, "by": 70, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-
-    { "id": "m4_w_sw", "moduleId": "MODULE_4", "ax": -170, "ay": -260, "bx": -90, "by": -260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
-    { "id": "m4_w_se", "moduleId": "MODULE_4", "ax": 90, "ay": -260, "bx": 170, "by": -260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
-    { "id": "m4_w_west", "moduleId": "MODULE_4", "ax": -170, "ay": -960, "bx": -170, "by": -260, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m4_w_east", "moduleId": "MODULE_4", "ax": 170, "ay": -960, "bx": 170, "by": -260, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m4_w_north", "moduleId": "MODULE_4", "ax": -170, "ay": -960, "bx": 170, "by": -960, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-
-    { "id": "m5_w_nw", "moduleId": "MODULE_5", "ax": -220, "ay": 260, "bx": -90, "by": 260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-    { "id": "m5_w_ne", "moduleId": "MODULE_5", "ax": 90, "ay": 260, "bx": 220, "by": 260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
-    { "id": "m5_w_west", "moduleId": "MODULE_5", "ax": -220, "ay": 260, "bx": -220, "by": 760, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m5_w_east", "moduleId": "MODULE_5", "ax": 220, "ay": 260, "bx": 220, "by": 760, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
-    { "id": "m5_w_south", "moduleId": "MODULE_5", "ax": -220, "ay": 760, "bx": 220, "by": 760, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null }
-  ],
-  "handles": [
-    { "id": "h_m1_start", "moduleId": "MODULE_1", "ax": -925, "ay": -70, "bx": -925, "by": 70, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m1_top_1", "moduleId": "MODULE_1", "ax": -830, "ay": -142, "bx": -650, "by": -142, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m1_top_2", "moduleId": "MODULE_1", "ax": -500, "ay": -142, "bx": -320, "by": -142, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m1_bot_1", "moduleId": "MODULE_1", "ax": -840, "ay": 142, "bx": -700, "by": 142, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m1_solar", "moduleId": "MODULE_1", "ax": -620, "ay": 140, "bx": -500, "by": 140, "grabRadius": 36, "terminalId": "SOLAR" },
-    { "id": "h_m1_bot_2", "moduleId": "MODULE_1", "ax": -420, "ay": 142, "bx": -300, "by": 142, "grabRadius": 32, "terminalId": null },
-
-    { "id": "h_m2_nw", "moduleId": "MODULE_2", "ax": -210, "ay": -95, "bx": -95, "by": -210, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m2_ne", "moduleId": "MODULE_2", "ax": 95, "ay": -210, "bx": 210, "by": -95, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m2_se", "moduleId": "MODULE_2", "ax": 210, "ay": 95, "bx": 95, "by": 210, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m2_sw", "moduleId": "MODULE_2", "ax": -95, "ay": 210, "bx": -210, "by": 95, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m2_dock_east", "moduleId": "MODULE_2", "ax": 225, "ay": -55, "bx": 225, "by": 55, "grabRadius": 36, "terminalId": "DOCKING_1" },
-    { "id": "h_m2_dock_north", "moduleId": "MODULE_2", "ax": -55, "ay": -225, "bx": 55, "by": -225, "grabRadius": 36, "terminalId": "DOCKING_2" },
-    { "id": "h_m2_dock_south", "moduleId": "MODULE_2", "ax": -55, "ay": 225, "bx": 55, "by": 225, "grabRadius": 36, "terminalId": "DOCKING_3" },
-
-    { "id": "h_m3_top_1", "moduleId": "MODULE_3", "ax": 330, "ay": -158, "bx": 510, "by": -158, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_bot_1", "moduleId": "MODULE_3", "ax": 330, "ay": 158, "bx": 510, "by": 158, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_obs_top", "moduleId": "MODULE_3", "ax": 575, "ay": -100, "bx": 685, "by": -100, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_obs_bot", "moduleId": "MODULE_3", "ax": 575, "ay": 100, "bx": 685, "by": 100, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_obs_west", "moduleId": "MODULE_3", "ax": 528, "ay": -45, "bx": 528, "by": 45, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_obs_east", "moduleId": "MODULE_3", "ax": 732, "ay": -45, "bx": 732, "by": 45, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_top_2", "moduleId": "MODULE_3", "ax": 740, "ay": -158, "bx": 910, "by": -158, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_bot_2", "moduleId": "MODULE_3", "ax": 740, "ay": 158, "bx": 910, "by": 158, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m3_thermal", "moduleId": "MODULE_3", "ax": 985, "ay": -65, "bx": 985, "by": 65, "grabRadius": 36, "terminalId": "THERMAL" },
-
-    { "id": "h_m4_left_1", "moduleId": "MODULE_4", "ax": -138, "ay": -340, "bx": -138, "by": -490, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m4_right_1", "moduleId": "MODULE_4", "ax": 138, "ay": -480, "bx": 138, "by": -640, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m4_left_2", "moduleId": "MODULE_4", "ax": -138, "ay": -660, "bx": -138, "by": -820, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m4_oxygen", "moduleId": "MODULE_4", "ax": -65, "ay": -925, "bx": 65, "by": -925, "grabRadius": 36, "terminalId": "OXYGEN" },
-
-    { "id": "h_m5_left", "moduleId": "MODULE_5", "ax": -188, "ay": 340, "bx": -188, "by": 520, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m5_right", "moduleId": "MODULE_5", "ax": 188, "ay": 340, "bx": 188, "by": 520, "grabRadius": 32, "terminalId": null },
-    { "id": "h_m5_bridge", "moduleId": "MODULE_5", "ax": -80, "ay": 720, "bx": 80, "by": 720, "grabRadius": 36, "terminalId": null }
-  ],
-  "terminals": [
-    {
-      "id": "SOLAR",
-      "moduleId": "MODULE_1",
-      "handleId": "h_m1_solar",
-      "type": "SOLAR",
-      "pos": { "x": -560, "y": 152 },
-      "labelKey": "flight.terminal.solar",
-      "causedBy": "design:solar",
-      "baseUrgencyS": 45
+      "computers": [
+        {
+          "id": "DOCKING_1",
+          "type": "DOCKING",
+          "linkedHandleId": "H_HUB_NORTH",
+          "mountPosition": { "x": 350, "y": 96 },
+          "mountAngle": 180,
+          "causedBy": "design:engine",
+          "baseUrgencyS": 65,
+          "unlocksSeal": "NORTH",
+          "unlocksModuleId": "MOD_VERTICAL_LAB",
+          "visualPreset": {
+            "chassisWidth": 106,
+            "chassisHeight": 54,
+            "screenColor": "#f59e0b",
+            "hasAntenna": false,
+            "hasCoolingPipes": false,
+            "hasRadarDish": true
+          }
+        },
+        {
+          "id": "DOCKING_2",
+          "type": "DOCKING",
+          "linkedHandleId": "H_HUB_EAST",
+          "mountPosition": { "x": 604, "y": 350 },
+          "mountAngle": -90,
+          "causedBy": "design:engine",
+          "baseUrgencyS": 65,
+          "unlocksSeal": "EAST",
+          "unlocksModuleId": "MOD_THERMAL_BAY",
+          "visualPreset": {
+            "chassisWidth": 106,
+            "chassisHeight": 54,
+            "screenColor": "#f59e0b",
+            "hasAntenna": false,
+            "hasCoolingPipes": false,
+            "hasRadarDish": true
+          }
+        },
+        {
+          "id": "DOCKING_3",
+          "type": "DOCKING",
+          "linkedHandleId": "H_DOCK_CONSOLE",
+          "mountPosition": { "x": 532, "y": 532 },
+          "mountAngle": -45,
+          "causedBy": "design:engine",
+          "baseUrgencyS": 70,
+          "unlocksSeal": "SOUTH",
+          "unlocksModuleId": "MOD_COMMAND",
+          "visualPreset": {
+            "chassisWidth": 110,
+            "chassisHeight": 58,
+            "screenColor": "#f59e0b",
+            "hasAntenna": false,
+            "hasCoolingPipes": false,
+            "hasRadarDish": true
+          }
+        }
+      ]
     },
     {
-      "id": "DOCKING_1",
-      "moduleId": "MODULE_2",
-      "handleId": "h_m2_dock_east",
-      "type": "DOCKING",
-      "pos": { "x": 242, "y": 0 },
-      "labelKey": "flight.terminal.docking1",
-      "causedBy": "design:engine",
-      "baseUrgencyS": 65,
-      "unlocksSeal": "EAST",
-      "unlocksModuleId": "MODULE_3"
+      "id": "MOD_VERTICAL_LAB",
+      "title": "ШАХТА 03 // ЖИТТЄЗАБЕЗПЕЧЕННЯ (VERTICAL)",
+      "orientation": "VERTICAL",
+      "unlockedAtWave": 1,
+      "worldPos": { "x": 1010, "y": -930 },
+      "size": { "width": 520, "height": 820 },
+      "chamfer": { "topLeft": 85, "topRight": 85, "bottomRight": 85, "bottomLeft": 85 },
+      "theme": {
+        "floorColor": "#0f1d2e",
+        "wallThickness": 14,
+        "gridPattern": "PANELS",
+        "portholes": [
+          { "x": 260, "y": 280, "r": 46 },
+          { "x": 260, "y": 560, "r": 46 }
+        ]
+      },
+      "doors": [
+        {
+          "id": "DOOR_FROM_HUB_N",
+          "side": "BOTTOM",
+          "offset": 260,
+          "width": 120,
+          "connectsToModuleId": "MOD_INTERSECTION",
+          "unlockedAtDockingWave": 1
+        }
+      ],
+      "obstacles": [
+        {
+          "id": "OBS_VLAB_1",
+          "kind": "PILLAR_CIRCLE",
+          "pos": { "x": 260, "y": 420 },
+          "radiusOrSize": { "w": 42, "h": 42 },
+          "bounciness": 0.7
+        }
+      ],
+      "handles": [
+        { "id": "H_VLAB_R1", "start": { "x": 472, "y": 660 }, "end": { "x": 472, "y": 500 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_VLAB_L1", "start": { "x": 48, "y": 520 }, "end": { "x": 48, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_VLAB_R2", "start": { "x": 472, "y": 340 }, "end": { "x": 472, "y": 180 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_OXYGEN_TERM", "start": { "x": 190, "y": 46 }, "end": { "x": 330, "y": 46 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" }
+      ],
+      "computers": [
+        {
+          "id": "OXYGEN",
+          "type": "OXYGEN",
+          "linkedHandleId": "H_OXYGEN_TERM",
+          "mountPosition": { "x": 260, "y": 90 },
+          "mountAngle": 180,
+          "causedBy": "design:battery",
+          "baseUrgencyS": 48,
+          "visualPreset": {
+            "chassisWidth": 104,
+            "chassisHeight": 56,
+            "screenColor": "#0ea5e9",
+            "hasAntenna": false,
+            "hasCoolingPipes": true,
+            "hasRadarDish": false
+          }
+        }
+      ]
     },
     {
-      "id": "DOCKING_2",
-      "moduleId": "MODULE_2",
-      "handleId": "h_m2_dock_north",
-      "type": "DOCKING",
-      "pos": { "x": 0, "y": -242 },
-      "labelKey": "flight.terminal.docking2",
-      "causedBy": "design:engine",
-      "baseUrgencyS": 65,
-      "unlocksSeal": "NORTH",
-      "unlocksModuleId": "MODULE_4"
+      "id": "MOD_THERMAL_BAY",
+      "title": "ВІДСІК 04 // ТЕРМОКОНТУР ТА РЕАКТОР (HORIZONTAL)",
+      "orientation": "HORIZONTAL",
+      "unlockedAtWave": 2,
+      "worldPos": { "x": 1620, "y": -20 },
+      "size": { "width": 920, "height": 520 },
+      "chamfer": { "topLeft": 85, "topRight": 85, "bottomRight": 85, "bottomLeft": 85 },
+      "theme": {
+        "floorColor": "#16192b",
+        "wallThickness": 14,
+        "gridPattern": "TECH_RIBS",
+        "portholes": [
+          { "x": 240, "y": 140, "r": 42 },
+          { "x": 680, "y": 140, "r": 42 }
+        ]
+      },
+      "doors": [
+        {
+          "id": "DOOR_FROM_HUB_E",
+          "side": "LEFT",
+          "offset": 260,
+          "width": 120,
+          "connectsToModuleId": "MOD_INTERSECTION",
+          "unlockedAtDockingWave": 2
+        }
+      ],
+      "obstacles": [
+        {
+          "id": "OBS_CORE_BOX",
+          "kind": "CARGO_BOX",
+          "pos": { "x": 460, "y": 260 },
+          "radiusOrSize": { "w": 140, "h": 140 },
+          "bounciness": 0.65
+        }
+      ],
+      "handles": [
+        { "id": "H_TBAY_TOP1", "start": { "x": 140, "y": 44 }, "end": { "x": 340, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_BOT1", "start": { "x": 140, "y": 476 }, "end": { "x": 340, "y": 476 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_CORE_T", "start": { "x": 400, "y": 152 }, "end": { "x": 520, "y": 152 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_CORE_B", "start": { "x": 400, "y": 368 }, "end": { "x": 520, "y": 368 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_TOP2", "start": { "x": 580, "y": 44 }, "end": { "x": 780, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_THERMAL_TERM", "start": { "x": 872, "y": 190 }, "end": { "x": 872, "y": 330 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#f97316" }
+      ],
+      "computers": [
+        {
+          "id": "THERMAL",
+          "type": "THERMAL",
+          "linkedHandleId": "H_THERMAL_TERM",
+          "mountPosition": { "x": 828, "y": 260 },
+          "mountAngle": -90,
+          "causedBy": "design:instrument",
+          "baseUrgencyS": 48,
+          "visualPreset": {
+            "chassisWidth": 100,
+            "chassisHeight": 56,
+            "screenColor": "#f97316",
+            "hasAntenna": false,
+            "hasCoolingPipes": true,
+            "hasRadarDish": false
+          }
+        }
+      ]
     },
     {
-      "id": "DOCKING_3",
-      "moduleId": "MODULE_2",
-      "handleId": "h_m2_dock_south",
-      "type": "DOCKING",
-      "pos": { "x": 0, "y": 242 },
-      "labelKey": "flight.terminal.docking3",
-      "causedBy": "design:engine",
-      "baseUrgencyS": 70,
-      "unlocksSeal": "SOUTH",
-      "unlocksModuleId": "MODULE_5"
-    },
-    {
-      "id": "THERMAL",
-      "moduleId": "MODULE_3",
-      "handleId": "h_m3_thermal",
-      "type": "THERMAL",
-      "pos": { "x": 1002, "y": 0 },
-      "labelKey": "flight.terminal.thermal",
-      "causedBy": "design:instrument",
-      "baseUrgencyS": 48
-    },
-    {
-      "id": "OXYGEN",
-      "moduleId": "MODULE_4",
-      "handleId": "h_m4_oxygen",
-      "type": "OXYGEN",
-      "pos": { "x": 0, "y": -942 },
-      "labelKey": "flight.terminal.oxygen",
-      "causedBy": "design:battery",
-      "baseUrgencyS": 48
+      "id": "MOD_COMMAND",
+      "title": "МІСТОК 05 // КОМАНДНИЙ МОДУЛЬ (COMMAND)",
+      "orientation": "INTERSECTION",
+      "unlockedAtWave": 3,
+      "worldPos": { "x": 980, "y": 590 },
+      "size": { "width": 580, "height": 520 },
+      "chamfer": { "topLeft": 90, "topRight": 90, "bottomRight": 130, "bottomLeft": 130 },
+      "theme": {
+        "floorColor": "#0c192c",
+        "wallThickness": 14,
+        "gridPattern": "HEX",
+        "portholes": [
+          { "x": 190, "y": 280, "r": 52 },
+          { "x": 390, "y": 280, "r": 52 }
+        ]
+      },
+      "doors": [
+        {
+          "id": "DOOR_FROM_HUB_S",
+          "side": "TOP",
+          "offset": 290,
+          "width": 120,
+          "connectsToModuleId": "MOD_INTERSECTION",
+          "unlockedAtDockingWave": 3
+        }
+      ],
+      "obstacles": [],
+      "handles": [
+        { "id": "H_CMD_LEFT", "start": { "x": 56, "y": 160 }, "end": { "x": 56, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_CMD_RIGHT", "start": { "x": 524, "y": 160 }, "end": { "x": 524, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_CMD_BRIDGE", "start": { "x": 200, "y": 465 }, "end": { "x": 380, "y": 465 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#3ddc84" }
+      ],
+      "computers": []
     }
   ]
 }

@@ -1,73 +1,96 @@
 import {
   type FlightState,
-  STATION_MODULES,
+  type ModuleBlueprint,
+  STATION_LEVEL_CONFIG,
 } from "../../core/flight";
 
 export class Camera2D {
-  public x = -610;
-  public y = 0;
+  public x = 460;
+  public y = 240;
   public zoom = 1.0;
 
-  public targetX = -610;
-  public targetY = 0;
+  public targetX = 460;
+  public targetY = 240;
   public targetZoom = 1.0;
 
+  private initialized = false;
   private shakePhase = 0;
   public shakeOffsetX = 0;
   public shakeOffsetY = 0;
 
-  public updateFromState(state: FlightState, dtS: number): void {
-    if (state.gameMode === "STATION_ROAM") {
-      // Камера плавно слідує за Astronaut (lerp = 0.08)
-      this.targetX = state.astronaut.pos.x;
-      this.targetY = state.astronaut.pos.y;
-      this.targetZoom = 1.0;
+  public computeModuleCameraTarget(
+    mod: ModuleBlueprint,
+    viewportW: number,
+    viewportH: number,
+  ): { cx: number; cy: number; zoom: number } {
+    const cx = mod.worldPos.x + mod.size.width * 0.5;
+    const cy = mod.worldPos.y + mod.size.height * 0.5;
+    const zoomX = (viewportW * 0.82) / mod.size.width;
+    const zoomY = (viewportH * 0.78) / mod.size.height;
+    const zoom = Math.max(0.45, Math.min(1.65, Math.min(zoomX, zoomY)));
+    return { cx, cy, zoom };
+  }
 
-      const lerpFactor = 1 - Math.pow(1 - 0.08, Math.max(1, dtS * 60));
-      this.x += (this.targetX - this.x) * lerpFactor;
-      this.y += (this.targetY - this.y) * lerpFactor;
-      this.zoom += (this.targetZoom - this.zoom) * lerpFactor;
-    } else if (state.gameMode === "MINIGAME_ACTIVE") {
-      // Зафіксована на активному TerminalNode (легкий зум 1.2x)
-      const activeTerm = state.terminals.find(
-        (t) => t.id === state.activeMinigame.terminalId,
-      );
-      if (activeTerm) {
-        this.targetX = activeTerm.pos.x;
-        this.targetY = activeTerm.pos.y;
-      } else {
-        this.targetX = state.astronaut.pos.x;
-        this.targetY = state.astronaut.pos.y;
-      }
-      this.targetZoom = 1.2;
+  public snapToModule(
+    moduleId: string,
+    viewportW: number,
+    viewportH: number,
+  ): void {
+    const mod =
+      STATION_LEVEL_CONFIG.find((m) => m.id === moduleId) ??
+      STATION_LEVEL_CONFIG[0]!;
+    const { cx, cy, zoom } = this.computeModuleCameraTarget(
+      mod,
+      viewportW,
+      viewportH,
+    );
+    this.x = cx;
+    this.y = cy;
+    this.zoom = zoom;
+    this.targetX = cx;
+    this.targetY = cy;
+    this.targetZoom = zoom;
+    this.initialized = true;
+  }
 
-      const lerpFactor = 1 - Math.pow(1 - 0.12, Math.max(1, dtS * 60));
-      this.x += (this.targetX - this.x) * lerpFactor;
-      this.y += (this.targetY - this.y) * lerpFactor;
-      this.zoom += (this.targetZoom - this.zoom) * lerpFactor;
-    } else if (state.gameMode === "MODULE_EXPANSION_CUTSCENE") {
-      // Панорамування на новий пристикований модуль (Zoom 0.7x)
-      const targetMod = STATION_MODULES.find(
-        (m) => m.id === state.cutsceneTargetModuleId,
-      );
-      if (targetMod) {
-        this.targetX = targetMod.cameraCenter.x;
-        this.targetY = targetMod.cameraCenter.y;
-      }
-      this.targetZoom = 0.7;
-
-      const lerpFactor = 1 - Math.pow(1 - 0.1, Math.max(1, dtS * 60));
-      this.x += (this.targetX - this.x) * lerpFactor;
-      this.y += (this.targetY - this.y) * lerpFactor;
-      this.zoom += (this.targetZoom - this.zoom) * lerpFactor;
-    } else {
-      // GAME_OVER / VICTORY: статична камера з легким віддаленням
-      this.targetZoom = 0.75;
-      const lerpFactor = 1 - Math.pow(1 - 0.06, Math.max(1, dtS * 60));
-      this.zoom += (this.targetZoom - this.zoom) * lerpFactor;
+  public updateFromState(
+    state: FlightState,
+    dtS: number,
+    viewportW = 1280,
+    viewportH = 720,
+  ): void {
+    if (!this.initialized) {
+      this.snapToModule(state.activeModuleId, viewportW, viewportH);
     }
 
-    // Тряска екрана (screenShake) при ударах об стіни або аваріях
+    const focusModuleId =
+      state.gameMode === "MODULE_EXPANSION_CUTSCENE" &&
+      state.cutsceneTargetModuleId
+        ? state.cutsceneTargetModuleId
+        : state.activeModuleId;
+
+    const activeModule =
+      STATION_LEVEL_CONFIG.find((m) => m.id === focusModuleId) ??
+      STATION_LEVEL_CONFIG[0]!;
+
+    const { cx, cy, zoom } = this.computeModuleCameraTarget(
+      activeModule,
+      viewportW,
+      viewportH,
+    );
+
+    this.targetX = cx;
+    this.targetY = cy;
+    this.targetZoom =
+      state.gameMode === "MINIGAME_ACTIVE" ? zoom * 1.06 : zoom;
+
+    // Плавний глайд при переході через шлюз (RoomCameraController, speed = 7.5)
+    const speed = 7.5;
+    const step = Math.min(1, speed * dtS);
+    this.x += (this.targetX - this.x) * step;
+    this.y += (this.targetY - this.y) * step;
+    this.zoom += (this.targetZoom - this.zoom) * step;
+
     if (state.screenShakePx > 0.2) {
       this.shakePhase += dtS * 48;
       this.shakeOffsetX = Math.sin(this.shakePhase * 1.7) * state.screenShakePx;

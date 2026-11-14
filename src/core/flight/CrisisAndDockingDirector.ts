@@ -74,7 +74,6 @@ export function stepCrisisAndDockingDirector(
   let cutsceneTimerS = slice.cutsceneTimerS;
   let cutsceneTargetModuleId = slice.cutsceneTargetModuleId;
 
-  // Під час MODULE_EXPANSION_CUTSCENE (1.5 с) таймери криз на паузі
   if (isCutscene) {
     cutsceneTimerS = Math.max(0, cutsceneTimerS - dtS);
     if (cutsceneTimerS === 0) {
@@ -126,35 +125,35 @@ export function stepCrisisAndDockingDirector(
     }
   }
 
-  // Хвиля 1 (0:40 — Стикування №1 на східному шлюзі Модуля 2)
+  // Хвиля 1 (0:40 — Стикування №1 у MOD_INTERSECTION)
   if (waveClockS >= WAVE_TIMINGS.wave1TimeS && dockingWaveIndex < 1) {
     dockingWaveIndex = 1;
     activateTerminal("DOCKING_1");
     screenShakeAddPx = Math.max(screenShakeAddPx, 7);
   }
 
-  // Хвиля 2 (2:00 — Стикування №2 на північному шлюзі Модуля 2 + Терморегуляція у Модулі 3)
+  // Хвиля 2 (2:00 — Стикування №2 + Кисень у MOD_VERTICAL_LAB)
   if (
     waveClockS >= WAVE_TIMINGS.wave2TimeS &&
     dockingWaveIndex === 1 &&
-    slice.unlockedModuleIds.includes("MODULE_3")
+    slice.unlockedModuleIds.includes("MOD_VERTICAL_LAB")
   ) {
     dockingWaveIndex = 2;
     activateTerminal("DOCKING_2");
-    activateTerminal("THERMAL");
+    activateTerminal("OXYGEN");
     screenShakeAddPx = Math.max(screenShakeAddPx, 8);
   }
 
-  // Хвиля 3 (3:30 — Фінальне Стикування №3 на південному шлюзі + подвійний збій Сонячні панелі + Кисень)
+  // Хвиля 3 (3:30 — Фінальне Стикування №3 + подвійний збій на периферії)
   if (
     waveClockS >= WAVE_TIMINGS.wave3TimeS &&
     dockingWaveIndex === 2 &&
-    slice.unlockedModuleIds.includes("MODULE_4")
+    slice.unlockedModuleIds.includes("MOD_THERMAL_BAY")
   ) {
     dockingWaveIndex = 3;
     activateTerminal("DOCKING_3");
     activateTerminal("SOLAR");
-    activateTerminal("OXYGEN");
+    activateTerminal("THERMAL");
     screenShakeAddPx = Math.max(screenShakeAddPx, 10);
   }
 
@@ -249,7 +248,6 @@ export function stepCrisisAndDockingDirector(
     };
   });
 
-  // Неперервна зміна ресурсів станції щосекунди (не зупиняється під час мініігор!)
   const mult = slice.crisisMultiplier;
   if (solarMalfunction) {
     energyPct = clamp(energyPct - 1.35 * mult * dtS, 0, 100);
@@ -269,7 +267,7 @@ export function stepCrisisAndDockingDirector(
   if (oxygenMalfunction) {
     oxygenPct = clamp(oxygenPct - 1.45 * mult * dtS, 0, 100);
   } else {
-    const netO2Rate = slice.unlockedModuleIds.includes("MODULE_4") ? 0.55 : -0.12;
+    const netO2Rate = slice.unlockedModuleIds.includes("MOD_VERTICAL_LAB") ? 0.55 : -0.12;
     oxygenPct = clamp(oxygenPct + netO2Rate * dtS, 0, 100);
   }
 
@@ -386,7 +384,7 @@ export function resolveTerminalSuccess(
 
     if (target.id === "DOCKING_1") {
       cutsceneTimerS = PHYSICS_CONSTANTS.cutsceneDurationS;
-      cutsceneTargetModuleId = "MODULE_3";
+      cutsceneTargetModuleId = "MOD_VERTICAL_LAB";
       triggeredCutscene = true;
       if (waveClockS < WAVE_TIMINGS.wave2TimeS - 16) {
         waveClockS = WAVE_TIMINGS.wave2TimeS - 16;
@@ -402,7 +400,7 @@ export function resolveTerminalSuccess(
       });
     } else if (target.id === "DOCKING_2") {
       cutsceneTimerS = PHYSICS_CONSTANTS.cutsceneDurationS;
-      cutsceneTargetModuleId = "MODULE_4";
+      cutsceneTargetModuleId = "MOD_THERMAL_BAY";
       triggeredCutscene = true;
       if (waveClockS < WAVE_TIMINGS.wave3TimeS - 16) {
         waveClockS = WAVE_TIMINGS.wave3TimeS - 16;
