@@ -56,12 +56,18 @@ export function DebugScreen() {
   const dispatch = useCallback((action: GameAction) => {
     setHistory((h) => [...h, step(h[h.length - 1]!, action)]);
   }, []);
-  const dispatchFlight = useCallback(
-    (action: FlightAction) => {
-      dispatch({ phase: "flight", action });
-    },
-    [dispatch],
-  );
+  const dispatchFlight = useCallback((action: FlightAction) => {
+    setHistory((h) => {
+      const current = h[h.length - 1]!;
+      const next = step(current, { phase: "flight", action });
+      if (current.phase === "flight" && next.phase === "flight" && h.length > 1) {
+        const copy = h.slice(0, -1);
+        copy.push(next);
+        return copy;
+      }
+      return [...h, next];
+    });
+  }, []);
   const restart = (nextSeed: number) => {
     setSeed(nextSeed);
     setHistory([newGame(SAMPLE_MISSION, SAMPLE_CATALOG, nextSeed)]);

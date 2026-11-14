@@ -1,88 +1,238 @@
 {
-  "cabinWidthM": 12,
-  "cabinHeightM": 6,
-  "grabRadiusM": 0.95,
-  "pushSpeedFastMs": 4.2,
-  "pushSpeedLongMs": 2.1,
-  "fastHopMaxDistM": 5.6,
-  "flightDurationS": 120,
-  "nodes": [
+  "physics": {
+    "playerRadiusPx": 22,
+    "maxPullDistancePx": 180,
+    "maxLaunchSpeedPxS": 650,
+    "pullExponent": 1.2,
+    "trajectoryPreviewCount": 10,
+    "trajectoryStepS": 0.04,
+    "airDragPerS": 0.08,
+    "wallRestitution": 0.65,
+    "highSpeedStunThresholdPxS": 480,
+    "stunDurationS": 0.8,
+    "ignoreHandleDurationS": 0.25,
+    "safeGrabSpeedPxS": 420,
+    "slipGrabSpeedPxS": 550,
+    "slipDampingFactor": 0.7,
+    "thrusterImpulsePxS": 340,
+    "maxThrusterCharges": 3,
+    "cutsceneDurationS": 1.5
+  },
+  "waves": {
+    "wave1TimeS": 40,
+    "wave2TimeS": 120,
+    "wave3TimeS": 210,
+    "initialSolarWarningTimeS": 4
+  },
+  "modules": [
     {
-      "id": "handrail-bl",
-      "kind": "handrail",
-      "wall": "bottom",
-      "xM": 2.4,
-      "yM": 5.1,
-      "titleKey": "flight.node.handrailBl"
+      "id": "MODULE_1",
+      "type": "HORIZONTAL",
+      "labelKey": "flight.module.starter",
+      "unlockedAtStart": true,
+      "bounds": { "minX": -960, "minY": -170, "maxX": -260, "maxY": 170 },
+      "cameraCenter": { "x": -610, "y": 0 },
+      "portholes": [
+        { "x": -780, "y": -55, "radius": 36 },
+        { "x": -440, "y": -55, "radius": 36 }
+      ],
+      "obstacles": []
     },
     {
-      "id": "handrail-tl",
-      "kind": "handrail",
-      "wall": "top",
-      "xM": 3.0,
-      "yM": 0.9,
-      "titleKey": "flight.node.handrailTl"
+      "id": "MODULE_2",
+      "type": "INTERSECTION",
+      "labelKey": "flight.module.hub",
+      "unlockedAtStart": true,
+      "bounds": { "minX": -260, "minY": -260, "maxX": 260, "maxY": 260 },
+      "cameraCenter": { "x": 0, "y": 0 },
+      "portholes": [
+        { "x": 0, "y": 0, "radius": 52 }
+      ],
+      "obstacles": []
     },
     {
-      "id": "handrail-center",
-      "kind": "handrail",
-      "wall": "bottom",
-      "xM": 5.8,
-      "yM": 5.1,
-      "titleKey": "flight.node.handrailCenter"
+      "id": "MODULE_3",
+      "type": "HORIZONTAL",
+      "labelKey": "flight.module.power",
+      "unlockedAtStart": false,
+      "requiredSeal": "EAST",
+      "bounds": { "minX": 260, "minY": -190, "maxX": 1020, "maxY": 190 },
+      "cameraCenter": { "x": 640, "y": 0 },
+      "portholes": [
+        { "x": 420, "y": -85, "radius": 34 },
+        { "x": 850, "y": -85, "radius": 34 }
+      ],
+      "obstacles": [
+        { "id": "OBS_CORE_3", "minX": 560, "minY": -70, "maxX": 700, "maxY": 70 }
+      ]
     },
     {
-      "id": "handrail-br",
-      "kind": "handrail",
-      "wall": "bottom",
-      "xM": 9.2,
-      "yM": 5.1,
-      "titleKey": "flight.node.handrailBr"
+      "id": "MODULE_4",
+      "type": "VERTICAL",
+      "labelKey": "flight.module.lifesupport",
+      "unlockedAtStart": false,
+      "requiredSeal": "NORTH",
+      "bounds": { "minX": -170, "minY": -960, "maxX": 170, "maxY": -260 },
+      "cameraCenter": { "x": 0, "y": -610 },
+      "portholes": [
+        { "x": 0, "y": -460, "radius": 34 },
+        { "x": 0, "y": -740, "radius": 34 }
+      ],
+      "obstacles": []
     },
     {
-      "id": "console-propulsion",
-      "kind": "console",
-      "wall": "left",
-      "system": "propulsion",
-      "xM": 1.1,
-      "yM": 3.0,
-      "titleKey": "flight.console.propulsion"
+      "id": "MODULE_5",
+      "type": "COMMAND",
+      "labelKey": "flight.module.command",
+      "unlockedAtStart": false,
+      "requiredSeal": "SOUTH",
+      "bounds": { "minX": -220, "minY": 260, "maxX": 220, "maxY": 760 },
+      "cameraCenter": { "x": 0, "y": 510 },
+      "portholes": [
+        { "x": -95, "y": 520, "radius": 40 },
+        { "x": 95, "y": 520, "radius": 40 }
+      ],
+      "obstacles": []
+    }
+  ],
+  "walls": [
+    { "id": "m1_w_west", "moduleId": "MODULE_1", "ax": -960, "ay": -170, "bx": -960, "by": 170, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m1_w_north", "moduleId": "MODULE_1", "ax": -960, "ay": -170, "bx": -260, "by": -170, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+    { "id": "m1_w_south", "moduleId": "MODULE_1", "ax": -960, "ay": 170, "bx": -260, "by": 170, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
+    { "id": "m1_w_east_top", "moduleId": "MODULE_1", "ax": -260, "ay": -170, "bx": -260, "by": -90, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m1_w_east_bot", "moduleId": "MODULE_1", "ax": -260, "ay": 90, "bx": -260, "by": 170, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+
+    { "id": "m2_w_nw", "moduleId": "MODULE_2", "ax": -260, "ay": -90, "bx": -90, "by": -260, "normal": { "nx": 0.7071, "ny": 0.7071 }, "isDockingSeal": null },
+    { "id": "m2_w_ne", "moduleId": "MODULE_2", "ax": 90, "ay": -260, "bx": 260, "by": -90, "normal": { "nx": -0.7071, "ny": 0.7071 }, "isDockingSeal": null },
+    { "id": "m2_w_se", "moduleId": "MODULE_2", "ax": 260, "ay": 90, "bx": 90, "by": 260, "normal": { "nx": -0.7071, "ny": -0.7071 }, "isDockingSeal": null },
+    { "id": "m2_w_sw", "moduleId": "MODULE_2", "ax": -90, "ay": 260, "bx": -260, "by": 90, "normal": { "nx": 0.7071, "ny": -0.7071 }, "isDockingSeal": null },
+    { "id": "m2_seal_east", "moduleId": "MODULE_2", "ax": 260, "ay": -90, "bx": 260, "by": 90, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": "EAST" },
+    { "id": "m2_seal_north", "moduleId": "MODULE_2", "ax": -90, "ay": -260, "bx": 90, "by": -260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": "NORTH" },
+    { "id": "m2_seal_south", "moduleId": "MODULE_2", "ax": -90, "ay": 260, "bx": 90, "by": 260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": "SOUTH" },
+
+    { "id": "m3_w_west_top", "moduleId": "MODULE_3", "ax": 260, "ay": -190, "bx": 260, "by": -90, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m3_w_west_bot", "moduleId": "MODULE_3", "ax": 260, "ay": 90, "bx": 260, "by": 190, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m3_w_north", "moduleId": "MODULE_3", "ax": 260, "ay": -190, "bx": 1020, "by": -190, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+    { "id": "m3_w_south", "moduleId": "MODULE_3", "ax": 260, "ay": 190, "bx": 1020, "by": 190, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
+    { "id": "m3_w_east", "moduleId": "MODULE_3", "ax": 1020, "ay": -190, "bx": 1020, "by": 190, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m3_obs_north", "moduleId": "MODULE_3", "ax": 560, "ay": -70, "bx": 700, "by": -70, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
+    { "id": "m3_obs_south", "moduleId": "MODULE_3", "ax": 560, "ay": 70, "bx": 700, "by": 70, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+    { "id": "m3_obs_west", "moduleId": "MODULE_3", "ax": 560, "ay": -70, "bx": 560, "by": 70, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m3_obs_east", "moduleId": "MODULE_3", "ax": 700, "ay": -70, "bx": 700, "by": 70, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+
+    { "id": "m4_w_sw", "moduleId": "MODULE_4", "ax": -170, "ay": -260, "bx": -90, "by": -260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
+    { "id": "m4_w_se", "moduleId": "MODULE_4", "ax": 90, "ay": -260, "bx": 170, "by": -260, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null },
+    { "id": "m4_w_west", "moduleId": "MODULE_4", "ax": -170, "ay": -960, "bx": -170, "by": -260, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m4_w_east", "moduleId": "MODULE_4", "ax": 170, "ay": -960, "bx": 170, "by": -260, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m4_w_north", "moduleId": "MODULE_4", "ax": -170, "ay": -960, "bx": 170, "by": -960, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+
+    { "id": "m5_w_nw", "moduleId": "MODULE_5", "ax": -220, "ay": 260, "bx": -90, "by": 260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+    { "id": "m5_w_ne", "moduleId": "MODULE_5", "ax": 90, "ay": 260, "bx": 220, "by": 260, "normal": { "nx": 0, "ny": 1 }, "isDockingSeal": null },
+    { "id": "m5_w_west", "moduleId": "MODULE_5", "ax": -220, "ay": 260, "bx": -220, "by": 760, "normal": { "nx": 1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m5_w_east", "moduleId": "MODULE_5", "ax": 220, "ay": 260, "bx": 220, "by": 760, "normal": { "nx": -1, "ny": 0 }, "isDockingSeal": null },
+    { "id": "m5_w_south", "moduleId": "MODULE_5", "ax": -220, "ay": 760, "bx": 220, "by": 760, "normal": { "nx": 0, "ny": -1 }, "isDockingSeal": null }
+  ],
+  "handles": [
+    { "id": "h_m1_start", "moduleId": "MODULE_1", "ax": -925, "ay": -70, "bx": -925, "by": 70, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m1_top_1", "moduleId": "MODULE_1", "ax": -830, "ay": -142, "bx": -650, "by": -142, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m1_top_2", "moduleId": "MODULE_1", "ax": -500, "ay": -142, "bx": -320, "by": -142, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m1_bot_1", "moduleId": "MODULE_1", "ax": -840, "ay": 142, "bx": -700, "by": 142, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m1_solar", "moduleId": "MODULE_1", "ax": -620, "ay": 140, "bx": -500, "by": 140, "grabRadius": 36, "terminalId": "SOLAR" },
+    { "id": "h_m1_bot_2", "moduleId": "MODULE_1", "ax": -420, "ay": 142, "bx": -300, "by": 142, "grabRadius": 32, "terminalId": null },
+
+    { "id": "h_m2_nw", "moduleId": "MODULE_2", "ax": -210, "ay": -95, "bx": -95, "by": -210, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m2_ne", "moduleId": "MODULE_2", "ax": 95, "ay": -210, "bx": 210, "by": -95, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m2_se", "moduleId": "MODULE_2", "ax": 210, "ay": 95, "bx": 95, "by": 210, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m2_sw", "moduleId": "MODULE_2", "ax": -95, "ay": 210, "bx": -210, "by": 95, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m2_dock_east", "moduleId": "MODULE_2", "ax": 225, "ay": -55, "bx": 225, "by": 55, "grabRadius": 36, "terminalId": "DOCKING_1" },
+    { "id": "h_m2_dock_north", "moduleId": "MODULE_2", "ax": -55, "ay": -225, "bx": 55, "by": -225, "grabRadius": 36, "terminalId": "DOCKING_2" },
+    { "id": "h_m2_dock_south", "moduleId": "MODULE_2", "ax": -55, "ay": 225, "bx": 55, "by": 225, "grabRadius": 36, "terminalId": "DOCKING_3" },
+
+    { "id": "h_m3_top_1", "moduleId": "MODULE_3", "ax": 330, "ay": -158, "bx": 510, "by": -158, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_bot_1", "moduleId": "MODULE_3", "ax": 330, "ay": 158, "bx": 510, "by": 158, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_obs_top", "moduleId": "MODULE_3", "ax": 575, "ay": -100, "bx": 685, "by": -100, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_obs_bot", "moduleId": "MODULE_3", "ax": 575, "ay": 100, "bx": 685, "by": 100, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_obs_west", "moduleId": "MODULE_3", "ax": 528, "ay": -45, "bx": 528, "by": 45, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_obs_east", "moduleId": "MODULE_3", "ax": 732, "ay": -45, "bx": 732, "by": 45, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_top_2", "moduleId": "MODULE_3", "ax": 740, "ay": -158, "bx": 910, "by": -158, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_bot_2", "moduleId": "MODULE_3", "ax": 740, "ay": 158, "bx": 910, "by": 158, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m3_thermal", "moduleId": "MODULE_3", "ax": 985, "ay": -65, "bx": 985, "by": 65, "grabRadius": 36, "terminalId": "THERMAL" },
+
+    { "id": "h_m4_left_1", "moduleId": "MODULE_4", "ax": -138, "ay": -340, "bx": -138, "by": -490, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m4_right_1", "moduleId": "MODULE_4", "ax": 138, "ay": -480, "bx": 138, "by": -640, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m4_left_2", "moduleId": "MODULE_4", "ax": -138, "ay": -660, "bx": -138, "by": -820, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m4_oxygen", "moduleId": "MODULE_4", "ax": -65, "ay": -925, "bx": 65, "by": -925, "grabRadius": 36, "terminalId": "OXYGEN" },
+
+    { "id": "h_m5_left", "moduleId": "MODULE_5", "ax": -188, "ay": 340, "bx": -188, "by": 520, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m5_right", "moduleId": "MODULE_5", "ax": 188, "ay": 340, "bx": 188, "by": 520, "grabRadius": 32, "terminalId": null },
+    { "id": "h_m5_bridge", "moduleId": "MODULE_5", "ax": -80, "ay": 720, "bx": 80, "by": 720, "grabRadius": 36, "terminalId": null }
+  ],
+  "terminals": [
+    {
+      "id": "SOLAR",
+      "moduleId": "MODULE_1",
+      "handleId": "h_m1_solar",
+      "type": "SOLAR",
+      "pos": { "x": -560, "y": 152 },
+      "labelKey": "flight.terminal.solar",
+      "causedBy": "design:solar",
+      "baseUrgencyS": 45
     },
     {
-      "id": "console-solar",
-      "kind": "console",
-      "wall": "top",
-      "system": "power",
-      "xM": 4.8,
-      "yM": 0.9,
-      "titleKey": "flight.console.solar"
+      "id": "DOCKING_1",
+      "moduleId": "MODULE_2",
+      "handleId": "h_m2_dock_east",
+      "type": "DOCKING",
+      "pos": { "x": 242, "y": 0 },
+      "labelKey": "flight.terminal.docking1",
+      "causedBy": "design:engine",
+      "baseUrgencyS": 65,
+      "unlocksSeal": "EAST",
+      "unlocksModuleId": "MODULE_3"
     },
     {
-      "id": "console-thermal",
-      "kind": "console",
-      "wall": "center",
-      "system": "thermal",
-      "xM": 6.4,
-      "yM": 3.0,
-      "titleKey": "flight.console.thermal"
+      "id": "DOCKING_2",
+      "moduleId": "MODULE_2",
+      "handleId": "h_m2_dock_north",
+      "type": "DOCKING",
+      "pos": { "x": 0, "y": -242 },
+      "labelKey": "flight.terminal.docking2",
+      "causedBy": "design:engine",
+      "baseUrgencyS": 65,
+      "unlocksSeal": "NORTH",
+      "unlocksModuleId": "MODULE_4"
     },
     {
-      "id": "console-comms",
-      "kind": "console",
-      "wall": "top",
-      "system": "comms",
-      "xM": 8.4,
-      "yM": 0.9,
-      "titleKey": "flight.console.comms"
+      "id": "DOCKING_3",
+      "moduleId": "MODULE_2",
+      "handleId": "h_m2_dock_south",
+      "type": "DOCKING",
+      "pos": { "x": 0, "y": 242 },
+      "labelKey": "flight.terminal.docking3",
+      "causedBy": "design:engine",
+      "baseUrgencyS": 70,
+      "unlocksSeal": "SOUTH",
+      "unlocksModuleId": "MODULE_5"
     },
     {
-      "id": "console-separation",
-      "kind": "console",
-      "wall": "right",
-      "system": "structure",
-      "xM": 10.9,
-      "yM": 3.0,
-      "titleKey": "flight.console.separation"
+      "id": "THERMAL",
+      "moduleId": "MODULE_3",
+      "handleId": "h_m3_thermal",
+      "type": "THERMAL",
+      "pos": { "x": 1002, "y": 0 },
+      "labelKey": "flight.terminal.thermal",
+      "causedBy": "design:instrument",
+      "baseUrgencyS": 48
+    },
+    {
+      "id": "OXYGEN",
+      "moduleId": "MODULE_4",
+      "handleId": "h_m4_oxygen",
+      "type": "OXYGEN",
+      "pos": { "x": 0, "y": -942 },
+      "labelKey": "flight.terminal.oxygen",
+      "causedBy": "design:battery",
+      "baseUrgencyS": 48
     }
   ]
 }
