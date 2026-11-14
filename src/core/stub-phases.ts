@@ -4,7 +4,7 @@
 import type {
   DebugAction, Design, DesignInput, DesignPhase, FlightInput, FlightPhase, OrbitInput, OrbitPhase, SlotId,
 } from './contracts';
-import { SAMPLE_DESIGN, stubDesign, stubFlight, stubOrbit } from './stubs';
+import { initialDesign, stubDesign, stubFlight, stubOrbit } from './stubs';
 
 // ───────────────────────── Частина 1: вибір без графіки ─────────────────────────
 
@@ -24,7 +24,7 @@ export type StubDesignAction =
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
 export const stubDesignPhase: DesignPhase<StubDesignState, StubDesignAction> = {
-  init: (input) => ({ input, design: SAMPLE_DESIGN, confirmed: false }),
+  init: (input) => ({ input, design: initialDesign(input), confirmed: false }),
 
   step(state, action) {
     if (state.confirmed) return state; // після підтвердження проєкт заморожений

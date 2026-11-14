@@ -1,0 +1,27 @@
+{
+  "borealis": {
+    "id": "borealis",
+    "nameKey": "agency.borealis.name",
+    "descriptionKey": "agency.borealis.description",
+    "budgetFactor": 1.5,
+    "launcherCostFactor": 1,
+    "moduleCostFactor": {}
+  },
+  "monsoon": {
+    "id": "monsoon",
+    "nameKey": "agency.monsoon.name",
+    "descriptionKey": "agency.monsoon.description",
+    "budgetFactor": 0.75,
+    "launcherCostFactor": 0.6,
+    "launcherIds": ["small", "medium"],
+    "moduleCostFactor": { "engine": 0.7, "solar": 0.8 }
+  },
+  "meridia": {
+    "id": "meridia",
+    "nameKey": "agency.meridia.name",
+    "descriptionKey": "agency.meridia.description",
+    "budgetFactor": 1,
+    "launcherCostFactor": 1,
+    "moduleCostFactor": { "instrument": 0.8, "antenna": 0.8 }
+  }
+}

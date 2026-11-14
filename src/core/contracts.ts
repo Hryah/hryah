@@ -170,7 +170,7 @@ export interface MissionOutcome {
 
 export interface PhaseOutput<Out> {
   result: Out;
-  log: CauseEntry[];
+  log: CauseEntry[];              // лише нові записи цієї фази; input.log сюди не копіюємо
 }
 
 export interface Phase<In, State, Action, Out> {
@@ -190,6 +190,8 @@ export interface DebugAction<Action> {
 }
 
 export interface DesignInput { mission: Mission; catalog: Catalog }
+// Вхідний log — накопичена історія попередніх фаз, доступна для читання й causedBy.
+// finish повертає лише нові записи поточної фази; склейка сама додає їх до історії.
 export interface FlightInput { mission: Mission; spec: SpacecraftSpec; log: CauseEntry[] }
 export interface OrbitInput { mission: Mission; spec: SpacecraftSpec; flight: FlightResult; log: CauseEntry[] }
 
