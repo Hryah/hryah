@@ -10,6 +10,26 @@
 :80 {
 	encode zstd gzip
 
+	# hryah-rooms: сервер кімнат консорціуму (довге опитування)
+	handle_path /experimental/api/* {
+		rewrite * /api{path}
+		reverse_proxy 127.0.0.1:8091 {
+			flush_interval -1
+		}
+	}
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8090 {
+			flush_interval -1
+		}
+	}
+	# Серверний бандл їде в релізі разом зі статикою, але назовні його не віддаємо.
+	handle /server/* {
+		respond 404
+	}
+	handle /experimental/server/* {
+		respond 404
+	}
+
 	# experimental: /experimental/*  (збирається з --base=/experimental/)
 	redir /experimental /experimental/ 308
 	handle_path /experimental/* {

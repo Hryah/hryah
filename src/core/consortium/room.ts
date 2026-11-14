@@ -53,6 +53,48 @@ export type RoomAction =
   | { type: 'start' }
   | { type: 'play'; action: ConsortiumAction };
 
+// Чи має значення вигляд дії кімнати. Сервер публічний, тому перевіряємо не лише тип, а й поля, включно з вкладеними
+// діями гравця: чужий JSON не повинен потрапити в step. Лише форма (типи); сенс (чи є такий модуль) лишається за step.
+const SLOT_IDS = ['engine', 'solar', 'battery', 'antenna', 'instrument'];
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 64;
+
+function isConsortiumAction(a: unknown): a is ConsortiumAction {
+  if (!isObj(a)) return false;
+  switch (a.type) {
+    case 'launch': case 'wait': return true;
+    case 'develop': {
+      const o = a.order;
+      return isObj(o) && o.slot === 'instrument' && isNum(o.apertureM) && typeof o.inspect === 'boolean';
+    }
+    case 'design': {
+      const d = a.action;
+      if (!isObj(d)) return false;
+      switch (d.type) {
+        case 'setModule': return typeof d.slot === 'string' && SLOT_IDS.includes(d.slot) && isStr(d.moduleId);
+        case 'setFuel': return isNum(d.fuelKg);
+        case 'setAlt': return isNum(d.altKm);
+        case 'setLauncher': return isStr(d.launcherId);
+        default: return false; // confirm іде окремою дією launch
+      }
+    }
+    default: return false;
+  }
+}
+
+export function isRoomAction(a: unknown): a is RoomAction {
+  if (!isObj(a)) return false;
+  switch (a.type) {
+    case 'join': return typeof a.name === 'string';
+    case 'ready': return typeof a.ready === 'boolean';
+    case 'wish': return a.agencyId === null || isStr(a.agencyId);
+    case 'start': case 'leave': return true;
+    case 'play': return isConsortiumAction(a.action);
+    default: return false;
+  }
+}
+
 export interface RoomSetup {
   base: DesignInput;
   market: Market;
