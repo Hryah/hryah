@@ -183,6 +183,13 @@ export function newConsortium(
   };
 }
 
+// Профіль агенції для власної розробки: скло з власної фабрики впливає на брак дзеркала.
+// Ним користуються і ядро, і екран (оцінка ризику), щоб цифри збігались.
+export function developerProfile(entry: AgencyEntry, turn: number): AgencyProfile {
+  const glass = glassDefectFactor(entry.factory, turn);
+  return glass === 1 ? entry.agency : { ...entry.agency, defectFactor: (entry.agency.defectFactor ?? 1) * glass };
+}
+
 export function activeAgency(state: ConsortiumState): AgencyEntry | undefined {
   return state.agencies[state.active];
 }
@@ -403,10 +410,7 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       if (entry.projects.some((p) => p.slot === action.order.slot)) return state;
       let project: DevProject;
       try {
-        // Скло з власної фабрики впливає на брак дзеркала.
-        const glass = glassDefectFactor(entry.factory, state.turn);
-        const maker = glass === 1 ? entry.agency : { ...entry.agency, defectFactor: (entry.agency.defectFactor ?? 1) * glass };
-        project = startDevelopment(maker, action.order, state.turn, state.seed);
+        project = startDevelopment(developerProfile(entry, state.turn), action.order, state.turn, state.seed);
       } catch {
         return state;
       }
@@ -476,7 +480,8 @@ function stepFactory(state: ConsortiumState, entry: AgencyEntry, action: Extract
       design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, nextAccount, entry.factory) },
     });
   }
-  const plan = planBatch(entry.agency, factory, action.order, state.turn, state.base.catalog.modules);
+  // Базою партії може бути лише те, що агенція бачить зараз: без санкційних і ще не відкритих ринком модулів.
+  const plan = planBatch(entry.agency, factory, action.order, state.turn, entry.design.input.catalog.modules);
   if (!plan.batch || account.fundsMUsd <= plan.batch.costMUsd) return state;
   const nextAccount = { ...account, fundsMUsd: money(account.fundsMUsd - plan.batch.costMUsd) };
   const nextFactory = { ...factory, batches: [...factory.batches, plan.batch] };

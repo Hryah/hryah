@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import {
-  activeAgency, campaignRoomSetup, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  activeAgency, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
   type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
@@ -275,7 +275,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   const order: DevOrder = { slot: "instrument", apertureM, inspect };
   const cost = developmentCostMUsd(entry.agency, order);
   const turns = developmentTurns(entry.agency, order);
-  const chance = defectChance(entry.agency, order);
+  const chance = defectChance(developerProfile(entry, state.turn), order);
   const affordable = cost < entry.design.input.mission.budgetMUsd;
   const canOrder = entry.actionsLeft > 0 && affordable;
   return (
