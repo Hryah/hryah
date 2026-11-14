@@ -188,3 +188,24 @@ describe("неактивні гравці й рестарт", () => {
     expect(rooms.join(a.code, "Bob")).toMatchObject({ status: 503 });
   });
 });
+
+describe("кімнати з ботами", () => {
+  it("остання людина виходить: кімната закривається, боти її не тримають", () => {
+    const rooms = new Rooms({ setup });
+    const c = rooms.create("Host");
+    if ("error" in c) throw new Error(c.error);
+    expect(rooms.act(c.code, c.player, c.token, { type: "addBot" })).not.toHaveProperty("error");
+    expect(rooms.act(c.code, c.player, c.token, { type: "start" })).not.toHaveProperty("error");
+    rooms.act(c.code, c.player, c.token, { type: "leave" });
+    expect(rooms.join(c.code, "Late")).toHaveProperty("error");
+  });
+
+  it("в лобі: людина виходить, лишився лише бот — кімнату закрито", () => {
+    const rooms = new Rooms({ setup });
+    const c = rooms.create("Host");
+    if ("error" in c) throw new Error(c.error);
+    rooms.act(c.code, c.player, c.token, { type: "addBot" });
+    rooms.act(c.code, c.player, c.token, { type: "leave" });
+    expect(rooms.join(c.code, "Late")).toHaveProperty("error");
+  });
+});
