@@ -200,5 +200,6 @@
   "ui.campaign.programEnded": "Campaign over: programme {percent}% complete",
   "ui.campaign.leader": "Biggest contribution: {agency} ({points})",
   "ui.campaign.awaiting": "Window closed. Waiting for mission reports from: {players}",
-  "ui.nav.mission": "Single mission"
+  "ui.nav.mission": "Single mission",
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
 }
