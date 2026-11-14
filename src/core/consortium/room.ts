@@ -30,7 +30,7 @@ export interface LobbyState {
   seed: number;
   hostId: string;
   players: Player[];
-  agencyIds: string[];        // агенції, доступні в цій кімнаті, у порядку ходів
+  agencyIds: string[];        // агенції, доступні в цій кімнаті; їхній порядок задає порядок ходів у грі
   minPlayers: number;
 }
 
@@ -60,6 +60,8 @@ export interface RoomSetup {
 
 export function newRoom(hostId: string, hostName: string, agencyIds: string[], seed = 1, minPlayers = 1): LobbyState {
   if (agencyIds.length === 0) throw new Error('Потрібна хоча б одна агенція');
+  if (new Set(agencyIds).size !== agencyIds.length) throw new Error('Агенції в кімнаті не повинні повторюватись');
+  if (minPlayers < 1 || minPlayers > Math.min(MAX_PLAYERS, agencyIds.length)) throw new Error('minPlayers поза межами 1..кількість агенцій');
   return {
     phase: 'lobby', seed, hostId, agencyIds, minPlayers,
     players: [{ id: hostId, name: hostName, wish: null, ready: false }],
@@ -68,6 +70,7 @@ export function newRoom(hostId: string, hostName: string, agencyIds: string[], s
 
 // Розподіл країн. Конфлікт (кілька гравців хочуть одну агенцію) вирішує монета від сіду й ключа агенції:
 // переможець бере її, решта отримують вільні агенції за порядком місць. Гравці без бажання беруть вільні в кінці.
+// Результат упорядковано за lobby.agencyIds: саме в такому порядку агенції ходитимуть у грі.
 export function assignAgencies(lobby: LobbyState): Assignment[] {
   const out = new Map<string, Assignment>();
   const taken = new Set<string>();
@@ -83,14 +86,17 @@ export function assignAgencies(lobby: LobbyState): Assignment[] {
   for (const p of lobby.players) {
     if (out.has(p.id)) continue;
     const agencyId = free.shift();
-    if (!agencyId) continue; // гравців більше, ніж агенцій: перевіряє canStart
+    if (!agencyId) continue; // гравців більше, ніж агенцій: це ловить startBlockers
     out.set(p.id, { playerId: p.id, agencyId, how: p.wish ? 'lost' : 'auto' });
   }
-  return lobby.players.map((p) => out.get(p.id)).filter((a): a is Assignment => a !== undefined);
+  const order = (a: Assignment) => lobby.agencyIds.indexOf(a.agencyId);
+  return lobby.players.map((p) => out.get(p.id)).filter((a): a is Assignment => a !== undefined).sort((a, b) => order(a) - order(b));
 }
 
-export function startBlockers(lobby: LobbyState): string[] {
+// knownAgencyIds: які агенції реально є в налаштуваннях гри; якщо кімната посилається на невідому, старт блокується з причиною.
+export function startBlockers(lobby: LobbyState, knownAgencyIds?: string[]): string[] {
   const out: string[] = [];
+  if (knownAgencyIds && lobby.agencyIds.some((id) => !knownAgencyIds.includes(id))) out.push('lobby.unknownAgency');
   if (lobby.players.length < lobby.minPlayers) out.push('lobby.tooFew');
   if (lobby.players.length > lobby.agencyIds.length) out.push('lobby.tooMany');
   if (lobby.players.some((p) => !p.ready && p.id !== lobby.hostId)) out.push('lobby.notReady');
@@ -124,14 +130,15 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
     case 'wish': {
       if (!me) return state;
       if (action.agencyId !== null && !state.agencyIds.includes(action.agencyId)) return state;
-      // Зміна бажання скидає готовність: інші мали погодитись на інший розклад.
-      return { ...state, players: state.players.map((p) => (p.id === playerId ? { ...p, wish: action.agencyId, ready: false } : p)) };
+      if (me.wish === action.agencyId) return state;
+      // Зміна бажання міняє розклад для всіх (можливий новий конфлікт), тож готовність скидається в усіх.
+      return { ...state, players: state.players.map((p) => ({ ...p, wish: p.id === playerId ? action.agencyId : p.wish, ready: false })) };
     }
     case 'ready':
       if (!me) return state;
       return { ...state, players: state.players.map((p) => (p.id === playerId ? { ...p, ready: action.ready } : p)) };
     case 'start': {
-      if (playerId !== state.hostId || startBlockers(state).length > 0) return state;
+      if (playerId !== state.hostId || startBlockers(state, setup.agencies.map((a) => a.id)).length > 0) return state;
       const assignments = assignAgencies(state);
       const byId = new Map(setup.agencies.map((a) => [a.id, a]));
       const agencies = assignments.map((a) => byId.get(a.agencyId)).filter((a): a is AgencyProfile => a !== undefined);
