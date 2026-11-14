@@ -108,6 +108,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
   const [error, setError] = useState<string | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  const leaving = useRef(false); // гравець сам вийшов: 403 від сервера після цього очікуваний, без повідомлення «кімнату втрачено»
   useEffect(() => {
     const ctl = new AbortController();
     let version = 0;
@@ -119,7 +120,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
           if (snap.changed) setRoom(snap.state);
           setError(null);
         } catch (e) {
-          if (ctl.signal.aborted) return;
+          if (ctl.signal.aborted || leaving.current) return;
           const message = (e as Error).message;
           if (message === "unauthorized" || message === "no such room") { exitRef.current(t("ui.menu.roomGone")); return; }
           setError(message);
@@ -130,11 +131,15 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
     return () => ctl.abort();
   }, [session]);
 
-  const act = (action: RoomAction) => { sendAction(session, action).catch((e: Error) => setError(e.message)); };
+  const act = (action: RoomAction) => {
+    if (action.type === "leave") leaving.current = true;
+    sendAction(session, action).catch((e: Error) => { if (!leaving.current) setError(e.message); });
+    if (action.type === "leave") onExit(); // і «✕» у лобі, і кнопка «Вийти»: одразу в меню, без повідомлення
+  };
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <button style={button} onClick={() => { act({ type: "leave" }); onExit(); }}>← {t("ui.menu.leave")}</button>
+        <button style={button} onClick={() => act({ type: "leave" })}>← {t("ui.menu.leave")}</button>
         <strong>{t("ui.menu.roomCode", { code: session.code })}</strong>
         {error && <span style={{ color: C.bad }}>{t("ui.menu.error", { error })}</span>}
       </div>

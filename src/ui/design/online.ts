@@ -21,7 +21,7 @@ export const joinRoom = (code: string, name: string) =>
 export const sendAction = (s: Session, action: RoomAction) =>
   call<{ version: number }>(`${base()}/${s.code}/action`, post({ player: s.player, token: s.token, action }));
 export const poll = (s: Session, since: number, signal: AbortSignal) =>
-  call<Snapshot>(`${base()}/${s.code}?player=${s.player}&token=${s.token}&since=${since}`, { signal });
+  call<Snapshot>(`${base()}/${s.code}?since=${since}`, { signal, headers: { authorization: `Bearer ${s.token}`, "x-hryah-player": s.player } });
 
 // Канали / і /experimental/ живуть на одному домені, тож ключ має префікс каналу (правило 8).
 const KEY = `${import.meta.env.BASE_URL}hryah.room`;

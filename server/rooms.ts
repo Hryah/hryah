@@ -5,7 +5,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Buffer } from "node:buffer";
 import { randomInt, randomUUID } from "node:crypto";
-import { newRoom, stepRoom, type RoomAction, type RoomSetup, type RoomState } from "../src/core/consortium";
+import { isRoomAction, newRoom, stepRoom, type RoomAction, type RoomSetup, type RoomState } from "../src/core/consortium";
 
 export const POLL_MS = 25_000;
 export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
@@ -29,19 +29,6 @@ export interface RoomsOptions {
 }
 
 type Json = Record<string, unknown>;
-const ACTION_TYPES = new Set(["wish", "ready", "start", "leave", "play"]);
-
-// Сервер публічний: перевіряємо не лише тип дії, а й типи полів, щоб у стан кімнати не потрапляв сміт.
-function validShape(a: RoomAction): boolean {
-  const x = a as unknown as Record<string, unknown>;
-  switch (a.type) {
-    case "ready": return typeof x.ready === "boolean";
-    case "wish": return x.agencyId === null || typeof x.agencyId === "string";
-    case "play": return !!x.action && typeof x.action === "object" && typeof (x.action as { type?: unknown }).type === "string";
-    case "start": case "leave": return true;
-    default: return false;
-  }
-}
 
 export class Rooms {
   private rooms = new Map<string, Room>();
@@ -78,6 +65,7 @@ export class Rooms {
   join(code: string, name: string): { player: string; token: string } | { error: string; status: number } {
     const room = this.rooms.get(code.toUpperCase());
     if (!room) return { error: "no such room", status: 404 };
+    if (!name.trim()) return { error: "name required", status: 400 };
     const player = randomUUID().slice(0, 8);
     const next = stepRoom(room.state, player, { type: "join", name }, this.setup);
     if (next === room.state) return { error: "cannot join", status: 409 };
@@ -90,7 +78,9 @@ export class Rooms {
   act(code: string, player: string, token: string, action: RoomAction): { version: number } | { error: string; status: number } {
     const room = this.auth(code, player, token);
     if (!room) return { error: "unauthorized", status: 403 };
-    if (!ACTION_TYPES.has(action.type) || !validShape(action)) return { error: "bad action", status: 400 };
+    // Сервер публічний: перевіряємо повну форму дії (включно з вкладеними діями гравця), а не лише type.
+    // join сюди не приходить: він має власний шлях, бо тоді у гравця ще нема токена.
+    if (!isRoomAction(action) || action.type === "join") return { error: "bad action", status: 400 };
     let next: RoomState;
     try {
       next = stepRoom(room.state, player, action, this.setup);
@@ -197,13 +187,14 @@ export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
         }
         if (req.method === "POST" && parts[2] === "action" && parts.length === 3) {
           const body = await readJson(req);
-          const action = body.action;
-          if (!action || typeof action !== "object") return send(res, 400, { error: "bad action" });
-          return reply(res, rooms.act(code, str(body.player), str(body.token), action as RoomAction));
+          return reply(res, rooms.act(code, str(body.player), str(body.token), body.action as RoomAction));
         }
         if (req.method === "GET" && parts.length === 2) {
           const since = Number(url.searchParams.get("since") ?? 0);
-          return reply(res, await rooms.poll(code, str(url.searchParams.get("player")), str(url.searchParams.get("token")),
+          // Токен у заголовку, а не в URL: адреси потрапляють у access-логи Caddy.
+          const auth = String(req.headers["authorization"] ?? "");
+          const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+          return reply(res, await rooms.poll(code, String(req.headers["x-hryah-player"] ?? ""), token,
             Number.isFinite(since) ? since : 0, pollMs, (cb) => { res.on("close", cb); }));
         }
         return send(res, 404, { error: "not found" });

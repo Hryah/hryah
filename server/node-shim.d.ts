@@ -1,7 +1,7 @@
 // Мінімальні типи Node для сервера кімнат: @types/node у проєкті немає, а нову залежність без дозволу не додаємо.
 declare module "node:http" {
   export interface IncomingMessage {
-    url?: string; method?: string;
+    url?: string; method?: string; headers: Record<string, string | string[] | undefined>;
     on(event: "data", cb: (chunk: Uint8Array) => void): this;
     on(event: "end", cb: () => void): this;
     on(event: "error", cb: (e: Error) => void): this;

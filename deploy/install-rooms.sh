@@ -73,12 +73,34 @@ snippet = """:80 {
 			flush_interval -1
 		}
 	}
+	# Серверний бандл їде в релізі разом зі статикою, але назовні його не віддаємо.
+	handle /server/* {
+		respond 404
+	}
+	handle /experimental/server/* {
+		respond 404
+	}
 """
 assert ":80 {\n" in s, "не знайшов блок :80"
 open(p, "w").write(s.replace(":80 {\n", snippet, 1))
 PY
   if ! caddy validate --config "$CF" --adapter caddyfile >/dev/null 2>&1; then
     cp "$CF.bak-before-rooms" "$CF"; echo "Caddyfile не пройшов перевірку, повернув як було" >&2; exit 1
+  fi
+  systemctl reload caddy
+fi
+# Апгрейд: проксі вже стояв зі старої версії інсталятора, а закриття /server/* ще ні.
+if grep -q 'hryah-rooms' "$CF" && ! grep -q 'handle /server/\*' "$CF"; then
+  cp "$CF" "$CF.bak-before-private"
+  python3 - "$CF" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+block = ":80 {\n\t# Серверний бандл їде в релізі разом зі статикою, але назовні його не віддаємо.\n\thandle /server/* {\n\t\trespond 404\n\t}\n\thandle /experimental/server/* {\n\t\trespond 404\n\t}\n"
+open(p, "w").write(s.replace(":80 {\n", block, 1))
+PY
+  if ! caddy validate --config "$CF" --adapter caddyfile >/dev/null 2>&1; then
+    cp "$CF.bak-before-private" "$CF"; echo "Caddyfile не пройшов перевірку, повернув як було" >&2; exit 1
   fi
   systemctl reload caddy
 fi
