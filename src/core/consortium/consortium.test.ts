@@ -6,6 +6,7 @@ import { designPhase, launchBlockers } from "../design";
 import type { AgencyProfile } from "../design/agency";
 import { summarize, sweepDesigns } from "../sim";
 import { SAMPLE_CATALOG, SAMPLE_MISSION, stubDesign } from "../stubs";
+import { bestByLaunchTurn } from "./analysis";
 import { applyMarket, checkMarket, priceFactor, type Market } from "./market";
 import { diversityMultiplier, qualityFactor, runValueMUsd, settleRewards, timeFactor, TUNING, type AgencyRun } from "./reward";
 import {
@@ -82,7 +83,7 @@ function run(agencyId: string, launchTurn: number, deliveredMb: number, resoluti
   const { result } = stubDesign(base, { ...designPhase.init(base, 0).design, altKm, modules: { ...designPhase.init(base, 0).design.modules, instrument } });
   const spec: SpacecraftSpec = { ...result, resolutionM };
   const outcome: MissionOutcome = { success: true, deliveredMb, survivedOrbits: 10, score: 0 };
-  return { agencyId, launchTurn, spec, outcome };
+  return { agencyId, launchTurn, spec, outcome, log: [] };
 }
 
 describe("нагорода", () => {
@@ -169,20 +170,47 @@ describe("сесія: хід агенцій", () => {
 
   it("не створюється без агенцій", () => expect(() => start([])).toThrow());
 
-  it("зміна проєкту коштує дію, порожня дія безкоштовна, після ліміту дії ігноруються", () => {
+  it("перша зміна елемента керування коштує дію, повторні зміни того самого безкоштовні", () => {
     let s = start();
     s = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } });
     expect(s.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN - 1);
-    const same = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-m" } }); // повертає на початкове
-    expect(same.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN - 2);
-    const noop = run2(same, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-m" } });
-    expect(noop).toBe(same);
-    let spent = start();
-    for (let i = 0; i < ACTIONS_PER_TURN + 2; i++) {
-      spent = run2(spent, { type: "design", action: { type: "setFuel", fuelKg: 10 + i } });
-    }
-    expect(spent.agencies[0]?.actionsLeft).toBe(0);
-    expect(spent.agencies[0]?.design.design.fuelKg).toBe(10 + ACTIONS_PER_TURN - 1);
+    expect(s.agencies[0]?.touched).toEqual(["slot:battery"]);
+    s = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-m" } });
+    expect(s.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN - 1);
+    // пальне з 12 до 24 кг: шість кроків по 2 кг коштують одну дію
+    for (let kg = 14; kg <= 24; kg += 2) s = run2(s, { type: "design", action: { type: "setFuel", fuelKg: kg } });
+    expect(s.agencies[0]?.design.design.fuelKg).toBe(24);
+    expect(s.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN - 2);
+  });
+
+  it("порожня дія нічого не коштує й не зачіпає елемент", () => {
+    const s = start();
+    const same = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-m" } });
+    expect(same).toBe(s);
+  });
+
+  it("коли елементи вичерпано, новий не змінити, але вже зачеплені можна", () => {
+    let s = start();
+    s = run2(
+      s,
+      { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } },
+      { type: "design", action: { type: "setFuel", fuelKg: 10 } },
+      { type: "design", action: { type: "setAlt", altKm: 450 } },
+      { type: "design", action: { type: "setLauncher", launcherId: "medium" } },
+    );
+    expect(s.agencies[0]?.actionsLeft).toBe(0);
+    const blocked = run2(s, { type: "design", action: { type: "setModule", slot: "engine", moduleId: "eng-cold" } });
+    expect(blocked).toBe(s);
+    const again = run2(s, { type: "design", action: { type: "setFuel", fuelKg: 8 } });
+    expect(again.agencies[0]?.design.design.fuelKg).toBe(8);
+  });
+
+  it("новий ход повертає елементи керування", () => {
+    let s = start();
+    s = run2(s, { type: "design", action: { type: "setFuel", fuelKg: 10 } }, wait, wait, wait);
+    expect(s.turn).toBe(1);
+    expect(s.agencies[0]?.touched).toEqual([]);
+    expect(s.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN);
   });
 
   it("confirm через дію design заборонено: запуск лише окремою дією", () => {
@@ -283,4 +311,36 @@ describe("сесія: підсумок", () => {
     expect(s.result).not.toBeNull();
     expect(s.turn).toBe(2);
   });
+});
+
+describe("сесія: журнал причин у результатах", () => {
+  it("прогін зберігає журнал усіх частин, і причини посилаються на існуючі записи", () => {
+    let s = start([usa]);
+    s = run2(s, { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } }, launch);
+    const log = s.result?.runs[0]?.log ?? [];
+    expect(log.some((e) => e.id === "design:battery")).toBe(true);
+    expect(log.some((e) => e.id === "orbit:battery-dead")).toBe(true);
+    const ids = new Set(log.map((e) => e.id));
+    for (const e of log) for (const cause of e.causedBy ?? []) expect(ids.has(cause), cause).toBe(true);
+  });
+});
+
+describe("баланс очікування", () => {
+  const input = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
+  const best = (a: AgencyProfile) => {
+    const rows = bestByLaunchTurn(input, market, a, DEFAULT_DEADLINE_TURN);
+    return rows.reduce((top, r) => (r.netMUsd > top.netMUsd ? r : top)).turn;
+  };
+
+  it("очікування є рішенням: найкращий хід запуску не перший і не останній", () => {
+    for (const a of agencies) {
+      const turn = best(a);
+      expect(turn, a.id).toBeGreaterThan(0);
+      expect(turn, a.id).toBeLessThan(DEFAULT_DEADLINE_TURN);
+    }
+  }, 120000);
+
+  it("в агенцій різні найкращі ходи, тож однієї стратегії для всіх немає", () => {
+    expect(new Set(agencies.map(best)).size).toBeGreaterThan(1);
+  }, 120000);
 });

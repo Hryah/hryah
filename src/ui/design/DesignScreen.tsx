@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
-import { designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
+import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import { fmt, t } from "../text";
 
 // Екран частини 1. Лише читає стан і шле дії: усі розрахунки робить core/design.
@@ -17,7 +17,8 @@ export interface Upcoming {
 interface Props {
   state: DesignState;
   dispatch: (action: DesignAction) => void;
-  editable: boolean;
+  // Чи можна міняти: усе разом або кожен елемент керування окремо ("slot:engine", "fuel", "alt", "launcher").
+  editable: boolean | ((control: string) => boolean);
   upcoming?: Upcoming[];
   actionsLeft?: number;
   header?: ReactNode;
@@ -47,7 +48,11 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
   const { mission, catalog } = state.input;
   const { design } = state;
   const blockers = launchBlockers(state);
-  const act = (action: DesignAction) => editable && dispatch(action);
+  const can = (control: string) => (typeof editable === "function" ? editable(control) : editable);
+  const act = (action: DesignAction) => {
+    const control = controlOf(action);
+    if (control !== null && can(control)) dispatch(action);
+  };
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -96,9 +101,9 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
                 const selected = design.modules[slot] === m.id;
                 return (
                   <button
-                    key={m.id} disabled={!editable} onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
+                    key={m.id} disabled={!can(`slot:${slot}`)} onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
                     style={{
-                      ...button, textAlign: "left", background: C.card, opacity: editable ? 1 : 0.6,
+                      ...button, textAlign: "left", background: C.card, opacity: can(`slot:${slot}`) ? 1 : 0.6,
                       border: `1px solid ${selected ? C.accent : C.line}`, boxShadow: selected ? `0 0 0 1px ${C.accent}` : "none",
                     }}
                   >
@@ -127,8 +132,8 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
               const selected = design.launcherId === l.id;
               return (
                 <button
-                  key={l.id} disabled={!editable} onClick={() => act({ type: "setLauncher", launcherId: l.id })}
-                  style={{ ...button, background: C.card, border: `1px solid ${selected ? C.accent : C.line}`, opacity: editable ? 1 : 0.6, textAlign: "left" }}
+                  key={l.id} disabled={!can("launcher")} onClick={() => act({ type: "setLauncher", launcherId: l.id })}
+                  style={{ ...button, background: C.card, border: `1px solid ${selected ? C.accent : C.line}`, opacity: can("launcher") ? 1 : 0.6, textAlign: "left" }}
                 >
                   <div style={{ fontWeight: 600 }}>{t(l.nameKey)}</div>
                   <div style={{ color: C.dim, fontSize: 12 }}>≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$</div>
@@ -138,12 +143,12 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
           </div>
         </div>
         <Stepper
-          label={t("ui.fuel")} value={`${fmt(design.fuelKg)} kg`} disabled={!editable}
+          label={t("ui.fuel")} value={`${fmt(design.fuelKg)} kg`} disabled={!can("fuel")}
           onMinus={() => act({ type: "setFuel", fuelKg: design.fuelKg - FUEL_STEP_KG })}
           onPlus={() => act({ type: "setFuel", fuelKg: design.fuelKg + FUEL_STEP_KG })}
         />
         <Stepper
-          label={t("ui.altitude")} value={`${fmt(design.altKm)} km`} disabled={!editable}
+          label={t("ui.altitude")} value={`${fmt(design.altKm)} km`} disabled={!can("alt")}
           onMinus={() => act({ type: "setAlt", altKm: design.altKm - ALT_STEP_KM })}
           onPlus={() => act({ type: "setAlt", altKm: design.altKm + ALT_STEP_KM })}
         />

@@ -86,6 +86,17 @@ export function launchBlockers(state: DesignState): MarginId[] {
     .map((m) => m.id);
 }
 
+// Який елемент керування чіпає дія: слот, пальне, висота чи носій. Для розкладу змін за хід (див. консорціум).
+export function controlOf(action: DesignAction): string | null {
+  switch (action.type) {
+    case 'setModule': return `slot:${action.slot}`;
+    case 'setFuel': return 'fuel';
+    case 'setAlt': return 'alt';
+    case 'setLauncher': return 'launcher';
+    case 'confirm': return null;
+  }
+}
+
 export const designPhase: DesignPhase<DesignState, DesignAction> = {
   init: (input) => ({ input, design: startDesign(input), confirmed: false }),
 

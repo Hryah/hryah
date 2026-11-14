@@ -7,11 +7,13 @@
 
 import type { CauseEntry, DesignInput, SpacecraftSpec } from '../contracts';
 import { applyAgency, type AgencyProfile } from '../design/agency';
-import { designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
+import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
 import { applyMarket, checkMarket, type Market } from './market';
 import { settleRewards, type AgencyRun, type Settlement } from './reward';
 
+// Скільки різних елементів керування (слот, пальне, висота, носій) агенція може чіпати за хід.
+// Повторні зміни вже зачепленого за цей хід елемента безкоштовні: пальне чи орбіту не доведеться тицяти по одному кроку.
 export const ACTIONS_PER_TURN = 4;
 export const DEFAULT_DEADLINE_TURN = 12;
 
@@ -25,6 +27,7 @@ export interface AgencyEntry {
   agency: AgencyProfile;
   design: DesignState;
   actionsLeft: number;
+  touched: string[];       // елементи керування, зачеплені за цей хід
   launch: Launch | null;
 }
 
@@ -57,6 +60,7 @@ export function newConsortium(
     agency,
     design: designPhase.init(inputFor(base, market, agency, 0), 0),
     actionsLeft: ACTIONS_PER_TURN,
+    touched: [],
     launch: null,
   }));
   return { base, market, deadlineTurn, turn: 0, active: 0, agencies: entries, result: null };
@@ -82,7 +86,7 @@ function startTurn(state: ConsortiumState, turn: number): ConsortiumState {
     agencies: state.agencies.map((e) =>
       e.launch
         ? e
-        : { ...e, actionsLeft: ACTIONS_PER_TURN, design: { ...e.design, input: inputFor(state.base, state.market, e.agency, turn) } },
+        : { ...e, actionsLeft: ACTIONS_PER_TURN, touched: [], design: { ...e.design, input: inputFor(state.base, state.market, e.agency, turn) } },
     ),
   };
 }
@@ -94,7 +98,10 @@ function settle(state: ConsortiumState): ConsortiumState {
     if (!e.launch) continue; // не встигла до дедлайну: внеску нема
     const flight = stubFlight({ mission, spec: e.launch.spec, log: e.launch.log });
     const orbit = stubOrbit({ mission, spec: e.launch.spec, flight: flight.result, log: [...e.launch.log, ...flight.log] });
-    runs.push({ agencyId: e.agency.id, launchTurn: e.launch.turn, spec: e.launch.spec, outcome: orbit.result });
+    runs.push({
+      agencyId: e.agency.id, launchTurn: e.launch.turn, spec: e.launch.spec, outcome: orbit.result,
+      log: [...e.launch.log, ...flight.log, ...orbit.log],
+    });
   }
   return { ...state, result: { runs, settlement: settleRewards(mission, runs) } };
 }
@@ -126,10 +133,15 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
   switch (action.type) {
     case 'design': {
       // Запуск іде окремою дією, щоб рахувався ход.
-      if (action.action.type === 'confirm' || entry.actionsLeft <= 0) return state;
+      const control = controlOf(action.action);
+      if (control === null) return state;
+      const already = entry.touched.includes(control);
+      if (!already && entry.actionsLeft <= 0) return state;
       const design = designPhase.step(entry.design, action.action);
       if (design === entry.design) return state; // порожня дія не коштує нічого
-      return replaceAt(state, state.active, { ...entry, design, actionsLeft: entry.actionsLeft - 1 });
+      return replaceAt(state, state.active, already
+        ? { ...entry, design }
+        : { ...entry, design, actionsLeft: entry.actionsLeft - 1, touched: [...entry.touched, control] });
     }
     case 'launch': {
       if (launchBlockers(entry.design).length > 0) return state;

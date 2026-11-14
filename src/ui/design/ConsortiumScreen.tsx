@@ -6,6 +6,8 @@ import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { fmt, t } from "../text";
+import { causeChains } from "../../core/debrief";
+import { describeEntry } from "./cause";
 import { DesignScreen, type Upcoming } from "./DesignScreen";
 
 // Консорціум: кілька агенцій по черзі за одним екраном. Екран лише показує сесію й шле дії.
@@ -58,7 +60,7 @@ function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
   );
 }
 
-function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
@@ -102,13 +104,13 @@ function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: Conso
 
   return (
     <DesignScreen
-      state={entry.design} editable={entry.actionsLeft > 0} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
+      state={entry.design} editable={(control) => entry.actionsLeft > 0 || entry.touched.includes(control)} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />
   );
 }
 
-function Results({ state, onRestart }: { state: ConsortiumState; onRestart: () => void }) {
+export function Results({ state, onRestart }: { state: ConsortiumState; onRestart: () => void }) {
   const result = state.result;
   if (!result) return null;
   const { settlement, runs } = result;
@@ -145,6 +147,27 @@ function Results({ state, onRestart }: { state: ConsortiumState; onRestart: () =
           </table>
         </>
       )}
+      {runs.map((run) => {
+        const chains = causeChains(run.log);
+        const warnings = run.log.filter((e) => e.kind === "warning");
+        if (chains.length === 0 && warnings.length === 0) return null;
+        return (
+          <div key={run.agencyId} style={{ borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+            <strong>{t("ui.result.why", { agency: nameOf(run.agencyId) })}</strong>
+            {chains.map((chain) => (
+              <div key={chain.failure.id} style={{ marginTop: 6 }}>
+                <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, state.base)}</div>
+                {chain.causes.filter((c) => c.kind !== "event").map((cause) => (
+                  <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, state.base)}</div>
+                ))}
+              </div>
+            ))}
+            {chains.length === 0 && warnings.map((w) => (
+              <div key={w.id} style={{ color: C.dim, fontSize: 13, marginTop: 4 }}>⚠ {describeEntry(w, state.base)}</div>
+            ))}
+          </div>
+        );
+      })}
       {runs.length > 0 && state.agencies.filter((e) => !e.launch).map((e) => (
         <div key={e.agency.id} style={{ color: C.bad }}>{t("ui.result.missed", { agency: t(e.agency.nameKey) })}</div>
       ))}

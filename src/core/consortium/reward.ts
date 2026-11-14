@@ -2,7 +2,7 @@
 // Пул росте від різноманітності (різні прилади й висоти), ділиться пропорційно внескам,
 // а переможець, якщо значно кращий за решту, отримує бонус. Усі числа в TUNING умовні.
 
-import type { Mission, MissionOutcome, SpacecraftSpec } from '../contracts';
+import type { CauseEntry, Mission, MissionOutcome, SpacecraftSpec } from '../contracts';
 
 export const TUNING = {
   qualityMin: 0.25,        // найгірша якість (знімок значно гірший за вимогу)
@@ -24,6 +24,7 @@ export interface AgencyRun {
   launchTurn: number;
   spec: SpacecraftSpec;
   outcome: MissionOutcome;
+  log: CauseEntry[];   // журнал причин усіх частин: з нього розбір будує «чому так вийшло»
 }
 
 export interface Payout {

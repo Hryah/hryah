@@ -2,7 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { designPhase } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
-import { ConsortiumScreen } from "./ConsortiumScreen";
+import { newConsortium, stepConsortium, type ConsortiumAction, type Market } from "../../core/consortium";
+import agenciesData from "../../data/agencies.json";
+import marketData from "../../data/market.json";
+import type { AgencyProfile } from "../../core/design/agency";
+import { ConsortiumScreen, Results } from "./ConsortiumScreen";
 import { DesignScreen } from "./DesignScreen";
 
 const state = designPhase.init({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, 1);
@@ -33,7 +37,7 @@ describe("екран частини 1: розмітка", () => {
 
   it("лічильник дій і режим лише для перегляду", () => {
     const html = renderToStaticMarkup(<DesignScreen state={state} dispatch={() => undefined} editable={false} actionsLeft={3} />);
-    expect(html).toContain("3 changes left this turn");
+    expect(html).toContain("3 controls left to adjust this turn");
     expect(html).toContain("disabled");
   });
 
@@ -46,7 +50,28 @@ describe("екран частини 1: розмітка", () => {
 describe("екран частини 1: вичерпані дії", () => {
   it("без змін у цей хід картки модулів заблоковані", () => {
     const html = renderToStaticMarkup(<DesignScreen state={state} dispatch={() => undefined} editable={false} actionsLeft={0} />);
-    expect(html).toContain("0 changes left this turn");
+    expect(html).toContain("0 controls left to adjust this turn");
     expect((html.match(/disabled/g) ?? []).length).toBeGreaterThan(10);
+  });
+});
+
+describe("результати: розбір причин", () => {
+  const usa = (agenciesData as unknown as Record<string, AgencyProfile>).usa!;
+  const play = (...actions: ConsortiumAction[]) =>
+    actions.reduce(stepConsortium, newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, marketData as Market, [usa]));
+
+  it("слабка батарея: показано відмову й рішення гравця, що до неї привело", () => {
+    const state = play({ type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } }, { type: "launch" });
+    const html = renderToStaticMarkup(<Results state={state} onRestart={() => undefined} />);
+    expect(html).toContain("Why United States got this result");
+    expect(html).toContain("Battery depleted");
+    expect(html).toContain("Selected Small battery for Battery");
+    expect(html).not.toContain("ui.");
+  });
+
+  it("добрий проєкт: без відмов, є таблиця виплат", () => {
+    const html = renderToStaticMarkup(<Results state={play({ type: "launch" })} onRestart={() => undefined} />);
+    expect(html).toContain("Total paid out");
+    expect(html).not.toContain("Battery depleted");
   });
 });

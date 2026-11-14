@@ -41,7 +41,7 @@
   "ui.turn": "Turn {turn} of {deadline}",
   "ui.status.planning": "planning",
   "ui.status.launched": "launched on turn {turn}",
-  "ui.actionsLeft": "{n} changes left this turn",
+  "ui.actionsLeft": "{n} controls left to adjust this turn (a control you already touched stays free)",
   "ui.budget": "Budget",
   "ui.margins": "Design check",
   "ui.margin.dv": "Delta-v",
@@ -79,5 +79,6 @@
   "ui.result.bonus": "winner bonus",
   "ui.result.missed": "{agency} missed the deadline and contributed nothing.",
   "ui.result.again": "Play again",
-  "ui.result.bonusLine": "Includes {bonus} M$ of winner bonus."
+  "ui.result.bonusLine": "Includes {bonus} M$ of winner bonus.",
+  "ui.result.why": "Why {agency} got this result"
 }
