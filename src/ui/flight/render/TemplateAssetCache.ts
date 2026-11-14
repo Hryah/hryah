@@ -35,6 +35,30 @@ export class TemplateAssetCache {
       if (tpl.model3d?.url) {
         this.getGlbMesh(tpl.model3d.url);
       }
+      if (tpl.sprite2d?.url) {
+        this.getImage(tpl.sprite2d.url);
+      }
+    }
+
+    const flightSprites = [
+      "assets/templates/flight/mod-horizontal.svg",
+      "assets/templates/flight/mod-hub.svg",
+      "assets/templates/flight/mod-vertical.svg",
+      "assets/templates/flight/astro-idle.svg",
+      "assets/templates/flight/astro-pull.svg",
+      "assets/templates/flight/astro-fly.svg",
+      "assets/templates/flight/astro-stun.svg",
+      "assets/templates/flight/door-seal.svg",
+      "assets/templates/flight/handle-rail.svg",
+      "assets/templates/flight/console-terminal.svg",
+      "assets/templates/flight/obstacle-pillar.svg",
+      "assets/templates/flight/obstacle-cargo.svg",
+      "assets/bodies/earth-map.svg",
+      "assets/icons/station/radar-dish.svg",
+      "assets/icons/station/filter-barrel.svg",
+    ];
+    for (const path of flightSprites) {
+      this.getImage(path);
     }
   }
 

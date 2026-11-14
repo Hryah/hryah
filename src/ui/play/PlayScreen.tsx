@@ -6,6 +6,7 @@ import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { DesignScreen } from "../design/DesignScreen";
 import { describeEntry } from "../design/cause";
 import { FlightScreen } from "../flight";
+import { resolveAssetUrl } from "../graphics/registry";
 import { fmt, t } from "../text";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
@@ -59,11 +60,12 @@ export function PlayScreen({ game, setGame, active }: Props) {
           {stepper}
           <div>
             <button
-              style={{ ...button, borderColor: blockers.length === 0 ? C.ok : C.line, opacity: blockers.length === 0 ? 1 : 0.5 }}
+              style={{ ...button, borderColor: blockers.length === 0 ? C.ok : C.line, opacity: blockers.length === 0 ? 1 : 0.5, display: "inline-flex", alignItems: "center", gap: 6 }}
               disabled={blockers.length > 0}
               onClick={() => dispatch({ phase: "design", action: { type: "confirm" } })}
             >
-              🚀 {t("ui.launch")}
+              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={16} height={16} />
+              {t("ui.launch")}
             </button>
           </div>
         </div>
@@ -116,7 +118,10 @@ export function PlayScreen({ game, setGame, active }: Props) {
           </div>
           {chains.map((chain) => (
             <div key={chain.failure.id}>
-              <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, BASE)}</div>
+              <div style={{ color: C.bad, display: "flex", alignItems: "center", gap: 6 }}>
+                <img src={resolveAssetUrl("assets/icons/ui/circle-x.svg")} alt="" width={14} height={14} />
+                {describeEntry(chain.failure, BASE)}
+              </div>
               {chain.causes.filter((c) => c.kind !== "event").map((cause) => (
                 <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, BASE)}</div>
               ))}

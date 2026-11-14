@@ -4,6 +4,7 @@ import { DebugScreen } from "./ui/debug/DebugScreen";
 import { ConsortiumScreen } from "./ui/design/ConsortiumScreen";
 import { PlayScreen, startPlay } from "./ui/play/PlayScreen";
 import type { GameState } from "./core/game";
+import { resolveAssetUrl } from "./ui/graphics/registry";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
 
@@ -42,7 +43,10 @@ export function App() {
           {label} · збірка {commit}
         </div>
         <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
-          <h1 style={{ margin: "0 0 8px" }}>🚀 hryah</h1>
+          <h1 style={{ margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}>
+            <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={26} height={26} />
+            hryah
+          </h1>
           <nav style={{ display: "flex", gap: 12, marginBottom: 16 }}>
             <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>Гра</a>
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>

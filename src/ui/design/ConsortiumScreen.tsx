@@ -6,6 +6,7 @@ import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MI
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
+import { resolveAssetUrl } from "../graphics/registry";
 import { fmt, t } from "../text";
 import { causeChains } from "../../core/debrief";
 import { describeEntry } from "./cause";
@@ -46,8 +47,9 @@ function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
       <h2 style={{ margin: 0 }}>{t("ui.setup.title", { max: MAX_AGENCIES })}</h2>
       <p style={{ color: C.dim, margin: 0 }}>{t("ui.setup.hint")}</p>
       {AGENCIES.map((a) => (
-        <label key={a.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+        <label key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
           <input type="checkbox" checked={chosen.includes(a.id)} onChange={() => toggle(a.id)} />
+          <img src={resolveAssetUrl(`assets/icons/agencies/${a.id}.svg`)} alt="" width={28} height={28} style={{ flexShrink: 0, opacity: 0.9 }} />
           <span>
             <strong>{t(a.nameKey)}</strong>
             <div style={{ color: C.dim, fontSize: 13 }}>{t(a.descriptionKey)}</div>
@@ -75,10 +77,13 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   if (project) {
     const left = project.readyTurn - state.turn;
     return (
-      <div style={{ color: C.dim, fontSize: 13 }}>
-        🔬 {t("ui.dev.project", { aperture: fmt(project.apertureM), cost: fmt(project.developmentCostMUsd) })}{" "}
-        <span style={{ color: left > 0 ? C.gold : C.ok }}>{left > 0 ? t("ui.dev.inTurns", { n: left }) : t("ui.dev.ready")}</span>
-        {project.inspect && ` · ${t("ui.dev.inspected")}`}
+      <div style={{ color: C.dim, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+        <img src={resolveAssetUrl("assets/icons/ui/camera.svg")} alt="" width={15} height={15} />
+        <span>
+          {t("ui.dev.project", { aperture: fmt(project.apertureM), cost: fmt(project.developmentCostMUsd) })}{" "}
+          <span style={{ color: left > 0 ? C.gold : C.ok }}>{left > 0 ? t("ui.dev.inTurns", { n: left }) : t("ui.dev.ready")}</span>
+          {project.inspect && ` · ${t("ui.dev.inspected")}`}
+        </span>
       </div>
     );
   }
@@ -91,7 +96,10 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   const canOrder = entry.actionsLeft > 0 && affordable;
   return (
     <div style={{ display: "grid", gap: 6, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <strong>🔬 {t("ui.dev.title")}</strong>
+      <strong style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <img src={resolveAssetUrl("assets/icons/ui/camera.svg")} alt="" width={15} height={15} />
+        {t("ui.dev.title")}
+      </strong>
       <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.dev.hint")}</div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <label>
@@ -130,7 +138,8 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
 
   const header = (
     <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <img src={resolveAssetUrl(`assets/icons/agencies/${entry.agency.id}.svg`)} alt="" width={24} height={24} />
         <strong style={{ fontSize: 20 }}>{t("ui.activeAgency", { agency: t(entry.agency.nameKey) })}</strong>
         <span style={{ color: C.accent }}>{t("ui.turn", { turn: state.turn, deadline: state.deadlineTurn })}</span>
       </div>
@@ -140,18 +149,23 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
             key={e.agency.id}
             style={{
               padding: "4px 10px", borderRadius: 999, fontSize: 13, border: `1px solid ${i === state.active ? C.accent : C.line}`,
-              color: e.launch ? C.ok : C.dim,
+              color: e.launch ? C.ok : C.dim, display: "inline-flex", alignItems: "center", gap: 6,
             }}
           >
+            <img src={resolveAssetUrl(`assets/icons/agencies/${e.agency.id}.svg`)} alt="" width={14} height={14} />
             {t(e.agency.nameKey)} · {e.launch ? t("ui.status.launched", { turn: e.launch.turn }) : t("ui.status.planning")}
           </span>
         ))}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button style={{ ...button, borderColor: canLaunch ? C.ok : C.line, opacity: canLaunch ? 1 : 0.5 }} disabled={!canLaunch} onClick={() => dispatch({ type: "launch" })}>
-          🚀 {t("ui.launch")}
+        <button style={{ ...button, borderColor: canLaunch ? C.ok : C.line, opacity: canLaunch ? 1 : 0.5, display: "inline-flex", alignItems: "center", gap: 6 }} disabled={!canLaunch} onClick={() => dispatch({ type: "launch" })}>
+          <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={15} height={15} />
+          {t("ui.launch")}
         </button>
-        <button style={button} onClick={() => dispatch({ type: "wait" })}>⏳ {t("ui.wait")}</button>
+        <button style={{ ...button, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => dispatch({ type: "wait" })}>
+          <img src={resolveAssetUrl("assets/icons/ui/clock.svg")} alt="" width={15} height={15} />
+          {t("ui.wait")}
+        </button>
       </div>
       <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.waitHint")}</div>
       <DevelopPanel state={state} dispatch={dispatch} />
@@ -193,7 +207,11 @@ export function Results({ state, onRestart }: { state: ConsortiumState; onRestar
             <tbody>
               {settlement.payouts.map((p) => (
                 <tr key={p.agencyId} style={{ borderTop: `1px solid ${C.line}` }}>
-                  <td style={{ padding: "8px 0" }}>{p.winner ? "🏆 " : ""}{nameOf(p.agencyId)}</td>
+                  <td style={{ padding: "8px 0", display: "flex", alignItems: "center", gap: 6 }}>
+                    <img src={resolveAssetUrl(`assets/icons/agencies/${p.agencyId}.svg`)} alt="" width={18} height={18} />
+                    {p.winner && <img src={resolveAssetUrl("assets/icons/ui/trophy.svg")} alt="" width={15} height={15} />}
+                    {nameOf(p.agencyId)}
+                  </td>
                   <td>{fmt(p.valueMUsd)} M$</td>
                   <td>{fmt(p.share * 100, 1)}%</td>
                   <td style={{ color: p.winner ? C.gold : "inherit" }}>{fmt(p.payoutMUsd)} M${p.winner ? ` · ${t("ui.result.bonus")}` : ""}</td>
@@ -212,14 +230,20 @@ export function Results({ state, onRestart }: { state: ConsortiumState; onRestar
             <strong>{t("ui.result.why", { agency: nameOf(run.agencyId) })}</strong>
             {chains.map((chain) => (
               <div key={chain.failure.id} style={{ marginTop: 6 }}>
-                <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, state.base)}</div>
+                <div style={{ color: C.bad, display: "flex", alignItems: "center", gap: 6 }}>
+                  <img src={resolveAssetUrl("assets/icons/ui/circle-x.svg")} alt="" width={14} height={14} />
+                  {describeEntry(chain.failure, state.base)}
+                </div>
                 {chain.causes.filter((c) => c.kind !== "event").map((cause) => (
                   <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, state.base)}</div>
                 ))}
               </div>
             ))}
             {chains.length === 0 && warnings.map((w) => (
-              <div key={w.id} style={{ color: C.dim, fontSize: 13, marginTop: 4 }}>⚠ {describeEntry(w, state.base)}</div>
+              <div key={w.id} style={{ color: C.dim, fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                <img src={resolveAssetUrl("assets/icons/ui/triangle-alert.svg")} alt="" width={14} height={14} />
+                {describeEntry(w, state.base)}
+              </div>
             ))}
           </div>
         );

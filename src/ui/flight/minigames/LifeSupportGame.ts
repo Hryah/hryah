@@ -311,7 +311,7 @@ export class LifeSupportGame {
     ctx.stroke();
 
     const barrelSprite = flightAssetCache.getImage(
-      "assets/sprites/station/machine_barrelLarge.png",
+      "assets/icons/station/filter-barrel.svg",
     );
     if (barrelSprite) {
       ctx.save();
