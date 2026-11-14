@@ -1,5 +1,0 @@
-# Generated viewer: review tools/asset-workshop sources.
-assets/index-*.js -text -diff linguist-generated=true
-assets/index-*.css -text linguist-generated=true
-*.glb binary
-*.zip binary
