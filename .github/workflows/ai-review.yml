@@ -9,7 +9,7 @@
 # НЕ додавай цей чек у required: він порадчий. Червоний лише на BLOCKER.
 #
 # Secrets: GEMINI_API_KEY, GROQ_API_KEY (запасні), TG_BOT_TOKEN, TG_CHAT_ID, TG_THREAD_ID
-# Variables (необов'язково): AGY_MODELS, AGY_HOMES, GEMINI_API_MODELS, REVIEW_MODELS
+# Variables (необов'язково): AGY_TIMEOUT_S (секунд на одну модель agy, типово 600), AGY_MODELS, AGY_HOMES, GEMINI_API_MODELS, REVIEW_MODELS
 
 name: ai-review
 
@@ -35,9 +35,9 @@ jobs:
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, hryah-review]
-    timeout-minutes: 8
+    timeout-minutes: 25
     env:
-      AGY_TIMEOUT_S: "150"
+      AGY_TIMEOUT_S: ${{ vars.AGY_TIMEOUT_S || '600' }}
     steps:
       # 1) Довірений код: цільова гілка (дефолт для pull_request_target).
       - uses: actions/checkout@v4
