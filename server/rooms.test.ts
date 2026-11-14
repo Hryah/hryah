@@ -84,4 +84,19 @@ describe("сервер кімнат", () => {
     const r = (await get(`/api/rooms/${a.code}?player=${a.player}&token=${a.token}&since=99`)).json;
     expect(r.changed).toBe(false);
   });
+
+  it("останній гравець виходить із лобі: кімната закривається; опитування не продовжує життя кімнати", async () => {
+    let t = 0;
+    const rooms = new Rooms({ setup, now: () => t });
+    const a = rooms.create("Ann");
+    if ("error" in a) throw new Error(a.error);
+    await rooms.poll(a.code, a.player, a.token, 99, 5);
+    t = 7 * 60 * 60 * 1000; // опитування були, дій не було
+    rooms.sweep();
+    expect(rooms.size()).toBe(0);
+    const b = rooms.create("Bob");
+    if ("error" in b) throw new Error(b.error);
+    rooms.act(b.code, b.player, b.token, { type: "leave" });
+    expect(rooms.size()).toBe(0);
+  });
 });

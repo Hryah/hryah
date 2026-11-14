@@ -23,7 +23,8 @@ export const sendAction = (s: Session, action: RoomAction) =>
 export const poll = (s: Session, since: number, signal: AbortSignal) =>
   call<Snapshot>(`${base()}/${s.code}?player=${s.player}&token=${s.token}&since=${since}`, { signal });
 
-const KEY = "hryah.room";
+// Канали / і /experimental/ живуть на одному домені, тож ключ має префікс каналу (правило 8).
+const KEY = `${import.meta.env.BASE_URL}hryah.room`;
 export function saveSession(s: Session | null): void {
   try { if (s) sessionStorage.setItem(KEY, JSON.stringify(s)); else sessionStorage.removeItem(KEY); } catch { /* приватний режим */ }
 }

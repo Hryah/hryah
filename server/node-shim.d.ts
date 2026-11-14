@@ -9,6 +9,7 @@ declare module "node:http" {
   }
   export interface ServerResponse {
     headersSent: boolean;
+    on(event: "close", cb: () => void): this;
     writeHead(status: number, headers?: Record<string, string>): this;
     end(body?: string): void;
   }

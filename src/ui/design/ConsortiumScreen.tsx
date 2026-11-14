@@ -161,7 +161,7 @@ function RoomView({ room, local = false, meId, send, onStart, onRestart }: RoomV
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
-      <div style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
+      <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
         <Turn state={consortium} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
     </div>

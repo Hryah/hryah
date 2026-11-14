@@ -87,12 +87,16 @@ export class Rooms {
     if (next !== room.state) {
       this.commit(room, next);
       if (action.type === "leave") room.tokens.delete(player);
+    } else if (action.type === "leave" && room.state.phase === "lobby" && room.state.players.length === 1) {
+      // Останній гравець виходить із лобі: кімнату закриваємо одразу, а не чекаємо TTL.
+      this.rooms.delete(room.code);
+      for (const wake of [...room.waiters]) wake();
     }
     return { version: room.version };
   }
 
   // Довге опитування: відповідає одразу, якщо версія новіша за since, інакше чекає зміни до pollMs.
-  async poll(code: string, player: string, token: string, since: number, pollMs: number):
+  async poll(code: string, player: string, token: string, since: number, pollMs: number, onClose?: (cb: () => void) => void):
     Promise<{ version: number; state: RoomState; changed: boolean } | { error: string; status: number }> {
     const room = this.auth(code, player, token);
     if (!room) return { error: "unauthorized", status: 403 };
@@ -101,9 +105,9 @@ export class Rooms {
         const done = () => { clearTimeout(timer); room.waiters.delete(done); resolve(); };
         const timer = setTimeout(done, pollMs);
         room.waiters.add(done);
+        onClose?.(done); // клієнт розірвав з'єднання: не тримаємо очікувач до кінця таймауту
       });
     }
-    room.touched = this.now();
     return { version: room.version, state: room.state, changed: room.version > since };
   }
 
@@ -184,7 +188,7 @@ export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
         if (req.method === "GET" && parts.length === 2) {
           const since = Number(url.searchParams.get("since") ?? 0);
           return reply(res, await rooms.poll(code, str(url.searchParams.get("player")), str(url.searchParams.get("token")),
-            Number.isFinite(since) ? since : 0, pollMs));
+            Number.isFinite(since) ? since : 0, pollMs, (cb) => { res.on("close", cb); }));
         }
         return send(res, 404, { error: "not found" });
       } catch {
