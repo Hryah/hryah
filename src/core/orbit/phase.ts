@@ -1,4 +1,5 @@
 import type { CauseEntry, OrbitInput, OrbitPhase, MissionOutcome, SystemId } from '../contracts';
+import { downlinkMb, orbitTiming, segmentLoadW, stepCharge, transmitSeconds } from '../model';
 import { nextRandom } from '../physics';
 
 export type ToggleId = 'camera' | 'transmitter' | 'heater' | 'safeMode';
@@ -49,10 +50,7 @@ function capabilities(state: OrbitState) {
   const { input } = state;
   const { spec, flight, mission } = input;
   const powerFactor = 1 - damage(input, 'power');
-  const shadowS = flight.orbit.periodS * clamp(flight.orbit.eclipseFraction, 0, 1);
-  const sunlightS = flight.orbit.periodS - shadowS;
-  const imagingS = Math.min(Math.max(0, mission.imagingSPerOrbit), sunlightS);
-  const passS = Math.min(Math.max(0, mission.passSPerOrbit), sunlightS - imagingS);
+  const { shadowS, sunlightS, imagingS, passS, idleSunS } = orbitTiming(flight.orbit, mission);
   const resolutionM = spec.resolutionM * flight.orbit.altKm / spec.design.altKm;
   return {
     capacityWh: spec.batteryWh * powerFactor,
@@ -61,7 +59,7 @@ function capabilities(state: OrbitState) {
     instrumentRateMbps: spec.instrumentRateMbps * (1 - damage(input, 'science')),
     heaterFactor: 1 - damage(input, 'thermal'),
     shadowS, sunlightS, imagingS, passS,
-    idleSunS: sunlightS - imagingS - passS,
+    idleSunS,
     resolutionM,
     resolutionOk: resolutionM <= mission.requiredResolutionM,
     orbitOk: flight.orbit.altKm >= mission.altRangeKm[0] && flight.orbit.altKm <= mission.altRangeKm[1],
@@ -160,7 +158,7 @@ function advanceOrbit(previous: OrbitState): OrbitState {
     const deficitW = loadW - generation;
     const untilEmptyS = deficitW > 0 ? Math.max(0, state.chargeWh) * 3600 / deficitW : Infinity;
     const elapsedS = Math.min(durationS, untilEmptyS);
-    state.chargeWh = clamp(state.chargeWh + (generation - loadW) * elapsedS / 3600, 0, caps.capacityWh);
+    state.chargeWh = stepCharge(state.chargeWh, caps.capacityWh, generation - loadW, elapsedS);
     state.tS += elapsedS;
 
     if (operation === 'camera') {
@@ -175,7 +173,7 @@ function advanceOrbit(previous: OrbitState): OrbitState {
           ['camera', 'transmitter']));
       }
     } else if (operation === 'transmitter') {
-      const sentMb = Math.min(state.bufferMb, linkMbps * elapsedS);
+      const sentMb = downlinkMb(state.bufferMb, linkMbps, 0, elapsedS, true);
       state.bufferMb = Math.max(0, state.bufferMb - sentMb);
       state.deliveredMb += sentMb;
     }
@@ -189,13 +187,13 @@ function advanceOrbit(previous: OrbitState): OrbitState {
     }
   };
 
-  move(caps.idleSunS, generationW, spec.baseLoadW);
-  move(caps.imagingS, generationW, spec.baseLoadW + (active.camera ? spec.instrumentW : 0),
-    active.camera ? 'camera' : 'idle');
-  const transmitS = active.transmitter && linkMbps > 0 ? Math.min(caps.passS, state.bufferMb / linkMbps) : 0;
-  move(transmitS, generationW, spec.baseLoadW + spec.transmitterW, 'transmitter');
-  move(caps.passS - transmitS, generationW, spec.baseLoadW);
-  move(caps.shadowS, 0, spec.baseLoadW + (active.heater ? spec.heaterW : 0));
+  // Навантаження відрізків і тривалість передачі беруться з model/: їх же рахує запас energy у частині 1.
+  move(caps.idleSunS, generationW, segmentLoadW(spec, 'sunIdle', active));
+  move(caps.imagingS, generationW, segmentLoadW(spec, 'imaging', active), active.camera ? 'camera' : 'idle');
+  const transmitS = transmitSeconds(caps.passS, state.bufferMb, linkMbps, active.transmitter);
+  move(transmitS, generationW, segmentLoadW(spec, 'transmit', active), 'transmitter');
+  move(caps.passS - transmitS, generationW, segmentLoadW(spec, 'passRest', active));
+  move(caps.shadowS, 0, segmentLoadW(spec, 'shadow', active));
 
   if (state.status === 'active') {
     const previousStress = state.coldStress;

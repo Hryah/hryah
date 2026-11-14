@@ -17,23 +17,17 @@ export interface Loads {
 }
 
 // Генерація мінус споживання, Вт. Додатне значення заряджає батарею, від'ємне розряджає.
+// Обігрів споживає лише в тіні (на сонці його тумблер нічого не коштує): так само рахує орбітальна фаза.
 // powerDamage від 0 до 1 зменшує генерацію панелей (пошкодження з польоту).
 export function netPowerW(spec: PowerSpec, loads: Loads, sunlit: boolean, powerDamage = 0): number {
   const generation = sunlit ? spec.panelPowerW * (1 - clamp01(powerDamage)) : 0;
   const consumption = loads.safeMode
-    ? spec.baseLoadW / 2 + (loads.heater ? spec.heaterW : 0)
+    ? spec.baseLoadW / 2 + (loads.heater && !sunlit ? spec.heaterW : 0)
     : spec.baseLoadW +
       (loads.camera ? spec.instrumentW : 0) +
       (loads.transmitter ? spec.transmitterW : 0) +
-      (loads.heater ? spec.heaterW : 0);
+      (loads.heater && !sunlit ? spec.heaterW : 0);
   return generation - consumption;
-}
-
-// Скільки Вт·год потрібно батареї, щоб прожити тінь тривалістю shadowS з камерою й обігрівом.
-export const SHADOW_LOADS: Loads = { camera: true, transmitter: false, heater: true, safeMode: false };
-
-export function shadowNeedWh(spec: PowerSpec, shadowS: number): number {
-  return (-netPowerW(spec, SHADOW_LOADS, false) * shadowS) / 3600;
 }
 
 // Новий заряд після dtS секунд за потужності netW, у межах від 0 до ємності.
