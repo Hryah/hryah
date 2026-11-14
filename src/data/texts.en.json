@@ -248,5 +248,6 @@
   "ui.research.title": "Research ({pts} points)",
   "ui.research.hint": "Points come from delivered data and from windows you skip. Research does not use up turn actions.",
   "ui.research.buy": "{cost} pts",
-  "ui.research.done": "done"
+  "ui.research.done": "done",
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
 }
