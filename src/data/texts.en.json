@@ -29,11 +29,11 @@
   "camera.m": "Mid-size camera",
   "camera.l": "Large camera",
   "agency.borealis.name": "Borealis Federation",
-  "agency.borealis.description": "Large budget and the full range of launchers. Nothing is cheap, but there is room for mistakes.",
+  "agency.borealis.description": "Large budget and the full range of launchers. Strong in software and electronics, weak in metallurgy.",
   "agency.monsoon.name": "Monsoon Union",
-  "agency.monsoon.description": "Small budget, but cheap launchers, engines and solar panels. Heavy launcher is not available.",
+  "agency.monsoon.description": "Small budget, cheap launchers and strong software. Sanctions block the large camera and antenna, so those have to be developed at home. No heavy launcher.",
   "agency.meridia.name": "Meridia Concord",
-  "agency.meridia.description": "Average budget, with discounted antennas and science instruments.",
+  "agency.meridia.description": "Average budget, very strong optics. Careful development takes longer.",
   "ui.setup.title": "Choose the agencies (up to {max})",
   "ui.setup.hint": "Agencies take turns at one screen and design their own spacecraft for the same mission.",
   "ui.setup.start": "Start the mission",
@@ -80,5 +80,11 @@
   "ui.result.missed": "{agency} missed the deadline and contributed nothing.",
   "ui.result.again": "Play again",
   "ui.result.bonusLine": "Includes {bonus} M$ of winner bonus.",
-  "ui.result.why": "Why {agency} got this result"
+  "ui.result.why": "Why {agency} got this result",
+  "agency.china.name": "China",
+  "agency.china.description": "State-directed industry builds fast and cheap with strong metallurgy and manufacturing. Export controls block the best cameras and antennas, so those must be developed at home.",
+  "custom.instrument": "Custom camera",
+  "design.developed": "Developed a custom camera with a {apertureM} m aperture for {costMUsd} M$ over {turns} turns.",
+  "design.defect": "Production defect: the camera is {blurPercent}% blurrier than designed. It was launched without an inspection, and the risk of a defect was {chancePercent}%.",
+  "design.defectInspected": "Production defect: the camera is {blurPercent}% blurrier than designed, even though it was inspected. The risk of a defect was {chancePercent}%."
 }

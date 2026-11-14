@@ -1,0 +1,14 @@
+{
+  "industries": ["metallurgy", "electronics", "software", "chemistry", "optics", "manufacturing"],
+  "slotWeights": {
+    "engine": { "chemistry": 0.5, "metallurgy": 0.3, "manufacturing": 0.2 },
+    "solar": { "electronics": 0.6, "manufacturing": 0.2, "chemistry": 0.2 },
+    "battery": { "chemistry": 0.7, "electronics": 0.3 },
+    "antenna": { "electronics": 0.6, "software": 0.4 },
+    "instrument": { "optics": 0.5, "electronics": 0.3, "software": 0.2 }
+  },
+  "buy": { "importMarkup": 0.25, "domesticDiscount": 0.25 },
+  "develop": {
+    "instrument": { "baseCostMUsd": 5, "baseTurns": 3, "baseDefectChance": 0.25 }
+  }
+}
