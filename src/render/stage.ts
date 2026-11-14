@@ -13,6 +13,11 @@ export interface Stage {
   readonly viewHeightUnits: number;
   /** Ширина видимої області у світових одиницях (залежить від пропорцій полотна). */
   viewWidthUnits(): number;
+  /**
+   * Точка світу → точка полотна в CSS-пікселях від його лівого верхнього кута (для HTML-підписів над об'єктами).
+   * Результат пише в `out` і повертає його; нових об'єктів не створює, тож можна викликати щокадру.
+   */
+  toScreen(point: THREE.Vector3, out: { x: number; y: number }): { x: number; y: number };
 }
 
 export interface StageRunner extends Stage {
@@ -80,6 +85,14 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     camera.updateProjectionMatrix();
   };
 
+  const projected = new THREE.Vector3();
+  const toScreen: Stage['toScreen'] = (point, out) => {
+    projected.copy(point).project(camera);
+    out.x = (projected.x * 0.5 + 0.5) * widthPx;
+    out.y = (0.5 - projected.y * 0.5) * heightPx;
+    return out;
+  };
+
   let frameId = 0;
   let running = false;
   let lastMs = 0;
@@ -97,6 +110,7 @@ export function createStage(canvas: HTMLCanvasElement, options: StageOptions = {
     camera,
     viewHeightUnits,
     viewWidthUnits: () => viewHeightUnits * aspect,
+    toScreen,
     start(onFrame) {
       if (disposed || running) return;
       running = true;

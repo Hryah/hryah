@@ -12,7 +12,7 @@
 
 `src/render` не імпортує `src/core`. Сцени (`src/scenes`) можуть імпортувати типи й каталоги з ядра.
 
-Файли `views.ts`, `src/scenes/*` і `src/render/*` ведуть не власники частин. Новий вид і нову сцену додавай у ці файли лише після домовленості з Олексієм (див. `AGENTS.md`, розділ «Де можна писати»).
+Свою сцену, свій вид і запис у галереї власник частини додає сам (див. `AGENTS.md`, розділ «Де можна писати»). Сам рушій `src/render/*` і `src/scenes/types.ts` міняються лише через Олексія.
 
 ## 2. Як підключити свою частину
 
@@ -125,7 +125,7 @@ export function DesignStage({ state }: { state: DesignState }) {
 | `primitives.ts` | `createBox`, `createPlanet`, `createOrbitRing`, `createArcSector`, `setArc`, `createStars`, `createBeam`, `setBeam`, `disposeObject` | Готові об'єкти для `mount`. `setArc(sector, centerRad, widthRad)` і `setBeam(beam, from, to)` змінюють об'єкт на місці й безпечні в `update`. Кінець сцени: `disposeObject` звільняє піддерево. |
 | `sprites.ts` | `createSprite(id, spriteSource)`, `SpriteHandle` | Намальовані об'єкти. Повертає `{ object, material, setScale(k), isPlaceholder(), dispose() }`. |
 | `filters.ts` | `Filter`, `pixelate`, `posterize`, `vignette`, `scanlines` | Дивись розділ 4. |
-| `stage.ts` | `Stage`, `createStage` | Сцена отримує `Stage` (`root`, `camera`, `viewHeightUnits`, `viewWidthUnits()`). `createStage` напряму не викликаємо, це робить `StageCanvas`. |
+| `stage.ts` | `Stage`, `createStage` | Сцена отримує `Stage` (`root`, `camera`, `viewHeightUnits`, `viewWidthUnits()`, `toScreen(point, out)`). `toScreen` переводить точку світу в CSS-пікселі полотна: так HTML-підпис ставиться над об'єктом. `createStage` напряму не викликаємо, це робить `StageCanvas`. |
 
 `createSprite(id, spriteSource)` викликай лише в `mount` (`spriteSource` з `src/scenes/sprite-source.ts`). id беремо з ядра (id модуля). Поки в `src/data/sprites.json` немає запису чи файла, показується заглушка: квадрат кольору з палітри (колір стабільний за id) з підписом id. Розмір і прив'язка беруться з маніфесту; якщо запису немає, це 1 одиниця з прив'язкою в центрі. Коли файл з'явиться, він підміняє заглушку після завантаження. `setScale(0..1)` корисний для плавної появи: `1` це розмір з маніфесту. Позицію ставимо через `sprite.object.position`, колір (підфарбування) через `sprite.material.color`. Вимоги до малюнків: `docs/SPRITES.md`.
 

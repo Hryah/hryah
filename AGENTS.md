@@ -17,6 +17,16 @@
 - `src/ui/<частина>/` — екран;
 - `src/core/phases.ts` — один рядок, що підключає твою частину замість заглушки.
 
+Якщо завдання про вигляд частини (сцена на рушії відображення), спершу прочитай `docs/RENDER_GUIDE.md`. Тоді до твоїх тек додаються:
+
+- `src/scenes/<частина>-scene.ts` — сцена;
+- `src/scenes/views.ts` і `src/scenes/views.test.ts` — лише твій вид, функція «стан → вид» і тести до них;
+- `src/scenes/gallery.tsx` — лише запис твоєї сцени;
+- `src/data/sprites.json` і `public/assets/sprites/` — записи й файли твоїх спрайтів;
+- `src/data/texts.en.json` — лише нові ключі.
+
+Сам рушій (`src/render/`), `src/scenes/types.ts` і чужі сцени не чіпай: якщо в рушії чогось бракує, зупинись і скажи людині.
+
 Усе інше не чіпай без прямого прохання людини. Особливо:
 
 - `src/core/contracts.ts`, `src/core/game.ts`, `src/core/physics.ts`, `src/core/stubs.ts`;
