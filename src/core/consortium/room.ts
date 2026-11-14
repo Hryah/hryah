@@ -38,6 +38,7 @@ export interface PlayState {
   phase: 'play';
   seed: number;
   assignments: Assignment[];  // порядок збігається з порядком агенцій у consortium
+  left: string[];             // хто вийшов під час гри: їхні агенції більше не ходять (лише «чекати»)
   consortium: ConsortiumState;
 }
 
@@ -103,14 +104,30 @@ export function startBlockers(lobby: LobbyState, knownAgencyIds?: string[]): str
   return out;
 }
 
+// Агенції тих, хто вийшов, пропускають хід автоматично, інакше решта чекала б на них до кінця гри.
+function skipLeft(state: PlayState): PlayState {
+  let consortium = state.consortium;
+  for (let guard = 0; guard < 1000 && !consortium.result; guard++) {
+    const entry = activeAgency(consortium);
+    const owner = state.assignments.find((a) => a.agencyId === entry?.agency.id);
+    if (!owner || !state.left.includes(owner.playerId)) break;
+    consortium = stepConsortium(consortium, { type: 'wait' });
+  }
+  return consortium === state.consortium ? state : { ...state, consortium };
+}
+
 export function stepRoom(state: RoomState, playerId: string, action: RoomAction, setup: RoomSetup): RoomState {
   if (state.phase === 'play') {
+    if (action.type === 'leave') {
+      if (!state.assignments.some((a) => a.playerId === playerId) || state.left.includes(playerId)) return state;
+      return skipLeft({ ...state, left: [...state.left, playerId] });
+    }
     if (action.type !== 'play') return state;
     const entry = activeAgency(state.consortium);
     const owner = state.assignments.find((a) => a.agencyId === entry?.agency.id);
     if (!owner || owner.playerId !== playerId) return state; // ходить лише власник активної агенції
     const consortium = stepConsortium(state.consortium, action.action);
-    return consortium === state.consortium ? state : { ...state, consortium };
+    return consortium === state.consortium ? state : skipLeft({ ...state, consortium });
   }
 
   const me = state.players.find((p) => p.id === playerId);
@@ -144,7 +161,7 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       const agencies = assignments.map((a) => byId.get(a.agencyId)).filter((a): a is AgencyProfile => a !== undefined);
       if (agencies.length !== assignments.length) return state;
       const consortium = newConsortium(setup.base, setup.market, agencies, setup.deadlineTurn, state.seed);
-      return { phase: 'play', seed: state.seed, assignments, consortium };
+      return skipLeft({ phase: 'play', seed: state.seed, assignments, left: [], consortium });
     }
     case 'play':
       return state;
