@@ -143,11 +143,13 @@ describe("гра в кімнаті", () => {
   it("гравець, що вийшов у грі, більше не блокує чергу: його агенція пропускає ходи", () => {
     let s = started();
     if (s.phase !== "play") throw new Error("очікувалась гра");
-    const first = s.assignments.find((a) => a.agencyId === s.consortium.agencies[s.consortium.active]!.agency.id)!.playerId;
+    const g0 = s;
+    const first = g0.assignments.find((a) => a.agencyId === g0.consortium.agencies[g0.consortium.active]!.agency.id)!.playerId;
     s = send(s, first, { type: "leave" });
     if (s.phase !== "play") throw new Error("очікувалась гра");
     expect(s.left).toEqual([first]);
-    const activeOwner = s.assignments.find((a) => a.agencyId === s.consortium.agencies[s.consortium.active]?.agency.id)?.playerId;
+    const after: RoomState = s;
+    const activeOwner = after.phase === "play" ? after.assignments.find((a) => a.agencyId === after.consortium.agencies[after.consortium.active]?.agency.id)?.playerId : undefined;
     expect(activeOwner).not.toBe(first); // хід одразу перейшов до того, хто лишився (або гра скінчилась)
     expect(send(s, first, { type: "leave" })).toBe(s); // повторний вихід нічого не міняє
     // той, хто лишився, закінчує гру: агенція того, хто вийшов, сама чекає кожен хід
