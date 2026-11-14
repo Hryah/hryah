@@ -73,7 +73,8 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 export function isMissionReport(v: unknown): v is MissionReport {
   if (!isObj(v) || !isObj(v.flight) || !Array.isArray(v.orbitActions)) return false;
   const f = v.flight;
-  if (!isObj(f.orbit) || !isNum(f.orbit.altKm) || !isNum(f.fuelLeftKg) || !Array.isArray(f.damage)) return false;
+  if (!isObj(f.orbit) || !isNum(f.orbit.altKm) || !isNum(f.orbit.periodS) || !isNum(f.orbit.eclipseFraction)) return false;
+  if (!isNum(f.fuelLeftKg) || !Array.isArray(f.damage)) return false;
   if (f.damage.length > MAX_DAMAGE || !f.damage.every((d) => isObj(d) && SYSTEMS.includes(d.system as SystemId) && isNum(d.severity))) return false;
   if (f.deploymentStatus !== undefined && f.deploymentStatus !== 'deployed' && f.deploymentStatus !== 'lost') return false;
   if (v.orbitActions.length > MAX_ORBIT_ACTIONS) return false;
@@ -84,9 +85,24 @@ export function isMissionReport(v: unknown): v is MissionReport {
 }
 
 // Результат польоту від клієнта в розумних межах. Орбіту (період, тінь) не беремо від клієнта, а рахуємо з висоти.
+// Лише відомі поля звіту: зайві властивості чужого JSON не потрапляють у стан кімнати.
+export function pickReport(report: MissionReport): MissionReport {
+  const f = report.flight;
+  return {
+    flight: {
+      orbit: { altKm: f.orbit.altKm, periodS: f.orbit.periodS, eclipseFraction: f.orbit.eclipseFraction },
+      fuelLeftKg: f.fuelLeftKg,
+      damage: f.damage.map((d) => ({ system: d.system, severity: d.severity })),
+      ...(f.deploymentStatus ? { deploymentStatus: f.deploymentStatus } : {}),
+    },
+    orbitActions: report.orbitActions.map((a) => (a.type === 'tick' ? { type: 'tick', dtS: a.dtS } : { type: 'toggle', id: a.id })),
+  };
+}
+
 export function sanitizeFlight(mission: Mission, spec: SpacecraftSpec, flight: FlightResult): FlightResult {
   const [lo, hi] = mission.altRangeKm;
-  const altKm = clamp(flight.orbit.altKm, Math.max(1, lo * 0.5), hi * 1.5);
+  // Нижня межа не вище за низьку орбіту невдалого польоту (~80 км), інакше реальна висота підмінялася б і повтор орбіти розійшовся.
+  const altKm = clamp(flight.orbit.altKm, Math.max(1, Math.min(lo * 0.5, 80)), hi * 1.5);
   const damage: Damage[] = flight.damage.slice(0, MAX_DAMAGE).map((d) => ({ system: d.system, severity: clamp(d.severity, 0, 1) }));
   return {
     orbit: orbitInfo(mission.body, altKm),

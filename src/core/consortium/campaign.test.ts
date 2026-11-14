@@ -9,7 +9,7 @@ import { botTarget } from "./bot";
 import { checkCampaign, hiddenMission, isMissionReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport } from "./campaign";
 import { checkMarket, type Market } from "./market";
 import { isRoomAction, newRoom, stepRoom, type PlayState, type RoomAction, type RoomSetup, type RoomState } from "./room";
-import { activeAgency, flownMission, flownSpec, pendingReports, programProgress, seedsFor } from "./session";
+import { activeAgency, applyReport, flownMission, flownSpec, pendingReports, programProgress, seedsFor } from "./session";
 
 const profiles = Object.values(agenciesData) as RoomSetup["agencies"];
 const market = marketData as unknown as Market;
@@ -195,5 +195,30 @@ describe("кампанія в кімнаті", () => {
     if (s.phase !== "play") throw new Error();
     expect(s.consortium.reportsFrom).toBeUndefined();
     expect(s.consortium.campaign).toBeUndefined();
+  });
+});
+
+describe("звіт: межі й зайві поля", () => {
+  it("низька орбіта після слабкого польоту не підміняється, тож тики клієнта приймаються повтором", () => {
+    const s = launchLikeBot(soloRoom());
+    const me = s.consortium.agencies.find((e) => e.agency.id === "borealis")!;
+    const mission = flownMission(s.consortium);
+    const spec = flownSpec(me)!;
+    const low = sanitizeFlight(mission, spec, { orbit: { altKm: 120, periodS: 1, eclipseFraction: 0 }, fuelLeftKg: 0, damage: [] });
+    expect(low.orbit.altKm).toBe(120);
+  });
+
+  it("зайві поля звіту не потрапляють у стан кімнати; звіт без periodS відхиляється", () => {
+    const s = launchLikeBot(soloRoom());
+    const report = honestReport(s);
+    const dirty = { ...report, junk: "x", flight: { ...report.flight, junk: { big: "y" }, orbit: { ...report.flight.orbit, junk: 1 } } };
+    expect(isRoomAction({ type: "report", report: dirty })).toBe(true);
+    // Вікно ще не закрите (хтось не долетів): звіт лягає в стан і чекає.
+    const open = { ...s.consortium, awaiting: false };
+    const stored = applyReport(open, "borealis", dirty as MissionReport);
+    expect(stored.agencies.find((e) => e.agency.id === "borealis")!.report).toBeDefined();
+    expect(JSON.stringify(stored)).not.toContain("junk");
+    const { periodS: _p, ...noPeriod } = report.flight.orbit;
+    expect(isMissionReport({ ...report, flight: { ...report.flight, orbit: noPeriod } })).toBe(false);
   });
 });

@@ -36,23 +36,29 @@ function score(input: DesignInput, design: Design): number | null {
   return value - COST_WEIGHT * spec.costMUsd;
 }
 
-// Найкращий доступний проєкт: перебір модулів і трьох висот, паливо під Δv, найменший носій, що підходить.
+// Повний перебір дорогий, коли модулів багато (каталог кампанії): тоді покоординатний спуск від найдешевшого проєкту.
+const FULL_SEARCH_LIMIT = 400;
+const cache = new WeakMap<DesignInput, Design | null>();
+
+// Найкращий доступний проєкт: модулі × три висоти, пальне під Δv, найменший носій, що підходить.
 export function botTarget(input: DesignInput): Design | null {
+  if (cache.has(input)) return cache.get(input) ?? null;
+  const result = searchTarget(input);
+  cache.set(input, result);
+  return result;
+}
+
+function searchTarget(input: DesignInput): Design | null {
   const bySlot = SLOTS.map((slot) => input.catalog.modules.filter((m: ModuleDef) => m.slot === slot));
   if (bySlot.some((list) => list.length === 0)) return null;
   const [lo, hi] = input.mission.altRangeKm;
-  const alts = [...new Set([lo, Math.round((lo + hi) / 100) * 50, hi])];
+  const mid = Math.min(hi, Math.max(lo, Math.round((lo + hi) / 100) * 50));
+  const alts = [...new Set([lo, mid, hi])];
   const launchers = [...input.mission.launchers].sort((a, b) => a.maxPayloadKg - b.maxPayloadKg);
-  let best: { design: Design; value: number } | null = null;
+  if (launchers.length === 0) return null;
 
-  const combos: Record<SlotId, string>[] = [];
-  const walk = (i: number, acc: Partial<Record<SlotId, string>>) => {
-    if (i === SLOTS.length) { combos.push(acc as Record<SlotId, string>); return; }
-    for (const m of bySlot[i]!) walk(i + 1, { ...acc, [SLOTS[i]!]: m.id });
-  };
-  walk(0, {});
-
-  for (const modules of combos) {
+  const evaluate = (modules: Record<SlotId, string>): { design: Design; value: number } | null => {
+    let best: { design: Design; value: number } | null = null;
     for (const altKm of alts) {
       const draft: Design = { modules, altKm, fuelKg: 0, launcherId: launchers[0]!.id };
       const fuelKg = fuelFor(input, draft);
@@ -63,6 +69,38 @@ export function botTarget(input: DesignInput): Design | null {
       const value = score(input, design);
       if (value !== null && (best === null || value > best.value)) best = { design, value };
     }
+    return best;
+  };
+
+  const combos = bySlot.reduce((n, list) => n * list.length, 1);
+  if (combos <= FULL_SEARCH_LIMIT) {
+    let best: { design: Design; value: number } | null = null;
+    const walk = (i: number, acc: Partial<Record<SlotId, string>>) => {
+      if (i === SLOTS.length) {
+        const r = evaluate(acc as Record<SlotId, string>);
+        if (r && (best === null || r.value > best.value)) best = r;
+        return;
+      }
+      for (const m of bySlot[i]!) walk(i + 1, { ...acc, [SLOTS[i]!]: m.id });
+    };
+    walk(0, {});
+    return (best as { design: Design } | null)?.design ?? null;
+  }
+
+  // Покоординатний спуск: по черзі пробуємо кожен модуль слота, решту тримаємо; три проходи вистачає.
+  let modules = Object.fromEntries(SLOTS.map((slot, i) => [slot, [...bySlot[i]!].sort((a, b) => a.costMUsd - b.costMUsd)[0]!.id])) as Record<SlotId, string>;
+  let best = evaluate(modules);
+  for (let pass = 0; pass < 3; pass++) {
+    let improved = false;
+    SLOTS.forEach((slot, i) => {
+      for (const m of bySlot[i]!) {
+        if (m.id === modules[slot]) continue;
+        const candidate = { ...modules, [slot]: m.id };
+        const r = evaluate(candidate);
+        if (r && (best === null || r.value > best.value)) { best = r; modules = candidate; improved = true; }
+      }
+    });
+    if (!improved) break;
   }
   return best?.design ?? null;
 }
