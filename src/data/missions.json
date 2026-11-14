@@ -1,0 +1,43 @@
+{
+  "earth-observer": {
+    "id": "earth-observer",
+    "titleKey": "mission.earthObserver.title",
+    "briefKey": "mission.earthObserver.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 60,
+    "dvRequiredMs": 300,
+    "altRangeKm": [
+      400,
+      800
+    ],
+    "requiredResolutionM": 2,
+    "requiredDataMb": 10000,
+    "durationOrbits": 10,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  }
+}
