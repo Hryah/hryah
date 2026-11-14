@@ -38,6 +38,7 @@ export interface PlayState {
   phase: 'play';
   seed: number;
   assignments: Assignment[];  // порядок збігається з порядком агенцій у consortium
+  playerNames: Record<string, string>; // імена, щоб екран показував, чий хід
   consortium: ConsortiumState;
 }
 
@@ -137,7 +138,8 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       const agencies = assignments.map((a) => byId.get(a.agencyId)).filter((a): a is AgencyProfile => a !== undefined);
       if (agencies.length !== assignments.length) return state;
       const consortium = newConsortium(setup.base, setup.market, agencies, setup.deadlineTurn, state.seed);
-      return { phase: 'play', seed: state.seed, assignments, consortium };
+      const playerNames = Object.fromEntries(state.players.map((p) => [p.id, p.name]));
+      return { phase: 'play', seed: state.seed, assignments, playerNames, consortium };
     }
     case 'play':
       return state;
