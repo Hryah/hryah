@@ -115,14 +115,19 @@ export function PlayScreen({ game, setGame, active }: Props) {
           <div style={{ color: C.dim }}>
             {t("ui.play.outcome", { mb: fmt(outcome.deliveredMb, 0), orbits: outcome.survivedOrbits, score: fmt(outcome.score, 0) })}
           </div>
-          {chains.map((chain) => (
+          {chains.map((chain) => {
+            // Події приховуємо як шум, але якщо причина лише подія (апарат прибув уже пошкодженим), показуємо її: інакше відмова лишиться без пояснення.
+            const real = chain.causes.filter((c) => c.kind !== "event");
+            const shown = satelliteLost || real.length === 0 ? chain.causes : real;
+            return (
             <div key={chain.failure.id}>
               <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, BASE)}</div>
-              {chain.causes.filter((c) => c.kind !== "event" || satelliteLost).map((cause) => (
+              {shown.map((cause) => (
                 <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, BASE)}</div>
               ))}
             </div>
-          ))}
+            );
+          })}
           <div><button style={button} onClick={() => setGame(() => startPlay())}>{t("ui.result.again")}</button></div>
         </Panel>
       );

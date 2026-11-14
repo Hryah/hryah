@@ -113,7 +113,10 @@ export function startDevelopment(agency: AgencyProfile, order: DevOrder, startTu
   const [hit, severityRoll] = rolls(seed, `${agency.id}|${order.slot}|${order.apertureM}|${order.inspect}`, 2) as [number, number];
   const defect = hit < chance ? { severity: round2(SCALING.severityMin + SCALING.severityRange * severityRoll) } : null;
   return {
-    ...order,
+    // Лише відомі поля замовлення: зайві поля з чужого JSON не мають потрапити в проєкт і в стан кімнати.
+    slot: order.slot,
+    apertureM: order.apertureM,
+    inspect: order.inspect,
     id: `${order.slot}-${agency.id}`,
     agencyId: agency.id,
     startTurn,

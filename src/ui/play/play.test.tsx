@@ -147,4 +147,24 @@ describe("наскрізна гра: екран показує поточну ч
     expect(html).toContain("Review failed flight");
     expect(html).not.toContain("Finish the flight and deploy the satellite");
   });
+
+  it("показує причину відмови, коли вона лише подія (апарат прибув на орбіту непрацездатним)", () => {
+    const launched = step(newGame(SAMPLE_MISSION, SAMPLE_CATALOG, 7), { phase: "design", action: { type: "confirm" } });
+    if (launched.phase !== "flight") throw new Error("очікувався політ");
+    const game: GameState = {
+      phase: "debrief", seed: launched.seed, mission: launched.mission,
+      record: {
+        seed: launched.seed, missionId: launched.mission.id, spec: launched.spec,
+        flight: { ...flightPhase.finish(launched.flight).result, deploymentStatus: "deployed" },
+        outcome: { success: false, deliveredMb: 0, survivedOrbits: 0, score: 0 },
+        log: [
+          { id: "orbit:arrival", phase: "orbit", tS: 0, kind: "event", system: "structure", messageKey: "orbit.proto.arrival", params: { altKm: 500 } },
+          { id: "orbit:arrivalFailure", phase: "orbit", tS: 0, kind: "failure", system: "power", messageKey: "orbit.proto.arrivalFailure", params: {}, causedBy: ["orbit:arrival"] },
+        ],
+      },
+    };
+    const html = render(game);
+    expect(html).toContain("Flight damage left the spacecraft unable to operate");
+    expect(html).toContain("Satellite separation confirmed at 500 km");
+  });
 });

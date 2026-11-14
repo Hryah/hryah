@@ -186,3 +186,18 @@ describe("форма дій кімнати", () => {
     for (const a of bad) expect(isRoomAction(a), JSON.stringify(a)).toBe(false);
   });
 });
+
+describe("замовлення розробки", () => {
+  it("зайві поля з чужого JSON не потрапляють у стан кімнати", () => {
+    let s: RoomState = lobby([ids[0]!, ids[1]!]);
+    s = send(s, "p1", { type: "ready", ready: true });
+    s = send(s, "p0", { type: "start" });
+    if (s.phase !== "play") throw new Error("очікувалась гра");
+    const cur: RoomState = s;
+    const owner = cur.phase === "play" ? cur.assignments.find((a) => a.agencyId === cur.consortium.agencies[cur.consortium.active]!.agency.id)!.playerId : "";
+    const order = { slot: "instrument", apertureM: 0.3, inspect: false, junk: "x".repeat(500) } as unknown as { slot: "instrument"; apertureM: number; inspect: boolean };
+    const next = send(cur, owner, { type: "play", action: { type: "develop", order } });
+    expect(next).not.toBe(cur); // заказ прийнято, тест не порожній
+    expect(JSON.stringify(next)).not.toContain("junk");
+  });
+});
