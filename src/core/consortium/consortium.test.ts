@@ -297,6 +297,88 @@ describe("сесія: недоступні модулі", () => {
   });
 });
 
+describe("сесія: власна розробка", () => {
+  const order = { slot: "instrument", apertureM: 0.3, inspect: false } as const;
+  const develop: ConsortiumAction = { type: "develop", order };
+  const kestrel = agencies.find((a) => a.id === "kestrel")!;
+  const customId = (a: AgencyProfile) => `custom-instrument-${a.id}`;
+  const pickCustom = (a: AgencyProfile): ConsortiumAction => ({ type: "design", action: { type: "setModule", slot: "instrument", moduleId: customId(a) } });
+  const waits = (s: ConsortiumState, n: number) => { for (let i = 0; i < n; i++) s = run2(s, wait); return s; };
+
+  it("замовлення коштує дію й одразу списує гроші з бюджету", () => {
+    const s = start([kestrel]);
+    const before = s.agencies[0]!.design.input.mission.budgetMUsd;
+    const after = run2(s, develop);
+    const project = after.agencies[0]!.projects[0]!;
+    expect(project.developmentCostMUsd).toBeGreaterThan(0);
+    expect(after.agencies[0]?.design.input.mission.budgetMUsd).toBeCloseTo(before - project.developmentCostMUsd, 2);
+    expect(after.agencies[0]?.actionsLeft).toBe(ACTIONS_PER_TURN - 1);
+  });
+
+  it("модуль з'являється в каталозі лише коли розробка готова", () => {
+    let s = run2(start([kestrel]), develop);
+    const readyTurn = s.agencies[0]!.projects[0]!.readyTurn;
+    expect(readyTurn).toBeGreaterThan(0);
+    expect(s.agencies[0]!.design.input.catalog.modules.some((m) => m.id === customId(kestrel))).toBe(false);
+    expect(run2(s, pickCustom(kestrel))).toBe(s);
+    s = waits(s, readyTurn);
+    expect(s.turn).toBe(readyTurn);
+    expect(s.agencies[0]!.design.input.catalog.modules.some((m) => m.id === customId(kestrel))).toBe(true);
+    const picked = run2(s, pickCustom(kestrel));
+    expect(picked.agencies[0]?.design.design.modules.instrument).toBe(customId(kestrel));
+  });
+
+  it("друге замовлення того самого слота, неможлива апертура й нестача дій відхиляються", () => {
+    const s = run2(start([kestrel]), develop);
+    expect(run2(s, { type: "develop", order: { ...order, apertureM: 0.2 } })).toBe(s);
+    expect(run2(start([kestrel]), { type: "develop", order: { ...order, apertureM: 5 } }).agencies[0]?.projects).toEqual([]);
+  });
+
+  it("не дозволяє замовити розробку на суму понад бюджет", () => {
+    const poor = { ...kestrel, budgetFactor: 0.05 };
+    const s = start([poor]);
+    expect(run2(s, develop).agencies[0]?.projects).toEqual([]);
+  });
+
+  it("санкції не діють на власну розробку: заблокованої камери нема, а своя є", () => {
+    let s = start([kestrel], 20);
+    expect(s.agencies[0]!.design.input.catalog.modules.some((m) => m.id === "cam-l")).toBe(false);
+    s = run2(s, develop);
+    s = waits(s, s.agencies[0]!.projects[0]!.readyTurn);
+    expect(s.agencies[0]!.design.input.catalog.modules.some((m) => m.id === customId(kestrel))).toBe(true);
+  });
+
+  it("брак кидається від сіду й параметрів, не від порядку дій; сід можна підібрати як з браком, так і без", () => {
+    const defects = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((seed) => run2(newConsortium(base, market, [monsoon], 12, seed), develop).agencies[0]!.projects[0]!.defect);
+    expect(defects.some((d) => d === null)).toBe(true);
+    expect(defects.some((d) => d !== null)).toBe(true);
+    const again = run2(newConsortium(base, market, [monsoon], 12, 3), develop).agencies[0]!.projects[0]!.defect;
+    expect(again).toEqual(defects[2]);
+  });
+
+  it("брак проявляється лише в підсумку: спека не змінюється до запуску, у журналі відмова з причиною", () => {
+    const seed = [...Array(200).keys()].find((n) => run2(newConsortium(base, market, [borealis], 12, n), develop).agencies[0]!.projects[0]!.defect);
+    expect(seed).toBeDefined();
+    const clean = [...Array(200).keys()].find((n) => !run2(newConsortium(base, market, [borealis], 12, n), develop).agencies[0]!.projects[0]!.defect)!;
+    const play = (n: number) => {
+      let s = run2(newConsortium(base, market, [borealis], 12, n), develop);
+      s = waits(s, s.agencies[0]!.projects[0]!.readyTurn);
+      s = run2(s, pickCustom(borealis), launch);
+      return s.result!.runs[0]!;
+    };
+    const bad = play(seed!);
+    const good = play(clean);
+    expect(bad.log.some((e) => e.id === "design:defect-instrument" && (e.causedBy?.length ?? 0) > 0)).toBe(true);
+    expect(good.log.some((e) => e.id === "design:defect-instrument")).toBe(false);
+    expect(bad.outcome.deliveredMb).toBeLessThan(good.outcome.deliveredMb);
+    // До виплат іде пошкоджена спека: різкість гірша, тож і внесок менший.
+    expect(bad.spec.resolutionM).toBeGreaterThan(good.spec.resolutionM);
+    expect(runValueMUsd(base.mission, bad)).toBeLessThan(runValueMUsd(base.mission, good));
+    const ids = new Set(bad.log.map((e) => e.id));
+    for (const e of bad.log) for (const c of e.causedBy ?? []) expect(ids.has(c), c).toBe(true);
+  });
+});
+
 describe("сесія: підсумок", () => {
   it("коли запустилась остання агенція, ход у стані лишається тим, на якому вона запустилась", () => {
     let s = start([borealis, monsoon]);

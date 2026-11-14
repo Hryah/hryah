@@ -6,7 +6,8 @@ import { newConsortium, stepConsortium, type ConsortiumAction, type Market } fro
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
-import { ConsortiumScreen, Results } from "./ConsortiumScreen";
+import { describeEntry } from "./cause";
+import { ConsortiumScreen, Results, Turn } from "./ConsortiumScreen";
 import { DesignScreen } from "./DesignScreen";
 
 const state = designPhase.init({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, 1);
@@ -73,5 +74,36 @@ describe("результати: розбір причин", () => {
     const html = renderToStaticMarkup(<Results state={play({ type: "launch" })} onRestart={() => undefined} />);
     expect(html).toContain("Total paid out");
     expect(html).not.toContain("Battery depleted");
+  });
+});
+
+describe("власна розробка на екрані", () => {
+  const borealis = (agenciesData as unknown as Record<string, AgencyProfile>).borealis!;
+  const fresh = () => newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, marketData as Market, [borealis]);
+
+  it("до замовлення показано форму з ціною, строком і ризиком браку", () => {
+    const html = renderToStaticMarkup(<Turn state={fresh()} dispatch={() => undefined} />);
+    expect(html).toContain("Develop your own camera");
+    expect(html).toContain("defect risk");
+    expect(html).not.toContain("ui.");
+  });
+
+  it("після замовлення показано проєкт і скільки ходів лишилось", () => {
+    const state = stepConsortium(fresh(), { type: "develop", order: { slot: "instrument", apertureM: 0.3, inspect: false } });
+    const html = renderToStaticMarkup(<Turn state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Custom camera, 0.3 m");
+    expect(html).toMatch(/ready in \d+ turns/);
+    expect(html).not.toContain("Start development");
+  });
+});
+
+describe("розбір причин: власна розробка", () => {
+  it("модуль власної розробки названо, а не показано сирим id", () => {
+    const text = describeEntry(
+      { id: "design:instrument", phase: "design", tS: 0, kind: "decision", system: "science", messageKey: "design.chose", params: { slot: "instrument", module: "custom-instrument-borealis" } },
+      { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG },
+    );
+    expect(text).toContain("Custom camera");
+    expect(text).not.toContain("custom-instrument");
   });
 });
