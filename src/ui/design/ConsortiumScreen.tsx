@@ -34,15 +34,15 @@ const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), 
 
 type Mode = { kind: "menu" } | { kind: "local" } | { kind: "online"; session: Session };
 
-export function ConsortiumScreen() {
+export function ConsortiumScreen({ active = true }: { active?: boolean }) {
   const [mode, setMode] = useState<Mode>(() => {
     const saved = loadSession();
     return saved ? { kind: "online", session: saved } : { kind: "menu" };
   });
   const [notice, setNotice] = useState<string | null>(null);
   const leave = (message?: string) => { saveSession(null); setNotice(message ?? null); setMode({ kind: "menu" }); };
-  if (mode.kind === "local") return <LocalRoom onExit={() => leave()} />;
-  if (mode.kind === "online") return <OnlineRoom session={mode.session} onExit={leave} />;
+  if (mode.kind === "local") return <LocalRoom active={active} onExit={() => leave()} />;
+  if (mode.kind === "online") return <OnlineRoom active={active} session={mode.session} onExit={leave} />;
   return <Menu notice={notice} onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
 }
 
@@ -88,14 +88,14 @@ function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s
   );
 }
 
-function LocalRoom({ onExit }: { onExit: () => void }) {
+function LocalRoom({ onExit, active }: { onExit: () => void; active: boolean }) {
   const [room, setRoom] = useState<RoomState>(newLocalRoom);
   const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <div><button style={button} onClick={onExit}>← {t("ui.menu.back")}</button></div>
       <RoomView
-        room={room} local send={send}
+        room={room} local active={active} send={send}
         onStart={() => {
           // За одним екраном «готовий» не потрібен: гравці домовились поруч.
           setRoom((r) => {
@@ -110,7 +110,7 @@ function LocalRoom({ onExit }: { onExit: () => void }) {
   );
 }
 
-function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: string) => void }) {
+function OnlineRoom({ session, onExit, active }: { session: Session; onExit: (notice?: string) => void; active: boolean }) {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const exitRef = useRef(onExit);
@@ -155,7 +155,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
         {error && <span style={{ color: C.bad }}>{t("ui.menu.error", { error })}</span>}
       </div>
       {room ? (
-        <RoomView room={room} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={() => act({ type: "leave" })} />
+        <RoomView room={room} active={active} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={() => act({ type: "leave" })} />
       ) : (
         <div style={{ color: C.dim }}>{t("ui.menu.connecting")}</div>
       )}
@@ -164,11 +164,11 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
 }
 
 interface RoomViewProps {
-  room: RoomState; local?: boolean; meId?: string;
+  room: RoomState; local?: boolean; active?: boolean; meId?: string;
   send: (playerId: string, action: RoomAction) => void; onStart: () => void; onRestart: () => void;
 }
 
-function RoomView({ room, local = false, meId, send, onStart, onRestart }: RoomViewProps) {
+function RoomView({ room, local = false, active = true, meId, send, onStart, onRestart }: RoomViewProps) {
   if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
   const { consortium } = room;
   if (consortium.result) return <Results state={consortium} onRestart={onRestart} />;
@@ -180,7 +180,7 @@ function RoomView({ room, local = false, meId, send, onStart, onRestart }: RoomV
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
       <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
-        <Turn state={consortium} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
+        <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
     </div>
   );
@@ -238,7 +238,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   );
 }
 
-export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
@@ -283,6 +283,7 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
 
   return (
     <DesignScreen
+      active={active}
       state={entry.design} editable={(control) => entry.actionsLeft > 0 || entry.touched.includes(control)} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />

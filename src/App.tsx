@@ -6,17 +6,27 @@ import { PlayScreen, startPlay } from "./ui/play/PlayScreen";
 import type { GameState } from "./core/game";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
+import { Gallery } from "./scenes/gallery";
 import { t } from "./ui/text";
 
-const RoomScreen = lazy(() => import("./ui/room/RoomScreen").then((module) => ({ default: module.RoomScreen })));
+const RoomScreen = lazy(() =>
+  import("./ui/room/RoomScreen").then((module) => ({
+    default: module.RoomScreen,
+  })),
+);
 
-// Перемикач екранів за #адресою: без адреси наскрізна гра (#play), #design консорціум (частина 1),
-// #orbit прототип орбіти, #debug дебаг-екран, #room окрема 3D-каюта.
-// Каюта завантажується при першому відкритті; змонтовані екрани зберігають прогрес.
-type View = "play" | "orbit" | "design" | "debug" | "room";
+// #play — гра, #design — консорціум, #orbit — прототип орбіти,
+// #debug — дебаг, #room — 3D-каюта, #gallery — галерея сцен.
+// Каюта завантажується при першому відкритті та зберігає стан.
+type View = "play" | "orbit" | "design" | "debug" | "room" | "gallery";
 
 const viewFromHash = (hash: string): View =>
-  hash === "#debug" ? "debug" : hash === "#design" ? "design" : hash === "#orbit" ? "orbit" : hash === "#room" ? "room" : "play";
+  hash === "#debug" ? "debug" :
+  hash === "#gallery" ? "gallery" :
+  hash === "#design" ? "design" :
+  hash === "#orbit" ? "orbit" :
+  hash === "#room" ? "room" :
+  "play";
 
 const useView = (): View => {
   const [view, setView] = useState<View>(() => viewFromHash(window.location.hash));
@@ -57,15 +67,20 @@ export function App() {
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
             <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
+            <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
           </nav>
           <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
-          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
+          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen active={view === "design"} /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
-          {(roomVisited || view === "room") && <div hidden={view !== "room"}>
-            <Suspense fallback={<p role="status">{t("room.loading")}</p>}>
-              <RoomScreen active={view === "room"} />
-            </Suspense>
-          </div>}
+          {view === "gallery" && <Gallery active />}
+
+          {(roomVisited || view === "room") && (
+            <div hidden={view !== "room"}>
+              <Suspense fallback={<p role="status">{t("room.loading")}</p>}>
+                <RoomScreen active={view === "room"} />
+              </Suspense>
+            </div>
+          )}
         </main>
       </div>
     </>
