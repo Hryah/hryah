@@ -3,10 +3,11 @@
 // Усі цифри тут умовні: справжні збирає той, хто веде каталог.
 
 import type {
-  Catalog, CauseEntry, Design, DesignInput, FlightInput, FlightResult, Margin, Mission,
-  MissionOutcome, ModuleDef, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
+  Catalog, CauseEntry, Design, DesignInput, FlightInput, FlightResult, Mission,
+  MissionOutcome, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
 } from './contracts';
-import { deltaVMs, eclipseFraction, fuelLeftKg, groundResolutionM, orbitalPeriodS } from './physics';
+import { buildSpec, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
+import { fuelLeftKg } from './physics';
 import catalogData from '../data/catalog.json';
 import missionsData from '../data/missions.json';
 import sampleDesignData from '../data/sample-design.json';
@@ -19,12 +20,6 @@ export const SAMPLE_MISSION: Mission = missionsData['earth-observer'] as Mission
 export const SAMPLE_CATALOG: Catalog = catalogData as Catalog;
 
 export const SAMPLE_DESIGN: Design = sampleDesignData;
-
-// Константи апарата, яких гравець не обирає.
-const STRUCTURE_MASS_KG = 40;
-const BASE_LOAD_W = 20;
-const HEATER_W = 15;
-const BUFFER_MB = 4000;
 
 // ───────────────────────── Заглушка частини 1 ─────────────────────────
 // Бере готовий Design (без інтерфейсу вибору) і рахує опис апарата та запаси.
@@ -51,64 +46,10 @@ export function initialDesign({ mission, catalog }: DesignInput): Design {
   };
 }
 
-function pick<S extends SlotId>(catalog: Catalog, design: Design, slot: S): Extract<ModuleDef, { slot: S }> {
-  const found = catalog.modules.find((m) => m.slot === slot && m.id === design.modules[slot]);
-  if (!found) throw new Error(`У каталозі немає модуля ${design.modules[slot]} для слота ${slot}`);
-  return found as Extract<ModuleDef, { slot: S }>;
-}
-
+// Розрахунок апарата живе в model/ (buildSpec); заглушка лише підставляє початковий проєкт.
 export function stubDesign(input: DesignInput, design: Design = initialDesign(input)): PhaseOutput<SpacecraftSpec> {
-  const { mission, catalog } = input;
-  const engine = pick(catalog, design, 'engine');
-  const solar = pick(catalog, design, 'solar');
-  const battery = pick(catalog, design, 'battery');
-  const antenna = pick(catalog, design, 'antenna');
-  const instrument = pick(catalog, design, 'instrument');
-  const launcher = mission.launchers.find((l) => l.id === design.launcherId);
-  if (!launcher) throw new Error(`У місії немає носія ${design.launcherId}`);
-
-  const modules = [engine, solar, battery, antenna, instrument];
-  const dryMassKg = STRUCTURE_MASS_KG + modules.reduce((sum, m) => sum + m.massKg, 0);
-  const wetMassKg = dryMassKg + design.fuelKg;
-  const costMUsd = launcher.costMUsd + modules.reduce((sum, m) => sum + m.costMUsd, 0);
-  const dvMs = deltaVMs(engine.ispS, dryMassKg, design.fuelKg);
-  const resolutionM = groundResolutionM(instrument.wavelengthM, design.altKm, instrument.apertureM);
-
-  // Енергія: батарея має прожити тінь з увімкненими камерою та обігрівом.
-  const shadowH = (orbitalPeriodS(mission.body, design.altKm) * eclipseFraction(mission.body, design.altKm)) / 3600;
-  const shadowNeedWh = (BASE_LOAD_W + HEATER_W + instrument.powerW) * shadowH;
-  // Зв'язок: за проліт треба скинути все, що камера зняла за вікно зйомки.
-  const dataPerOrbitMb = instrument.dataRateMbps * mission.imagingSPerOrbit;
-  const downlinkPerOrbitMb = antenna.downlinkMbps * mission.passSPerOrbit;
-
-  const margins: Margin[] = [
-    { id: 'dv', have: dvMs, need: mission.dvRequiredMs, unit: 'm/s', ok: dvMs >= mission.dvRequiredMs },
-    { id: 'energy', have: battery.capacityWh, need: shadowNeedWh, unit: 'Wh', ok: battery.capacityWh >= shadowNeedWh },
-    { id: 'link', have: downlinkPerOrbitMb, need: dataPerOrbitMb, unit: 'Mb/orbit', ok: downlinkPerOrbitMb >= dataPerOrbitMb },
-    { id: 'science', have: resolutionM, need: mission.requiredResolutionM, unit: 'm', ok: resolutionM <= mission.requiredResolutionM },
-    { id: 'mass', have: launcher.maxPayloadKg, need: wetMassKg, unit: 'kg', ok: launcher.maxPayloadKg >= wetMassKg },
-    { id: 'budget', have: mission.budgetMUsd, need: costMUsd, unit: 'M$', ok: mission.budgetMUsd >= costMUsd },
-  ];
-
-  const spec: SpacecraftSpec = {
-    design, dryMassKg, fuelKg: design.fuelKg, wetMassKg, ispS: engine.ispS, dvMs,
-    panelPowerW: solar.powerW, batteryWh: battery.capacityWh, baseLoadW: BASE_LOAD_W, heaterW: HEATER_W,
-    downlinkMbps: antenna.downlinkMbps, transmitterW: antenna.powerW, bufferMb: BUFFER_MB,
-    instrumentRateMbps: instrument.dataRateMbps, instrumentW: instrument.powerW, resolutionM,
-    costMUsd, margins,
-  };
-
-  // Кожен вибір гравця — запис у журналі; на них потім посилаються пізніші відмови.
-  const log: CauseEntry[] = (Object.keys(design.modules) as SlotId[]).map((slot) => ({
-    id: `design:${slot}`, phase: 'design', tS: 0, kind: 'decision', system: SLOT_SYSTEM[slot],
-    messageKey: 'design.chose', params: { slot, module: design.modules[slot] },
-  }));
-  return { result: spec, log };
+  return buildSpec(input, design);
 }
-
-const SLOT_SYSTEM = {
-  engine: 'propulsion', solar: 'power', battery: 'power', antenna: 'comms', instrument: 'science',
-} as const;
 
 // ───────────────────────── Заглушка частини 2 ─────────────────────────
 // Без геймплею: чесна формула «чи вистачило Δv і на яку орбіту вийшли».
@@ -118,10 +59,7 @@ export function stubFlight(input: FlightInput): PhaseOutput<FlightResult> {
   const log: CauseEntry[] = [];
   const reached = spec.dvMs >= mission.dvRequiredMs;
 
-  // Не вистачило Δv: виходимо нижче в тій самій пропорції (груба, але монотонна модель).
-  const altKm = reached
-    ? spec.design.altKm
-    : mission.altRangeKm[0] * 0.5 + (spec.design.altKm - mission.altRangeKm[0] * 0.5) * (spec.dvMs / mission.dvRequiredMs);
+  const altKm = reachedAltKm(mission, spec);
 
   if (!reached) {
     log.push({
@@ -133,11 +71,7 @@ export function stubFlight(input: FlightInput): PhaseOutput<FlightResult> {
 
   return {
     result: {
-      orbit: {
-        altKm,
-        periodS: orbitalPeriodS(mission.body, altKm),
-        eclipseFraction: eclipseFraction(mission.body, altKm),
-      },
+      orbit: orbitInfo(mission.body, altKm),
       fuelLeftKg: reached ? fuelLeftKg(spec.ispS, spec.dryMassKg, spec.fuelKg, mission.dvRequiredMs) : 0,
       damage: [],
     },
@@ -151,9 +85,8 @@ export function stubFlight(input: FlightInput): PhaseOutput<FlightResult> {
 export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
   const { mission, spec, flight } = input;
   const log: CauseEntry[] = [];
-  const shadowH = (flight.orbit.periodS * flight.orbit.eclipseFraction) / 3600;
-  const shadowNeedWh = (spec.baseLoadW + spec.heaterW + spec.instrumentW) * shadowH;
-  const batteryDies = spec.batteryWh < shadowNeedWh;
+  const needWh = orbitEnergyNeedWh(spec, flight.orbit, mission);
+  const batteryDies = needWh > 0 && spec.batteryWh <= needWh;
 
   const perOrbitMb = Math.min(
     spec.instrumentRateMbps * mission.imagingSPerOrbit,
@@ -165,7 +98,7 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
   if (batteryDies) {
     log.push({
       id: 'orbit:battery-dead', phase: 'orbit', tS: flight.orbit.periodS, kind: 'failure', system: 'power',
-      messageKey: 'orbit.batteryDead', params: { haveWh: spec.batteryWh, needWh: Math.round(shadowNeedWh) },
+      messageKey: 'orbit.batteryDead', params: { haveWh: spec.batteryWh, needWh: Math.round(needWh) },
       causedBy: ['design:battery', 'design:instrument'],
     });
   }
