@@ -36,6 +36,12 @@ export function StageCanvas<View>({ createScene, view, fallback, active = true, 
   const [failed, setFailed] = useState(false);
   const viewHeightUnits = options?.viewHeightUnits;
   const cameraElevationDeg = options?.cameraElevationDeg;
+  const shadows = options?.shadows;
+  const shadowType = typeof shadows === 'object' ? shadows.type : undefined;
+  const shadowsOn = Boolean(shadows);
+  const toneMapping = options?.toneMapping;
+  const exposure = options?.exposure;
+  const lighting = options?.lighting;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -44,6 +50,10 @@ export function StageCanvas<View>({ createScene, view, fallback, active = true, 
       () => createStage(canvas, {
         ...(viewHeightUnits !== undefined ? { viewHeightUnits } : {}),
         ...(cameraElevationDeg !== undefined ? { cameraElevationDeg } : {}),
+        ...(shadowsOn ? { shadows: shadowType ? { type: shadowType } : true } : {}),
+        ...(toneMapping !== undefined ? { toneMapping } : {}),
+        ...(exposure !== undefined ? { exposure } : {}),
+        ...(lighting !== undefined ? { lighting } : {}),
       }),
       createScene,
       () => viewRef.current,
@@ -59,7 +69,7 @@ export function StageCanvas<View>({ createScene, view, fallback, active = true, 
       sessionRef.current = null;
       session.dispose();
     };
-  }, [createScene, viewHeightUnits, cameraElevationDeg]);
+  }, [createScene, viewHeightUnits, cameraElevationDeg, shadowsOn, shadowType, toneMapping, exposure, lighting]);
 
   useEffect(() => {
     try {

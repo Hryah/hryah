@@ -8,7 +8,7 @@ import type { StageRunner } from './stage';
 function setup() {
   const stage: StageRunner = {
     root: new THREE.Scene(), camera: new THREE.OrthographicCamera(), viewHeightUnits: 10,
-    viewWidthUnits: () => 10, toScreen: (_point, out) => out,
+    viewWidthUnits: () => 10, toScreen: (_point, out) => out, follow: vi.fn(),
     start: vi.fn(), stop: vi.fn(), setFilters: vi.fn(), dispose: vi.fn(),
   };
   const scene: Scene<{ value: number }> = { mount: vi.fn(), update: vi.fn(), dispose: vi.fn() };
