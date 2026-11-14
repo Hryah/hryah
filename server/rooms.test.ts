@@ -113,4 +113,20 @@ describe("сервер кімнат", () => {
     expect((await act({ type: "ready", ready: true })).status).toBe(200);
     expect((await post(`/api/rooms/${a.code}/join/extra`, { name: "X" })).status).toBe(404);
   });
+
+  it("кімната закривається, коли всі гравці вийшли після гри; порожнє опитування не шле стан", async () => {
+    const rooms = new Rooms({ setup });
+    const a = rooms.create("Ann");
+    if ("error" in a) throw new Error(a.error);
+    const b = rooms.join(a.code, "Bob");
+    if ("error" in b) throw new Error(b.error);
+    rooms.act(a.code, b.player, b.token, { type: "ready", ready: true });
+    rooms.act(a.code, a.player, a.token, { type: "start" });
+    const unchanged = await rooms.poll(a.code, a.player, a.token, 9999, 5);
+    expect("state" in unchanged).toBe(false);
+    rooms.act(a.code, a.player, a.token, { type: "leave" });
+    expect(rooms.size()).toBe(1); // Bob ще в грі
+    rooms.act(a.code, b.player, b.token, { type: "leave" });
+    expect(rooms.size()).toBe(0);
+  });
 });

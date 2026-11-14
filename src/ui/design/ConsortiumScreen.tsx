@@ -3,7 +3,7 @@ import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import { activeAgency, newRoom, stepRoom, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState } from "../../core/consortium";
 import { Lobby } from "./Lobby";
-import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, type Session } from "./online";
+import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
@@ -117,7 +117,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
         try {
           const snap = await poll(session, version, ctl.signal);
           version = snap.version;
-          if (snap.changed) setRoom(snap.state);
+          if (snap.changed && snap.state) setRoom(snap.state);
           setError(null);
         } catch (e) {
           if (ctl.signal.aborted || leaving.current) return;
@@ -132,9 +132,13 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
   }, [session]);
 
   const act = (action: RoomAction) => {
-    if (action.type === "leave") leaving.current = true;
-    sendAction(session, action).catch((e: Error) => { if (!leaving.current) setError(e.message); });
-    if (action.type === "leave") onExit(); // і «✕» у лобі, і кнопка «Вийти»: одразу в меню, без повідомлення
+    if (action.type === "leave") {
+      leaving.current = true;
+      void sendLeave(session); // з повторами при мережевому збої, щоб місце не лишилось зайнятим
+      onExit(); // і «✕» у лобі, і кнопка «Вийти», і «Ще раз» після гри: одразу в меню, без повідомлення
+      return;
+    }
+    sendAction(session, action).catch((e: Error) => setError(e.message));
   };
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -144,7 +148,7 @@ function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: s
         {error && <span style={{ color: C.bad }}>{t("ui.menu.error", { error })}</span>}
       </div>
       {room ? (
-        <RoomView room={room} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={onExit} />
+        <RoomView room={room} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={() => act({ type: "leave" })} />
       ) : (
         <div style={{ color: C.dim }}>{t("ui.menu.connecting")}</div>
       )}

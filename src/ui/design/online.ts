@@ -2,7 +2,7 @@ import type { RoomAction, RoomState } from "../../core/consortium";
 
 // Клієнт кімнат: довге опитування сервера. Сервер лежить на тому ж хості під /api (або /experimental/api).
 export interface Session { code: string; player: string; token: string }
-export interface Snapshot { version: number; state: RoomState; changed: boolean }
+export interface Snapshot { version: number; state?: RoomState; changed: boolean }
 
 const base = () => `${import.meta.env.BASE_URL}api/rooms`;
 
@@ -20,6 +20,15 @@ export const joinRoom = (code: string, name: string) =>
     .then((s) => ({ ...s, code: code.trim().toUpperCase() }));
 export const sendAction = (s: Session, action: RoomAction) =>
   call<{ version: number }>(`${base()}/${s.code}/action`, post({ player: s.player, token: s.token, action }));
+// «Вихід» важливий для сервера (звільнити місце, не блокувати чергу): при мережевому збої пробуємо ще кілька разів.
+export async function sendLeave(s: Session, attempts = 3): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    try { await sendAction(s, { type: "leave" }); return; } catch (e) {
+      if (!(e instanceof TypeError)) return; // сервер відповів (403/404): повторювати нема сенсу
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
 export const poll = (s: Session, since: number, signal: AbortSignal) =>
   call<Snapshot>(`${base()}/${s.code}?since=${since}`, { signal, headers: { authorization: `Bearer ${s.token}`, "x-hryah-player": s.player } });
 

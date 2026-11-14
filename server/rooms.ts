@@ -89,7 +89,13 @@ export class Rooms {
     }
     if (next !== room.state) {
       this.commit(room, next);
-      if (action.type === "leave") room.tokens.delete(player);
+      if (action.type === "leave") {
+        room.tokens.delete(player);
+        if (this.abandoned(room.state)) {
+          this.rooms.delete(room.code);
+          for (const wake of [...room.waiters]) wake();
+        }
+      }
     } else if (action.type === "leave" && room.state.phase === "lobby" && room.state.players.length === 1) {
       // Останній гравець виходить із лобі: кімнату закриваємо одразу, а не чекаємо TTL.
       this.rooms.delete(room.code);
@@ -100,7 +106,7 @@ export class Rooms {
 
   // Довге опитування: відповідає одразу, якщо версія новіша за since, інакше чекає зміни до pollMs.
   async poll(code: string, player: string, token: string, since: number, pollMs: number, onClose?: (cb: () => void) => void):
-    Promise<{ version: number; state: RoomState; changed: boolean } | { error: string; status: number }> {
+    Promise<{ version: number; state?: RoomState; changed: boolean } | { error: string; status: number }> {
     const room = this.auth(code, player, token);
     if (!room) return { error: "unauthorized", status: 403 };
     if (room.version <= since) {
@@ -111,7 +117,9 @@ export class Rooms {
         onClose?.(done); // клієнт розірвав з'єднання: не тримаємо очікувач до кінця таймауту
       });
     }
-    return { version: room.version, state: room.state, changed: room.version > since };
+    const changed = room.version > since;
+    // Стан віддаємо лише коли він змінився: порожнє опитування по таймауту не серіалізує й не шле його даремно.
+    return changed ? { version: room.version, state: room.state, changed } : { version: room.version, changed };
   }
 
   hasWaiters(): boolean {
@@ -123,6 +131,11 @@ export class Rooms {
     const room = this.rooms.get(code.toUpperCase());
     if (!room || !token || room.tokens.get(player) !== token) return undefined;
     return room;
+  }
+
+  // Усі гравці гри вийшли (зокрема після її завершення, кнопка «Ще раз»): кімнату більше ніхто не тримає.
+  private abandoned(state: RoomState): boolean {
+    return state.phase === "play" && state.assignments.every((a) => state.left.includes(a.playerId));
   }
 
   private commit(room: Room, state: RoomState): void {
