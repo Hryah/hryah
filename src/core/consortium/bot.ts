@@ -4,12 +4,14 @@
 // а запускається, коли проєкт готовий і минула його «терплячість» (у різних агенцій різна).
 // Чиста функція: той самий стан дає ту саму дію.
 
-import type { Design, DesignInput, ModuleDef, SlotId } from '../contracts';
+import type { Design, DesignInput, InstrumentDef, ModuleDef, SlotId } from '../contracts';
 import { controlOf, launchBlockers, SLOTS, type DesignAction } from '../design';
 import { buildSpec } from '../model';
-import { deltaVMs } from '../physics';
+import { deltaVMs, groundResolutionM } from '../physics';
+import { developmentCostMUsd, MAX_APERTURE_M, MIN_APERTURE_M } from './develop';
+import { RESEARCH } from './research';
 import { stubFlight, stubOrbit } from '../stubs';
-import { runValueMUsd } from './reward';
+import { cargoKindOf, runValueMUsd, TUNING } from './reward';
 import { hashSeed } from './seed';
 import { activeAgency, type ConsortiumAction, type ConsortiumState } from './session';
 
@@ -27,28 +29,46 @@ function fuelFor(input: DesignInput, design: Design): number {
   return fuel;
 }
 
-function score(input: DesignInput, design: Design): number | null {
+// Що вже полетіло в цьому вікні в інших агенцій: бот не хоче дублювати (вантаж того самого типу цінується менше,
+// а однакові апарати не дають бонусу різноманітності).
+export interface Taken {
+  designs: string[];   // `${instrument}@${смуга висоти}`
+  cargo: string[];     // типи контейнерів
+}
+const NO_TAKEN: Taken = { designs: [], cargo: [] };
+const DUPLICATE_DESIGN_FACTOR = 0.85;
+const DUPLICATE_CARGO_FACTOR = 0.5;
+const designKey = (d: Design) => `${d.modules.instrument}@${Math.floor(d.altKm / TUNING.altBandKm)}`;
+
+function score(input: DesignInput, design: Design, taken: Taken): number | null {
   const { result: spec, log } = buildSpec(input, design);
   if (spec.margins.some((m) => (m.id === 'mass' || m.id === 'budget') && !m.ok)) return null;
   const flight = stubFlight({ mission: input.mission, spec, log });
   const orbit = stubOrbit({ mission: input.mission, spec, flight: flight.result, log });
-  const value = runValueMUsd(input.mission, { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [] }, undefined, input.catalog);
+  const run = { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [] };
+  let value = runValueMUsd(input.mission, run, undefined, input.catalog);
+  const kind = cargoKindOf(input.catalog, run);
+  if (kind && taken.cargo.includes(kind)) value *= DUPLICATE_CARGO_FACTOR ** taken.cargo.filter((k) => k === kind).length;
+  else if (!kind && taken.designs.includes(designKey(design))) value *= DUPLICATE_DESIGN_FACTOR;
   return value - COST_WEIGHT * spec.costMUsd;
 }
 
 // Повний перебір дорогий, коли модулів багато (каталог кампанії): тоді покоординатний спуск від найдешевшого проєкту.
 const FULL_SEARCH_LIMIT = 400;
-const cache = new WeakMap<DesignInput, Design | null>();
+const cache = new WeakMap<DesignInput, Map<string, Design | null>>();
 
 // Найкращий доступний проєкт: модулі × три висоти, пальне під Δv, найменший носій, що підходить.
-export function botTarget(input: DesignInput): Design | null {
-  if (cache.has(input)) return cache.get(input) ?? null;
-  const result = searchTarget(input);
-  cache.set(input, result);
+export function botTarget(input: DesignInput, taken: Taken = NO_TAKEN): Design | null {
+  const key = JSON.stringify(taken);
+  let byTaken = cache.get(input);
+  if (!byTaken) { byTaken = new Map(); cache.set(input, byTaken); }
+  if (byTaken.has(key)) return byTaken.get(key) ?? null;
+  const result = searchTarget(input, taken);
+  byTaken.set(key, result);
   return result;
 }
 
-function searchTarget(input: DesignInput): Design | null {
+function searchTarget(input: DesignInput, taken: Taken): Design | null {
   const bySlot = SLOTS.map((slot) => input.catalog.modules.filter((m: ModuleDef) => m.slot === slot));
   if (bySlot.some((list) => list.length === 0)) return null;
   const [lo, hi] = input.mission.altRangeKm;
@@ -66,7 +86,7 @@ function searchTarget(input: DesignInput): Design | null {
       const launcher = launchers.find((l) => l.maxPayloadKg >= wet);
       if (!launcher) continue;
       const design = { ...draft, fuelKg, launcherId: launcher.id };
-      const value = score(input, design);
+      const value = score(input, design, taken);
       if (value !== null && (best === null || value > best.value)) best = { design, value };
     }
     return best;
@@ -121,10 +141,43 @@ export function botPatience(agencyId: string): number {
   return hashSeed(`patience:${agencyId}`) % 3;
 }
 
+// Порядок, у якому бот купує дослідження: спершу дешеве й корисне всім.
+const RESEARCH_ORDER = ['scouting', 'series', 'test-stand', 'early-access', 'ind-manufacturing', 'ind-electronics', 'ind-optics', 'ind-chemistry', 'ind-metallurgy', 'ind-software', 'fast-track'];
+
+// Каталог не дає потрібної різкості навіть на найнижчій орбіті: потрібне власне дзеркало.
+function mirrorAperture(input: DesignInput): number | null {
+  const { mission } = input;
+  if (mission.kind === 'cargo') return null;
+  const lo = mission.altRangeKm[0];
+  const cams = input.catalog.modules.filter((m): m is InstrumentDef => m.slot === 'instrument');
+  if (cams.some((c) => groundResolutionM(c.wavelengthM, lo, c.apertureM) <= mission.requiredResolutionM)) return null;
+  const wavelength = cams[0]?.wavelengthM ?? 5.5e-7;
+  const need = (1.22 * wavelength * lo * 1000) / mission.requiredResolutionM;
+  const aperture = Math.ceil(need / 0.05) * 0.05;
+  return aperture >= MIN_APERTURE_M && aperture <= MAX_APERTURE_M ? Math.round(aperture * 100) / 100 : null;
+}
+
 export function botAction(state: ConsortiumState): ConsortiumAction {
   const entry = activeAgency(state);
   if (!entry || entry.launch) return { type: 'wait' };
-  const target = botTarget(entry.design.input);
+  // Дослідження не забирають дій ходу: купуємо, коли вистачає очок.
+  const account = entry.account;
+  if (account) {
+    const pick = RESEARCH_ORDER.find((id) => RESEARCH[id] && !account.unlocked.includes(id) && account.researchPts >= RESEARCH[id]!.costPts);
+    if (pick) return { type: 'research', nodeId: pick };
+  }
+  // Власне дзеркало, якщо каталог не дотягує до вимоги (Big Eye).
+  const aperture = mirrorAperture(entry.design.input);
+  if (aperture !== null && entry.actionsLeft > 0 && !entry.projects.some((p) => p.slot === 'instrument') && !entry.touched.includes('develop:instrument')) {
+    const order = { slot: 'instrument' as const, apertureM: aperture, inspect: true };
+    if (developmentCostMUsd(entry.agency, order) < entry.design.input.mission.budgetMUsd * 0.6) return { type: 'develop', order };
+  }
+  const others = state.agencies.filter((e) => e !== entry && e.launch);
+  const taken: Taken = {
+    designs: others.map((e) => designKey(e.launch!.spec.design)).sort(),
+    cargo: others.map((e) => cargoKindOf(state.base.catalog, { agencyId: '', launchTurn: 0, spec: e.launch!.spec, outcome: { success: true, deliveredMb: 0, survivedOrbits: 0, score: 0 }, log: [] })).filter((k): k is NonNullable<typeof k> => k !== undefined).sort(),
+  };
+  const target = botTarget(entry.design.input, taken);
   if (target) {
     const change = nextChange(entry.design.design, target);
     if (change) {
@@ -135,7 +188,9 @@ export function botAction(state: ConsortiumState): ConsortiumAction {
   }
   const windowStart = state.campaign?.windowStartTurn ?? 0;
   const lastTurn = state.turn >= state.deadlineTurn;
-  const patient = state.turn - windowStart < botPatience(entry.agency.id);
+  // Чекаємо на власне дзеркало, якщо воно ще не готове (але не довше за вікно).
+  const mirrorPending = aperture !== null && entry.projects.some((p) => p.slot === 'instrument' && p.readyTurn > state.turn);
+  const patient = state.turn - windowStart < botPatience(entry.agency.id) || mirrorPending;
   if (launchBlockers(entry.design).length === 0 && (!patient || lastTurn)) return { type: 'launch' };
   return { type: 'wait' };
 }

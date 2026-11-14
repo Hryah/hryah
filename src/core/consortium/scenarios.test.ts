@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../design/agency";
+import { launchBlockers } from "../design";
 import { groundResolutionM } from "../physics";
 import { sweepDesigns } from "../sim";
 import { botAction } from "./bot";
@@ -67,4 +68,33 @@ describe("баланс сценаріїв (перебір і кампанія б
       for (const e of s.agencies) expect(e.account!.fundsMUsd).toBeGreaterThanOrEqual(0);
     }, 30000);
   }
+});
+
+describe("доопрацювання: боти й стартовий проєкт", () => {
+  it("стартовий проєкт кампанії не заблокований масою в жодному сценарії й жодній агенції", () => {
+    for (const sc of Object.values(SCENARIOS)) {
+      const s = newConsortium({ mission: sc.mission, catalog: sc.catalog ?? CAMPAIGN_CATALOG }, market, agencies, 12, 5, { campaign: sc.campaign });
+      for (const e of s.agencies) {
+        expect(launchBlockers(e.design), `${sc.def.id}/${e.agency.id}`).not.toContain("mass");
+      }
+    }
+  });
+
+  it("Big Eye: боти замовляють власне дзеркало й отримують внесок", () => {
+    const s = playBots("big-eye");
+    expect(s.agencies.some((e) => e.projects.some((p) => p.slot === "instrument"))).toBe(true);
+    expect(s.campaign!.rounds.some((r) => r.runs.some((run) => run.spec.resolutionM <= s.base.mission.requiredResolutionM))).toBe(true);
+  });
+
+  it("Lifeline: у вікні боти везуть різні контейнери", () => {
+    const s = playBots("lifeline");
+    const first = s.campaign!.rounds[0]!;
+    const kinds = first.runs.map((r) => r.spec.design.modules.instrument);
+    expect(new Set(kinds).size).toBeGreaterThan(1);
+  });
+
+  it("боти купують дослідження, коли є очки", () => {
+    const s = playBots("living-planet");
+    expect(s.agencies.some((e) => e.account!.unlocked.length > 0)).toBe(true);
+  });
 });
