@@ -128,7 +128,7 @@ export const designPhase: DesignPhase<DesignState, DesignAction> = {
     const { result, log } = buildSpec(state.input, state.design);
     const { design } = state;
 
-    // Рішення, які заглушка не записує: пальне, висота, носій.
+    // Рішення, які buildSpec не записує: пальне, висота, носій.
     const extra: CauseEntry[] = [
       { id: 'design:fuel', phase: 'design', tS: 0, kind: 'decision', system: 'propulsion',
         messageKey: 'design.fuel', params: { fuelKg: design.fuelKg } },

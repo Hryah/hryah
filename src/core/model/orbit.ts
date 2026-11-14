@@ -13,7 +13,12 @@ export function orbitInfo(body: Body, altKm: number): OrbitInfo {
 export const DECAY_FLOOR_KM = 150;
 export const DECAY_SCALE_KM = 50;
 
-export function lifetimeOrbits(altKm: number): number {
+// Модель опору атмосфери є лише для Землі. Для інших тіл вона не відома, тож апарат вважаємо таким, що не гальмує.
+export const EARTH_NAME = 'Earth';
+export const NO_DRAG_LIFETIME_ORBITS = 1_000_000;
+
+export function lifetimeOrbits(altKm: number, body: Pick<Body, 'name'> = { name: EARTH_NAME }): number {
+  if (body.name !== EARTH_NAME) return NO_DRAG_LIFETIME_ORBITS;
   const above = Math.max(0, altKm - DECAY_FLOOR_KM) / DECAY_SCALE_KM;
   return Math.max(1, Math.round(above * above));
 }
