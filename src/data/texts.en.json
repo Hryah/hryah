@@ -27,5 +27,11 @@
   "antenna.l": "Large antenna",
   "camera.s": "Compact camera",
   "camera.m": "Mid-size camera",
-  "camera.l": "Large camera"
+  "camera.l": "Large camera",
+  "agency.usa.name": "United States",
+  "agency.usa.description": "Large budget and the full range of launchers. Nothing is cheap, but there is room for mistakes.",
+  "agency.india.name": "India",
+  "agency.india.description": "Small budget, but cheap launchers, engines and solar panels. Heavy launcher is not available.",
+  "agency.esa.name": "Europe",
+  "agency.esa.description": "Average budget, with discounted antennas and science instruments."
 }

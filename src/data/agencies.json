@@ -1,0 +1,27 @@
+{
+  "usa": {
+    "id": "usa",
+    "nameKey": "agency.usa.name",
+    "descriptionKey": "agency.usa.description",
+    "budgetFactor": 1.5,
+    "launcherCostFactor": 1,
+    "moduleCostFactor": {}
+  },
+  "india": {
+    "id": "india",
+    "nameKey": "agency.india.name",
+    "descriptionKey": "agency.india.description",
+    "budgetFactor": 0.75,
+    "launcherCostFactor": 0.6,
+    "launcherIds": ["small", "medium"],
+    "moduleCostFactor": { "engine": 0.7, "solar": 0.8 }
+  },
+  "esa": {
+    "id": "esa",
+    "nameKey": "agency.esa.name",
+    "descriptionKey": "agency.esa.description",
+    "budgetFactor": 1,
+    "launcherCostFactor": 1,
+    "moduleCostFactor": { "instrument": 0.8, "antenna": 0.8 }
+  }
+}
