@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "nikita-drawn-astronaut",
+  "status": "raw-source",
+  "runtimeReady": false,
+  "animationReady": false,
+  "approvedFront": "front",
+  "canonicalViews": {
+    "front": "front",
+    "back": "back",
+    "left": "left",
+    "right": "right"
+  },
+  "presentation": {
+    "character": "drawn-2d-camera-facing-sprite",
+    "world": "true-3d",
+    "camera": "fixed-orthographic-isometric",
+    "platform": "desktop-browser",
+    "controls": "WASD + E"
+  },
+  "sourceNotes": [
+    "All five originals are preserved byte-for-byte.",
+    "Four canonical views are selected; front-alternate is retained but not selected.",
+    "Original canvases have different dimensions and opaque blue-gray backgrounds.",
+    "Source SVG paths have no semantic animation rig; these are static poses, not completed movement cycles."
+  ],
+  "nextPreparation": [
+    "Remove only the background, preserving white suit details.",
+    "Normalize canvas scale and a common foot anchor without stretching proportions.",
+    "Prepare transparent runtime textures and animation frames or named 2D layers."
+  ],
+  "assets": [
+    {
+      "id": "front",
+      "path": "source/front.svg",
+      "originalFilename": "космонавт перед (2).svg",
+      "direction": "front",
+      "primary": true,
+      "widthPx": 1189,
+      "heightPx": 1323,
+      "sha256": "316a79b9ced6cf5fdd23f2f55bbd4b997383ace659327be2c60e17c43c02fbcd"
+    },
+    {
+      "id": "back",
+      "path": "source/back.svg",
+      "originalFilename": "космонавт ззаду.svg",
+      "direction": "back",
+      "primary": true,
+      "widthPx": 1190,
+      "heightPx": 1322,
+      "sha256": "05b31ddfa56dac9b42016d238b39b851ddd769ba0bf2a9cd67e48d125da5a911"
+    },
+    {
+      "id": "left",
+      "path": "source/left.svg",
+      "originalFilename": "космонавт ліво.svg",
+      "direction": "left",
+      "primary": true,
+      "widthPx": 638,
+      "heightPx": 1024,
+      "sha256": "f629358030bfd0e7e28800c81756b7afb0d2910acbdba66601cf82a02f62e4e8"
+    },
+    {
+      "id": "right",
+      "path": "source/right.svg",
+      "originalFilename": "космонавт право.svg",
+      "direction": "right",
+      "primary": true,
+      "widthPx": 643,
+      "heightPx": 1024,
+      "sha256": "419adac5f05a0eda8df4f711b93c80c60df3ad94fea25de463288c9219455407"
+    },
+    {
+      "id": "front-alternate",
+      "path": "source/front-alternate.svg",
+      "originalFilename": "Космонавт перед.svg",
+      "direction": "front",
+      "primary": false,
+      "widthPx": 427,
+      "heightPx": 475,
+      "sha256": "4a706b44ff97f49d7f4d4966f94983b1f45b557c08414f8a5913737cd7d15fc0"
+    }
+  ]
+}
