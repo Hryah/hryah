@@ -3,8 +3,8 @@
 //   export { orbitPhase } from './orbit';
 // Решта коду (склейка, дебаг-екран, тести) підхопить нові типи стану й дій сама.
 
-import { stubDesignPhase, stubFlightPhase, stubOrbitPhase } from './stub-phases';
+import { stubDesignPhase, stubOrbitPhase } from './stub-phases';
 
 export const designPhase = stubDesignPhase;
-export const flightPhase = stubFlightPhase;
+export { flightPhase } from './flight';
 export const orbitPhase = stubOrbitPhase;

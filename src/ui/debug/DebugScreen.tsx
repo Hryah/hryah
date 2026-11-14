@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { CauseEntry, Margin, SpacecraftSpec } from "../../core/contracts";
 import { causeChains } from "../../core/debrief";
-import { availableActions, newGame, phaseState, preview, step, type GameAction, type GameState } from "../../core/game";
+import { availableActions, newGame, phaseState, preview, step, type FlightAction, type GameAction, type GameState } from "../../core/game";
 import { summarize, sweepDesigns, type SweepSummary } from "../../core/sim";
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from "../../core/stubs";
+import { FlightScreen } from "../flight";
 import { SpacecraftViewport, type ViewportContext } from "../graphics";
 
 // Дебаг-екран: грати в будь-яку частину без справжнього інтерфейсу.
@@ -52,7 +53,15 @@ export function DebugScreen() {
   const snapshots = useMemo(() => history.map(snapshot), [history]);
   const keys = Object.keys(snapshots[snapshots.length - 1] ?? {});
 
-  const dispatch = (action: GameAction) => setHistory((h) => [...h, step(h[h.length - 1]!, action)]);
+  const dispatch = useCallback((action: GameAction) => {
+    setHistory((h) => [...h, step(h[h.length - 1]!, action)]);
+  }, []);
+  const dispatchFlight = useCallback(
+    (action: FlightAction) => {
+      dispatch({ phase: "flight", action });
+    },
+    [dispatch],
+  );
   const restart = (nextSeed: number) => {
     setSeed(nextSeed);
     setHistory([newGame(SAMPLE_MISSION, SAMPLE_CATALOG, nextSeed)]);
@@ -78,16 +87,23 @@ export function DebugScreen() {
     design: activeSpec?.design ?? SAMPLE_DESIGN,
     spec: activeSpec,
     flight:
-      state.phase === "orbit"
-        ? state.flightResult
-        : state.phase === "debrief"
-          ? state.record.flight
-          : undefined,
+      state.phase === "flight"
+        ? (result as ViewportContext["flight"])
+        : state.phase === "orbit"
+          ? state.flightResult
+          : state.phase === "debrief"
+            ? state.record.flight
+            : undefined,
   };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(320px, 1.2fr)", gap: 16 }}>
       <section style={panel}>
+        {state.phase === "flight" && (
+          <div style={{ marginBottom: 14 }}>
+            <FlightScreen state={state.flight} dispatch={dispatchFlight} />
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
           <strong style={{ fontSize: 18 }}>Частина: {state.phase}</strong>
           <span style={{ color: C.dim }}>крок {history.length - 1}</span>

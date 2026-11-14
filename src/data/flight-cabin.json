@@ -1,0 +1,88 @@
+{
+  "cabinWidthM": 12,
+  "cabinHeightM": 6,
+  "grabRadiusM": 0.95,
+  "pushSpeedFastMs": 4.2,
+  "pushSpeedLongMs": 2.1,
+  "fastHopMaxDistM": 5.6,
+  "flightDurationS": 120,
+  "nodes": [
+    {
+      "id": "handrail-bl",
+      "kind": "handrail",
+      "wall": "bottom",
+      "xM": 2.4,
+      "yM": 5.1,
+      "titleKey": "flight.node.handrailBl"
+    },
+    {
+      "id": "handrail-tl",
+      "kind": "handrail",
+      "wall": "top",
+      "xM": 3.0,
+      "yM": 0.9,
+      "titleKey": "flight.node.handrailTl"
+    },
+    {
+      "id": "handrail-center",
+      "kind": "handrail",
+      "wall": "bottom",
+      "xM": 5.8,
+      "yM": 5.1,
+      "titleKey": "flight.node.handrailCenter"
+    },
+    {
+      "id": "handrail-br",
+      "kind": "handrail",
+      "wall": "bottom",
+      "xM": 9.2,
+      "yM": 5.1,
+      "titleKey": "flight.node.handrailBr"
+    },
+    {
+      "id": "console-propulsion",
+      "kind": "console",
+      "wall": "left",
+      "system": "propulsion",
+      "xM": 1.1,
+      "yM": 3.0,
+      "titleKey": "flight.console.propulsion"
+    },
+    {
+      "id": "console-solar",
+      "kind": "console",
+      "wall": "top",
+      "system": "power",
+      "xM": 4.8,
+      "yM": 0.9,
+      "titleKey": "flight.console.solar"
+    },
+    {
+      "id": "console-thermal",
+      "kind": "console",
+      "wall": "center",
+      "system": "thermal",
+      "xM": 6.4,
+      "yM": 3.0,
+      "titleKey": "flight.console.thermal"
+    },
+    {
+      "id": "console-comms",
+      "kind": "console",
+      "wall": "top",
+      "system": "comms",
+      "xM": 8.4,
+      "yM": 0.9,
+      "titleKey": "flight.console.comms"
+    },
+    {
+      "id": "console-separation",
+      "kind": "console",
+      "wall": "right",
+      "system": "structure",
+      "xM": 10.9,
+      "yM": 3.0,
+      "titleKey": "flight.console.separation"
+    }
+  ]
+}
