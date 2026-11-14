@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DesignInput } from "../contracts";
 import { availableActions, newGame, step, type GameAction, type GameState } from "../game";
+import texts from "../../data/texts.en.json";
 import { SAMPLE_CATALOG, SAMPLE_MISSION, stubDesign } from "../stubs";
 import { designPhase, launchBlockers, type DesignAction, type DesignState } from "./phase";
 
@@ -230,5 +231,45 @@ describe("частина 1: дії без ефекту", () => {
     expect(run(atZero, { type: "setFuel", fuelKg: -2 })).toBe(atZero);
     const s = start();
     expect(run(s, { type: "setAlt", altKm: lo - 50 })).toBe(s);
+  });
+});
+
+describe("частина 1: повторний вибір того самого", () => {
+  it("setModule і setLauncher з поточним значенням не створюють новий стан", () => {
+    const s = start();
+    expect(run(s, { type: "setModule", slot: "engine", moduleId: s.design.modules.engine })).toBe(s);
+    expect(run(s, { type: "setLauncher", launcherId: s.design.launcherId })).toBe(s);
+  });
+
+  it("причини dv включають пальне й усі модулі, без повторів", () => {
+    const { log } = designPhase.finish(run(start(), { type: "setFuel", fuelKg: 0 }));
+    const warning = log.find((e) => e.id === "design:margin-dv");
+    expect(warning?.causedBy).toEqual(expect.arrayContaining(["design:fuel", "design:engine", "design:instrument"]));
+    expect(new Set(warning?.causedBy).size).toBe(warning?.causedBy?.length);
+  });
+});
+
+describe("частина 1: тексти", () => {
+  const known = new Set(Object.keys(texts));
+
+  it("усі messageKey журналу є в texts.en.json, навіть за найгіршого проєкту", () => {
+    const worst = run(
+      start(),
+      { type: "setModule", slot: "battery", moduleId: "bat-s" },
+      { type: "setModule", slot: "antenna", moduleId: "ant-s" },
+      { type: "setModule", slot: "instrument", moduleId: "cam-l" },
+      { type: "setFuel", fuelKg: 0 },
+    );
+    for (const entry of designPhase.finish(worst).log) expect(known.has(entry.messageKey)).toBe(true);
+  });
+
+  it("назви модулів, носіїв і місії з даних мають тексти", () => {
+    const keys = [
+      ...SAMPLE_CATALOG.modules.map((m) => m.nameKey),
+      ...SAMPLE_MISSION.launchers.map((l) => l.nameKey),
+      SAMPLE_MISSION.titleKey,
+      SAMPLE_MISSION.briefKey,
+    ];
+    for (const key of keys) expect(known.has(key), key).toBe(true);
   });
 });

@@ -44,7 +44,7 @@ const MODULE_DECISIONS = SLOTS.map((slot) => `design:${slot}`);
 
 // Які рішення гравця стоять за кожним запасом (id записів журналу).
 const MARGIN_CAUSES: Record<MarginId, string[]> = {
-  dv: ['design:engine', 'design:fuel'],
+  dv: ['design:fuel', ...MODULE_DECISIONS],
   energy: ['design:battery', 'design:instrument', 'design:altitude'],
   link: ['design:antenna', 'design:instrument'],
   science: ['design:instrument', 'design:altitude'],
@@ -97,7 +97,7 @@ export const designPhase: DesignPhase<DesignState, DesignAction> = {
     switch (action.type) {
       case 'setModule': {
         const exists = catalog.modules.some((m) => m.slot === action.slot && m.id === action.moduleId);
-        if (!exists) return state;
+        if (!exists || design.modules[action.slot] === action.moduleId) return state;
         return { ...state, design: { ...design, modules: { ...design.modules, [action.slot]: action.moduleId } } };
       }
       case 'setFuel': {
@@ -113,7 +113,7 @@ export const designPhase: DesignPhase<DesignState, DesignAction> = {
         return altKm === design.altKm ? state : { ...state, design: { ...design, altKm } };
       }
       case 'setLauncher': {
-        if (!mission.launchers.some((l) => l.id === action.launcherId)) return state;
+        if (!mission.launchers.some((l) => l.id === action.launcherId) || design.launcherId === action.launcherId) return state;
         return { ...state, design: { ...design, launcherId: action.launcherId } };
       }
       case 'confirm':
