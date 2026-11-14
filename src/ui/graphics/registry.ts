@@ -70,7 +70,7 @@ const BUS_FALLBACK: VisualTemplate = {
 };
 
 export const DEFAULT_TEMPLATES: readonly VisualTemplate[] = (
-  rawManifest.templates as unknown as readonly VisualTemplate[]
+  rawManifest.templates as readonly VisualTemplate[]
 ).map(normalizeTemplateUrls);
 
 export class TemplateRegistry implements ITemplateRegistry {

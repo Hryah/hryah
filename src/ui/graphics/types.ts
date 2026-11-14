@@ -4,7 +4,8 @@
 
 import type { Damage, Design, FlightResult, Mission, SlotId, SpacecraftSpec, SystemId } from '../../core/contracts';
 
-export type RenderMode = 'auto' | '3d' | 'sprite' | 'blueprint';
+// Графіка дизайну суто 2D: 'auto' бере SVG-спрайт, а без нього інженерне креслення.
+export type RenderMode = 'auto' | 'sprite' | 'blueprint';
 
 export type TemplateCategory =
   | 'module'
@@ -42,6 +43,8 @@ export interface Sprite2DSource {
   readonly widthPx?: number;
   readonly heightPx?: number;
   readonly tintColor?: string;
+  readonly format?: 'svg' | 'png';
+  readonly attribution?: string;
 }
 
 /** Опис текстур небесного тіла (Three.js / NASA Blue Marble / Solar System Scope) */
@@ -52,6 +55,8 @@ export interface PlanetTextureSource {
   readonly normalMapUrl?: string;
   readonly specularMapUrl?: string;
   readonly atmosphereColor?: string;
+  readonly format?: 'svg' | 'png' | 'jpg';
+  readonly attribution?: string;
 }
 
 /** Вбудований процедурний векторний шаблон (працює завжди, навіть без зовнішніх файлів) */

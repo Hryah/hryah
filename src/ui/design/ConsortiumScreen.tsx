@@ -330,10 +330,12 @@ export function Results({ state, onRestart }: { state: ConsortiumState; onRestar
             <tbody>
               {settlement.payouts.map((p) => (
                 <tr key={p.agencyId} style={{ borderTop: `1px solid ${C.line}` }}>
-                  <td style={{ padding: "8px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                    <img src={resolveAssetUrl(`assets/icons/agencies/${p.agencyId}.svg`)} alt="" width={18} height={18} />
-                    {p.winner && <img src={resolveAssetUrl("assets/icons/ui/trophy.svg")} alt="" width={15} height={15} />}
-                    {nameOf(p.agencyId)}
+                  <td style={{ padding: "8px 0" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <img src={resolveAssetUrl(`assets/icons/agencies/${p.agencyId}.svg`)} alt="" width={18} height={18} />
+                      {p.winner && <img src={resolveAssetUrl("assets/icons/ui/trophy.svg")} alt="" width={15} height={15} />}
+                      {nameOf(p.agencyId)}
+                    </span>
                   </td>
                   <td>{fmt(p.valueMUsd)} M$</td>
                   <td>{fmt(p.share * 100, 1)}%</td>

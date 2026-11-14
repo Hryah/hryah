@@ -63,7 +63,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
   return (
     <div style={{ display: "grid", gap: 16 }}>
       {header}
-      <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gridTemplateColumns: "minmax(240px, 1fr) minmax(260px, 1.15fr)", gap: 16, alignItems: "center" }}>
+      <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center" }}>
         <div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
             <strong style={{ fontSize: 18 }}>{t(mission.titleKey)}</strong>

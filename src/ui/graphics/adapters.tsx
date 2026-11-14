@@ -222,7 +222,7 @@ export interface TemplateUnitViewProps {
 
 /**
  * Універсальний адаптер одиниці темплейту:
- * Перемикає між 3D GLB моделлю, 2D текстурою/спрайтом та інженерним SVG-кресленням.
+ * Перемикає між 2D SVG-спрайтом (або текстурою тіла) та інженерним SVG-кресленням.
  */
 export function TemplateUnitView({
   template,
