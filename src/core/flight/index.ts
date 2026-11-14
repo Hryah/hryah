@@ -319,56 +319,6 @@ function applyMinigameVictory(state: FlightState, terminalId: string): FlightSta
   };
 }
 
-function isFlightTerminal(state: FlightState): boolean {
-  return state.phaseDone || state.gameMode === "VICTORY" || state.gameMode === "GAME_OVER";
-}
-
-function lossLog(state: FlightState): CauseEntry[] {
-  const log = [...state.log];
-  if (log.some((entry) => entry.messageKey === "flight.failure.satelliteLost")) return log;
-  const previous = [...state.input.log, ...log];
-  const uniqueId = (base: string): string => {
-    let id = base;
-    let sequence = 1;
-    while (previous.some((entry) => entry.id === id)) {
-      id = `${base}:${sequence}`;
-      sequence += 1;
-    }
-    return id;
-  };
-  const params = {
-    energyPct: Math.round(state.energyPct * 10) / 10,
-    oxygenPct: Math.round(state.oxygenPct * 10) / 10,
-    tempC: Math.round(state.tempC * 10) / 10,
-  };
-  let cause = [...log].reverse().find((entry) => entry.kind === "failure") ??
-    [...previous].reverse().find((entry) => entry.kind === "failure" || entry.kind === "event" || entry.kind === "decision");
-  if (!cause) {
-    cause = {
-      id: uniqueId("flight:terminal-state"),
-      phase: "flight",
-      tS: Math.round(state.timeElapsedS * 10) / 10,
-      kind: "event",
-      system: "structure",
-      messageKey: "flight.event.terminalState",
-      params,
-    };
-    log.push(cause);
-    previous.push(cause);
-  }
-  log.push({
-    id: uniqueId("flight:satellite-lost"),
-    phase: "flight",
-    tS: Math.round(state.timeElapsedS * 10) / 10,
-    kind: "failure",
-    system: "structure",
-    messageKey: "flight.failure.satelliteLost",
-    params,
-    causedBy: [cause.id],
-  });
-  return log;
-}
-
 export const flightPhase: FlightPhase<FlightState, FlightAction> = {
   init(input: FlightInput, seed: number): FlightState {
     const startHandle = ALL_GRAB_HANDLES[0]!;
@@ -436,7 +386,7 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
   },
 
   step(state: FlightState, action: FlightAction): FlightState {
-    if (isFlightTerminal(state)) return state;
+    if (state.phaseDone) return state;
 
     switch (action.type) {
       case "slingshot_start": {
@@ -974,7 +924,7 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
   },
 
   isDone(state: FlightState): boolean {
-    return isFlightTerminal(state);
+    return state.phaseDone;
   },
 
   finish(state: FlightState): { result: FlightResult; log: CauseEntry[] } {
@@ -989,14 +939,12 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
         },
         fuelLeftKg: state.fuelLeftKg,
         damage: [...state.damage],
-        deploymentStatus: state.gameMode === "GAME_OVER" ? "lost" : "deployed",
       },
-      log: state.gameMode === "GAME_OVER" ? lossLog(state) : [...state.log],
+      log: [...state.log],
     };
   },
 
   debugActions(state: FlightState): DebugAction<FlightAction>[] {
-    if (isFlightTerminal(state)) return [];
     const actions: DebugAction<FlightAction>[] = [
       {
         label: "+1с",
