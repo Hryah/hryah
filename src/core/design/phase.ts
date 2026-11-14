@@ -45,7 +45,7 @@ const MODULE_DECISIONS = SLOTS.map((slot) => `design:${slot}`);
 // Які рішення гравця стоять за кожним запасом (id записів журналу).
 const MARGIN_CAUSES: Record<MarginId, string[]> = {
   dv: ['design:fuel', ...MODULE_DECISIONS],
-  energy: ['design:battery', 'design:instrument', 'design:altitude'],
+  energy: ['design:battery', 'design:solar', 'design:instrument', 'design:antenna', 'design:altitude'],
   link: ['design:antenna', 'design:instrument'],
   science: ['design:instrument', 'design:altitude'],
   mass: ['design:launcher', 'design:fuel', ...MODULE_DECISIONS],
