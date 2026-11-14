@@ -167,6 +167,7 @@ export function setBeam(beam: THREE.Mesh, from: THREE.Vector3, to: THREE.Vector3
   direction.subVectors(to, from);
   const length = direction.length();
   if (length < 0.0001) { beam.visible = false; return; }
+  beam.visible = true;
   beam.position.copy(from).addScaledVector(direction, 0.5);
   beam.quaternion.setFromUnitVectors(UP, direction.divideScalar(length));
   beam.scale.set(1, length, 1);

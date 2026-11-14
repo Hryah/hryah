@@ -31,7 +31,7 @@ const button = {
 const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES };
 const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
 
-export function ConsortiumScreen() {
+export function ConsortiumScreen({ active = true }: { active?: boolean }) {
   const [room, setRoom] = useState<RoomState>(newLocalRoom);
   const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
 
@@ -59,7 +59,7 @@ export function ConsortiumScreen() {
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ color: C.gold }}>{t("ui.lobby.playerTurn", { player: name })}</div>
-      <Turn state={consortium} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+      <Turn state={consortium} active={active} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
     </div>
   );
 }
@@ -116,7 +116,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   );
 }
 
-export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
@@ -161,6 +161,7 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
 
   return (
     <DesignScreen
+      active={active}
       state={entry.design} editable={(control) => entry.actionsLeft > 0 || entry.touched.includes(control)} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />

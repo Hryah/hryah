@@ -102,13 +102,13 @@ export function Gallery({ active }: { active: boolean }) {
       </div>
       <div style={{ height: 520, borderRadius: 8, overflow: 'hidden', border: `1px solid ${css('outline')}` }}>
         {entry === 'engine' && (
-          <StageCanvas createScene={createTestScene} view={fakeTestView(elapsedS)} fallback={fallback} filters={filters} label={t('ui.gallery.engine')} />
+          <StageCanvas createScene={createTestScene} view={fakeTestView(elapsedS)} active={active} fallback={fallback} filters={filters} label={t('ui.gallery.engine')} />
         )}
         {entry === 'orbit' && (
-          <StageCanvas createScene={createOrbitScene} view={orbit} fallback={fallback} options={ORBIT_STAGE} filters={filters} label={t('ui.gallery.orbit')} />
+          <StageCanvas createScene={createOrbitScene} view={orbit} active={active} fallback={fallback} options={ORBIT_STAGE} filters={filters} label={t('ui.gallery.orbit')} />
         )}
         {entry === 'design' && (
-          <StageCanvas createScene={createDesignScene} view={fakeDesignView(elapsedS)} fallback={fallback} options={DESIGN_STAGE} filters={filters} label={t('ui.gallery.design')} />
+          <StageCanvas createScene={createDesignScene} view={fakeDesignView(elapsedS)} active={active} fallback={fallback} options={DESIGN_STAGE} filters={filters} label={t('ui.gallery.design')} />
         )}
       </div>
       {entry === 'orbit' && (

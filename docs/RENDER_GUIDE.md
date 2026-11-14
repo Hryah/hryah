@@ -95,15 +95,15 @@ export function fakeFlightView(tS: number): FlightView {
 
 ### г) На екрані гри
 
-Зразок: `src/ui/design/DesignStage.tsx`, використання: `<DesignStage state={state} />` у `DesignScreen.tsx`.
+Зразок: `src/ui/design/DesignStage.tsx`, використання: `<DesignStage state={state} active={active} />` у `DesignScreen.tsx`.
 
 ```tsx
 const STAGE = { viewHeightUnits: 8 }; // рівень модуля: стабільне посилання
 
-export function DesignStage({ state }: { state: DesignState }) {
+export function DesignStage({ state, active = true }: { state: DesignState; active?: boolean }) {
   return (
     <div style={{ height: 320, borderRadius: 12, overflow: 'hidden' }}>
-      <StageCanvas createScene={createDesignScene} view={designSceneView(state)} options={STAGE}
+      <StageCanvas createScene={createDesignScene} view={designSceneView(state)} options={STAGE} active={active}
         fallback={t('ui.render.noWebgl')} label={t('ui.designStage')} />
     </div>
   );
@@ -113,6 +113,7 @@ export function DesignStage({ state }: { state: DesignState }) {
 - `createScene` має бути функцією рівня модуля. Нова функція на кожен рендер перемонтує сцену.
 - `options` і `filters` також стабільні (константа або `useMemo`). Зміна `viewHeightUnits` / `cameraElevationDeg` перемонтовує сцену. Зміна списку `filters` ні.
 - Новий `view` на кожен рендер нормальний: сцена бере останній у наступному кадрі.
+- Передавай `active` від перемикача екранів аж до `StageCanvas`: саме `display: none` не зупиняє цикл. `active={false}` скасовує кадри; повторне ввімкнення зберігає сцену й час без стрибка після паузи. До першого `active={true}` WebGL не створюється. За замовчуванням `active` дорівнює `true`.
 - Контейнеру задай висоту: полотно займає 100% × 100%. Без WebGL показується `fallback`.
 - Кнопки й текст лишаються звичайним HTML поруч, не на полотні. Сцена лише показує.
 
@@ -174,6 +175,8 @@ vec4 filterColor(sampler2D frame, vec2 uv) {
 
 - У `update` не створювати об'єкти, геометрії й матеріали. Усе в `mount`, у `update` лише міняємо властивості. Для дуг і променів є `setArc` / `setBeam`.
 - `dispose` прибирає все, що створив `mount`: `disposeObject` для груп, `handle.dispose()` для спрайтів, окремі матеріали й текстури теж.
+- `dispose` має витримувати частково виконаний `mount`: обгортка викликає очищення сцени й stage також при помилці монтування. Під час звичайної паузи ресурси зберігаються до демонтування.
+- `setBeam` сам показує промінь ненульової довжини й ховає його при збігу кінців; окреме вимкнення через ігровий стан лишається справою сцени.
 - Кольори лише з палітри (`palette`, `css`, `*Material`). Прямого hex у сцені немає.
 - Статична картинка це помилка: у сцені завжди є хоч мала рухома деталь (погойдування, пульсація зір).
 - Спрайт це площина, завжди повернута до камери, з однією глибиною на весь спрайт. Накладені спрайти шаруй явно: `sprite.material.depthTest = false; sprite.material.depthWrite = false; sprite.object.renderOrder = N`. Так робить `design-scene.ts` (функція `layer`). Зсув по `z` не допомагає.

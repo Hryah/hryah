@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Scene } from '../scenes/types';
 import type { Filter } from './filters';
-import { createStage, type StageOptions, type StageRunner } from './stage';
+import { createSceneSession } from './scene-session';
+import { createStage, type StageOptions } from './stage';
 
 export interface StageCanvasProps<View> {
   /** Фабрика сцени. Має бути стабільною (функція рівня модуля): нова функція перемонтовує сцену. */
@@ -12,6 +13,8 @@ export interface StageCanvasProps<View> {
   view: View;
   /** Що показати, якщо WebGL недоступний. */
   fallback: ReactNode;
+  /** false зупиняє кадри, зберігаючи сцену. WebGL створюється лише при першому true. */
+  active?: boolean;
   options?: StageOptions;
   /** Візуальні фільтри на весь кадр. Зміна списку не перемонтовує сцену. */
   filters?: readonly Filter[];
@@ -21,13 +24,15 @@ export interface StageCanvasProps<View> {
   label?: string;
 }
 
-export function StageCanvas<View>({ createScene, view, fallback, options, filters, className, style, label }: StageCanvasProps<View>) {
+export function StageCanvas<View>({ createScene, view, fallback, active = true, options, filters, className, style, label }: StageCanvasProps<View>) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-  const stageRef = useRef<StageRunner | null>(null);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const sessionRef = useRef<ReturnType<typeof createSceneSession<View>> | null>(null);
   const [failed, setFailed] = useState(false);
   const viewHeightUnits = options?.viewHeightUnits;
   const cameraElevationDeg = options?.cameraElevationDeg;
@@ -35,32 +40,35 @@ export function StageCanvas<View>({ createScene, view, fallback, options, filter
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    let stage: StageRunner;
-    try {
-      stage = createStage(canvas, {
+    const session = createSceneSession(
+      () => createStage(canvas, {
         ...(viewHeightUnits !== undefined ? { viewHeightUnits } : {}),
         ...(cameraElevationDeg !== undefined ? { cameraElevationDeg } : {}),
-      });
+      }),
+      createScene,
+      () => viewRef.current,
+    );
+    sessionRef.current = session;
+    try {
+      session.setFilters(filtersRef.current ?? []);
+      session.setActive(activeRef.current);
     } catch {
-      setFailed(true); // WebGL недоступний
-      return;
+      setFailed(true);
     }
-    stageRef.current = stage;
-    stage.setFilters(filtersRef.current ?? []);
-    const scene = createScene();
-    scene.mount(stage);
-    stage.start((dtS, timeS) => scene.update(viewRef.current, dtS, timeS));
     return () => {
-      stageRef.current = null;
-      stage.stop();
-      scene.dispose();
-      stage.dispose();
+      sessionRef.current = null;
+      session.dispose();
     };
   }, [createScene, viewHeightUnits, cameraElevationDeg]);
 
   useEffect(() => {
-    stageRef.current?.setFilters(filters ?? []);
-  }, [filters]);
+    try {
+      sessionRef.current?.setFilters(filters ?? []);
+      sessionRef.current?.setActive(active);
+    } catch {
+      setFailed(true);
+    }
+  }, [filters, active]);
 
   if (failed) {
     return <div className={className} role="status" style={{ ...style, display: 'grid', placeItems: 'center', padding: 16 }}>{fallback}</div>;

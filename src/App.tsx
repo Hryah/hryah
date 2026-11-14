@@ -70,7 +70,7 @@ export function App() {
             <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
           </nav>
           <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
-          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
+          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen active={view === "design"} /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
           {view === "gallery" && <Gallery active />}
 

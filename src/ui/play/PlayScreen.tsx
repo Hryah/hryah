@@ -70,7 +70,7 @@ export function PlayScreen({ game, setGame, active }: Props) {
           </div>
         </div>
       );
-      body = <DesignScreen state={game.design} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
+      body = <DesignScreen state={game.design} active={active} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
       break;
     }
     case "flight":

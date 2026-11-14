@@ -8,10 +8,10 @@ import { t } from "../text";
 
 const STAGE = { viewHeightUnits: 8 };
 
-export function DesignStage({ state }: { state: DesignState }) {
+export function DesignStage({ state, active = true }: { state: DesignState; active?: boolean }) {
   return (
     <div style={{ height: 320, borderRadius: 12, overflow: "hidden" }}>
-      <StageCanvas createScene={createDesignScene} view={designSceneView(state)} options={STAGE}
+      <StageCanvas createScene={createDesignScene} view={designSceneView(state)} options={STAGE} active={active}
         fallback={t("ui.render.noWebgl")} label={t("ui.designStage")} />
     </div>
   );
