@@ -59,3 +59,14 @@ ENV/
 .antigravity/
 .agy/
 
+# Raw downloaded asset archives & heavy local 3D/texture packs
+downloads/
+public/assets/textures/
+public/assets/sprites/
+public/assets/models/**/*.glb
+!public/assets/models/spacecraft/satellite_bus.glb
+!public/assets/models/modules/solar_medium.glb
+!public/assets/models/modules/antenna_medium.glb
+
+
+

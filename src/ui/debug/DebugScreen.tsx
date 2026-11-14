@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import type { CauseEntry, Margin } from "../../core/contracts";
+import type { CauseEntry, Margin, SpacecraftSpec } from "../../core/contracts";
 import { causeChains } from "../../core/debrief";
 import { availableActions, newGame, phaseState, preview, step, type GameAction, type GameState } from "../../core/game";
 import { summarize, sweepDesigns, type SweepSummary } from "../../core/sim";
-import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
+import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from "../../core/stubs";
+import { SpacecraftViewport, type ViewportContext } from "../graphics";
 
 // Дебаг-екран: грати в будь-яку частину без справжнього інтерфейсу.
 // Працює з усім, що реалізує Phase і віддає debugActions. Логіки гри тут немає:
@@ -64,6 +65,26 @@ export function DebugScreen() {
   const groups: Record<string, typeof actions> = {};
   for (const a of actions) (groups[a.group] ??= []).push(a);
 
+  const activeSpec: SpacecraftSpec | undefined =
+    state.phase === "design"
+      ? (result as SpacecraftSpec | undefined)
+      : state.phase === "debrief"
+        ? state.record.spec
+        : state.spec;
+
+  const viewportCtx: ViewportContext = {
+    phase: state.phase,
+    mission: SAMPLE_MISSION,
+    design: activeSpec?.design ?? SAMPLE_DESIGN,
+    spec: activeSpec,
+    flight:
+      state.phase === "orbit"
+        ? state.flightResult
+        : state.phase === "debrief"
+          ? state.record.flight
+          : undefined,
+  };
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(320px, 1.2fr)", gap: 16 }}>
       <section style={panel}>
@@ -101,6 +122,7 @@ export function DebugScreen() {
       </section>
 
       <section style={{ display: "grid", gap: 16, alignContent: "start" }}>
+        <SpacecraftViewport context={viewportCtx} />
         <div style={panel}>
           <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>Результат частини, якби вона закінчилась зараз</div>
           {hasMargins(result) ? <Margins margins={result.margins} /> : null}
