@@ -4,7 +4,7 @@ import marketData from "../../data/market.json";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../stubs";
 import { checkMarket, type Market } from "./market";
 import {
-  assignAgencies, newRoom, startBlockers, stepRoom, type LobbyState, type RoomAction, type RoomSetup, type RoomState,
+  isRoomAction, assignAgencies, newRoom, startBlockers, stepRoom, type LobbyState, type RoomAction, type RoomSetup, type RoomState,
 } from "./room";
 
 const profiles = Object.values(agenciesData) as RoomSetup["agencies"];
@@ -160,5 +160,29 @@ describe("гра в кімнаті", () => {
       s = send(cur, owner, { type: "play", action: { type: "wait" } });
     }
     expect(s.phase === "play" && s.consortium.result !== null).toBe(true);
+  });
+});
+
+describe("форма дій кімнати", () => {
+  it("приймає правильні дії й відхиляє сміття на будь-якій глибині", () => {
+    const ok = [
+      { type: "ready", ready: true }, { type: "wish", agencyId: null }, { type: "wish", agencyId: "borealis" },
+      { type: "start" }, { type: "leave" }, { type: "play", action: { type: "wait" } }, { type: "play", action: { type: "launch" } },
+      { type: "play", action: { type: "develop", order: { slot: "instrument", apertureM: 0.3, inspect: false } } },
+      { type: "play", action: { type: "design", action: { type: "setFuel", fuelKg: 12 } } },
+      { type: "play", action: { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-m" } } },
+    ];
+    for (const a of ok) expect(isRoomAction(a), JSON.stringify(a)).toBe(true);
+    const bad = [
+      null, 5, "x", [], {}, { type: "nope" }, { type: "ready", ready: "yes" }, { type: "wish", agencyId: 5 },
+      { type: "play" }, { type: "play", action: null }, { type: "play", action: { type: "design" } },
+      { type: "play", action: { type: "design", action: { type: "setFuel", fuelKg: "boom" } } },
+      { type: "play", action: { type: "design", action: { type: "setFuel", fuelKg: NaN } } },
+      { type: "play", action: { type: "design", action: { type: "setModule", slot: "evil", moduleId: "x" } } },
+      { type: "play", action: { type: "design", action: { type: "confirm" } } },
+      { type: "play", action: { type: "develop", order: { slot: "engine", apertureM: 1, inspect: true } } },
+      { type: "play", action: { type: "develop", order: { slot: "instrument", apertureM: "1", inspect: true } } },
+    ];
+    for (const a of bad) expect(isRoomAction(a), JSON.stringify(a)).toBe(false);
   });
 });

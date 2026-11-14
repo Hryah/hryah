@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import { activeAgency, newRoom, stepRoom, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState } from "../../core/consortium";
 import { Lobby } from "./Lobby";
+import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
@@ -27,19 +28,74 @@ const button = {
 } as const;
 
 // Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
-// Онлайн-режим підставить сюди той самий RoomState від сервера (див. Lobby).
+// Онлайн: той самий RoomState приходить із сервера кімнат (online.ts), а дії йдуть на сервер.
 const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES };
 const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
 
+type Mode = { kind: "menu" } | { kind: "local" } | { kind: "online"; session: Session };
+
 export function ConsortiumScreen() {
+  const [mode, setMode] = useState<Mode>(() => {
+    const saved = loadSession();
+    return saved ? { kind: "online", session: saved } : { kind: "menu" };
+  });
+  const [notice, setNotice] = useState<string | null>(null);
+  const leave = (message?: string) => { saveSession(null); setNotice(message ?? null); setMode({ kind: "menu" }); };
+  if (mode.kind === "local") return <LocalRoom onExit={() => leave()} />;
+  if (mode.kind === "online") return <OnlineRoom session={mode.session} onExit={leave} />;
+  return <Menu notice={notice} onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
+}
+
+function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s: Session) => void; notice: string | null }) {
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = (job: () => Promise<Session>) => {
+    setBusy(true); setError(null);
+    job().then(onOnline).catch((e: Error) => setError(e.message)).finally(() => setBusy(false));
+  };
+  const named = name.trim().length > 0;
+  return (
+    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="menu">
+      <h2 style={{ margin: 0 }}>{t("ui.menu.title")}</h2>
+      <div>
+        <button style={{ ...button, borderColor: C.accent }} onClick={onLocal}>{t("ui.menu.local")}</button>
+        <span style={{ color: C.dim, marginLeft: 10, fontSize: 13 }}>{t("ui.menu.localHint")}</span>
+      </div>
+      <hr style={{ borderColor: C.line, width: "100%" }} />
+      <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
+      <form
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+        onSubmit={(e) => {
+          e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
+          if (!named || busy) return;
+          if (code.trim().length === 4) run(() => joinRoom(code, name)); else run(() => createRoom(name));
+        }}
+      >
+        <input value={name} maxLength={24} placeholder={t("ui.menu.name")} aria-label={t("ui.menu.name")} onChange={(e) => setName(e.target.value)} />
+        <button type="button" style={{ ...button, opacity: named && !busy ? 1 : 0.5 }} disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
+          {t("ui.menu.create")}
+        </button>
+        <input value={code} maxLength={4} size={5} placeholder={t("ui.menu.code")} aria-label={t("ui.menu.code")} onChange={(e) => setCode(e.target.value.toUpperCase())} />
+        <button type="button" style={{ ...button, opacity: named && code.length === 4 && !busy ? 1 : 0.5 }} disabled={!named || code.length !== 4 || busy} onClick={() => run(() => joinRoom(code, name))}>
+          {t("ui.menu.join")}
+        </button>
+      </form>
+      {notice && <div style={{ color: C.gold }}>{notice}</div>}
+      {error && <div style={{ color: C.bad }}>{t("ui.menu.error", { error })}</div>}
+    </div>
+  );
+}
+
+function LocalRoom({ onExit }: { onExit: () => void }) {
   const [room, setRoom] = useState<RoomState>(newLocalRoom);
   const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
-
-  if (room.phase === "lobby") {
-    return (
-      <Lobby
-        room={room} agencies={AGENCIES} local
-        send={send}
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div><button style={button} onClick={onExit}>← {t("ui.menu.back")}</button></div>
+      <RoomView
+        room={room} local send={send}
         onStart={() => {
           // За одним екраном «готовий» не потрібен: гравці домовились поруч.
           setRoom((r) => {
@@ -48,18 +104,84 @@ export function ConsortiumScreen() {
             return stepRoom(ready, r.hostId, { type: "start" }, ROOM_SETUP);
           });
         }}
+        onRestart={() => setRoom(newLocalRoom())}
       />
-    );
-  }
+    </div>
+  );
+}
+
+function OnlineRoom({ session, onExit }: { session: Session; onExit: (notice?: string) => void }) {
+  const [room, setRoom] = useState<RoomState | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const exitRef = useRef(onExit);
+  exitRef.current = onExit;
+  const leaving = useRef(false); // гравець сам вийшов: 403 від сервера після цього очікуваний, без повідомлення «кімнату втрачено»
+  useEffect(() => {
+    const ctl = new AbortController();
+    let version = 0;
+    (async () => {
+      while (!ctl.signal.aborted) {
+        try {
+          const snap = await poll(session, version, ctl.signal);
+          version = snap.version;
+          if (snap.changed && snap.state) setRoom(snap.state);
+          setError(null);
+        } catch (e) {
+          if (ctl.signal.aborted || leaving.current) return;
+          const message = (e as Error).message;
+          if (message === "unauthorized" || message === "no such room") { exitRef.current(t("ui.menu.roomGone")); return; }
+          setError(message);
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+    })();
+    return () => ctl.abort();
+  }, [session]);
+
+  const act = (action: RoomAction) => {
+    if (action.type === "leave") {
+      leaving.current = true;
+      void sendLeave(session); // з повторами при мережевому збої, щоб місце не лишилось зайнятим
+      onExit(); // і «✕» у лобі, і кнопка «Вийти», і «Ще раз» після гри: одразу в меню, без повідомлення
+      return;
+    }
+    sendAction(session, action).catch((e: Error) => setError(e.message));
+  };
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <button style={button} onClick={() => act({ type: "leave" })}>← {t("ui.menu.leave")}</button>
+        <strong>{t("ui.menu.roomCode", { code: session.code })}</strong>
+        {error && <span style={{ color: C.bad }}>{t("ui.menu.error", { error })}</span>}
+      </div>
+      {room ? (
+        <RoomView room={room} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={() => act({ type: "leave" })} />
+      ) : (
+        <div style={{ color: C.dim }}>{t("ui.menu.connecting")}</div>
+      )}
+    </div>
+  );
+}
+
+interface RoomViewProps {
+  room: RoomState; local?: boolean; meId?: string;
+  send: (playerId: string, action: RoomAction) => void; onStart: () => void; onRestart: () => void;
+}
+
+function RoomView({ room, local = false, meId, send, onStart, onRestart }: RoomViewProps) {
+  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
   const { consortium } = room;
-  if (consortium.result) return <Results state={consortium} onRestart={() => setRoom(newLocalRoom())} />;
+  if (consortium.result) return <Results state={consortium} onRestart={onRestart} />;
   const entry = activeAgency(consortium);
   const owner = room.assignments.find((a) => a.agencyId === entry?.agency.id);
   const name = owner ? room.playerNames[owner.playerId] ?? owner.playerId : "";
+  const mine = local || owner?.playerId === meId;
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ color: C.gold }}>{t("ui.lobby.playerTurn", { player: name })}</div>
-      <Turn state={consortium} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+      <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
+      <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
+        <Turn state={consortium} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
+      </div>
     </div>
   );
 }
