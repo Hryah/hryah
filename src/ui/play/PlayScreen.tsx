@@ -1,5 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { availableActions, newGame, step, type GameAction, type GameState } from "../../core/game";
+import { newGame, step, type GameAction, type GameState } from "../../core/game";
 import { causeChains } from "../../core/debrief";
 import { launchBlockers } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
@@ -7,6 +7,7 @@ import { DesignScreen } from "../design/DesignScreen";
 import { describeEntry } from "../design/cause";
 import { FlightScreen } from "../flight";
 import { resolveAssetUrl } from "../graphics/registry";
+import { OrbitPanel } from "./OrbitPanel";
 import { fmt, t } from "../text";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
@@ -36,15 +37,17 @@ interface Props {
 
 export function PlayScreen({ game, setGame, active }: Props) {
   const dispatch = (action: GameAction) => setGame((g) => step(g, action));
+  const satelliteLost = game.phase === "debrief" && game.record.flight.deploymentStatus === "lost";
 
   const stepper = (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       {STAGES.map((stage, i) => {
         const index = STAGES.indexOf(game.phase);
-        const color = i < index ? C.ok : i === index ? C.accent : C.dim;
+        const orbitSkipped = satelliteLost && stage === "orbit";
+        const color = satelliteLost && stage === "flight" ? C.bad : orbitSkipped ? C.dim : i < index ? C.ok : i === index ? C.accent : C.dim;
         return (
           <span key={stage} style={{ padding: "4px 12px", borderRadius: 999, fontSize: 13, border: `1px solid ${color}`, color }}>
-            {i + 1}. {t(`ui.play.stage.${stage}`)}
+            {i + 1}. {t(orbitSkipped ? "ui.play.stage.orbitSkipped" : `ui.play.stage.${stage}`)}
           </span>
         );
       })}
@@ -70,7 +73,7 @@ export function PlayScreen({ game, setGame, active }: Props) {
           </div>
         </div>
       );
-      body = <DesignScreen state={game.design} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
+      body = <DesignScreen state={game.design} active={active} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
       break;
     }
     case "flight":
@@ -80,31 +83,25 @@ export function PlayScreen({ game, setGame, active }: Props) {
           {/* Екран польоту займає весь вікно (fixed, z-index 1000), тож наша панель лежить над ним. */}
           <div data-testid="flight-overlay" style={{ ...overlay, display: active ? "grid" : "none" }}>
             {stepper}
-            <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.flightHint")}</div>
+            <div style={{ color: C.dim, fontSize: 13 }}>{t(game.flight.gameMode === "GAME_OVER" ? "ui.play.lostFlightHint" : "ui.play.flightHint")}</div>
             <div>
               <button style={button} onClick={() => dispatch({ phase: "flight", action: { type: "complete_phase" } })}>
-                {t("ui.play.skipFlight")}
+                {t(game.flight.gameMode === "GAME_OVER" ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
               </button>
             </div>
           </div>
         </>
       );
       break;
-    case "orbit": {
-      // Остання дія в списку частини завжди «відпрацювати до кінця»: на цьому тримаються боти в game.test.ts.
-      // Решту дебаг-дій справжньої орбіти гравцеві не показуємо.
-      const finish = availableActions(game).at(-1);
+    case "orbit":
       body = (
         <Panel stepper={stepper}>
           <h2 style={{ margin: 0 }}>{t("ui.play.orbitTitle")}</h2>
           <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {finish && <button style={button} onClick={() => dispatch(finish.action)}>{t("ui.play.runOrbit")}</button>}
-          </div>
+          <OrbitPanel state={game.orbit} dispatch={(action) => dispatch({ phase: "orbit", action })} />
         </Panel>
       );
       break;
-    }
     case "debrief": {
       const { outcome, log } = game.record;
       const chains = causeChains(log);
@@ -113,20 +110,29 @@ export function PlayScreen({ game, setGame, active }: Props) {
           <h2 style={{ margin: 0, color: outcome.success ? C.ok : C.bad }}>
             {t(outcome.success ? "ui.play.success" : "ui.play.failure")}
           </h2>
+          {satelliteLost && <div role="status" style={{ padding: 14, borderRadius: 8, border: `1px solid ${C.bad}`, background: "#321f2b" }}>
+            <strong>{t("ui.play.satelliteLostTitle")}</strong>
+            <p style={{ margin: "6px 0 0", color: "#d7b3bf", fontSize: 14 }}>{t("ui.play.orbitNotStarted")}</p>
+          </div>}
           <div style={{ color: C.dim }}>
             {t("ui.play.outcome", { mb: fmt(outcome.deliveredMb, 0), orbits: outcome.survivedOrbits, score: fmt(outcome.score, 0) })}
           </div>
-          {chains.map((chain) => (
+          {chains.map((chain) => {
+            // Події приховуємо як шум, але якщо причина лише подія (апарат прибув уже пошкодженим), показуємо її: інакше відмова лишиться без пояснення.
+            const real = chain.causes.filter((c) => c.kind !== "event");
+            const shown = satelliteLost || real.length === 0 ? chain.causes : real;
+            return (
             <div key={chain.failure.id}>
               <div style={{ color: C.bad, display: "flex", alignItems: "center", gap: 6 }}>
                 <img src={resolveAssetUrl("assets/icons/ui/circle-x.svg")} alt="" width={14} height={14} />
                 {describeEntry(chain.failure, BASE)}
               </div>
-              {chain.causes.filter((c) => c.kind !== "event").map((cause) => (
+              {shown.map((cause) => (
                 <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, BASE)}</div>
               ))}
             </div>
-          ))}
+            );
+          })}
           <div><button style={button} onClick={() => setGame(() => startPlay())}>{t("ui.result.again")}</button></div>
         </Panel>
       );

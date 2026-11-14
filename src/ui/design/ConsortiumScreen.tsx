@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
-import { newConsortium, activeAgency, stepConsortium, type ConsortiumAction, type ConsortiumState, type Market } from "../../core/consortium";
+import { activeAgency, newRoom, stepRoom, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState } from "../../core/consortium";
+import { Lobby } from "./Lobby";
+import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
@@ -18,7 +20,6 @@ const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", ba
 const AGENCIES = Object.values(agenciesData) as AgencyProfile[];
 const MARKET = marketData as Market;
 const BASE = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
-const MAX_AGENCIES = 4;
 // Сід кидків браку береться тут, на екрані: ядро власного рандому не має, тож кожна нова гра отримує свій.
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
@@ -27,39 +28,160 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 15,
 } as const;
 
-export function ConsortiumScreen() {
-  const [state, setState] = useState<ConsortiumState | null>(null);
-  const dispatch = (action: ConsortiumAction) => setState((s) => (s ? stepConsortium(s, action) : s));
+// Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
+// Онлайн: той самий RoomState приходить із сервера кімнат (online.ts), а дії йдуть на сервер.
+const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES };
+const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
 
-  if (!state) return <Setup onStart={(chosen) => setState(newConsortium(BASE, MARKET, chosen, undefined, newSeed()))} />;
-  if (state.result) return <Results state={state} onRestart={() => setState(null)} />;
-  return <Turn state={state} dispatch={dispatch} />;
+type Mode = { kind: "menu" } | { kind: "local" } | { kind: "online"; session: Session };
+
+export function ConsortiumScreen({ active = true }: { active?: boolean }) {
+  const [mode, setMode] = useState<Mode>(() => {
+    const saved = loadSession();
+    return saved ? { kind: "online", session: saved } : { kind: "menu" };
+  });
+  const [notice, setNotice] = useState<string | null>(null);
+  const leave = (message?: string) => { saveSession(null); setNotice(message ?? null); setMode({ kind: "menu" }); };
+  if (mode.kind === "local") return <LocalRoom active={active} onExit={() => leave()} />;
+  if (mode.kind === "online") return <OnlineRoom active={active} session={mode.session} onExit={leave} />;
+  return <Menu notice={notice} onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
 }
 
-function Setup({ onStart }: { onStart: (agencies: AgencyProfile[]) => void }) {
-  const [chosen, setChosen] = useState<string[]>(AGENCIES.map((a) => a.id));
-  const toggle = (id: string) =>
-    setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < MAX_AGENCIES ? [...c, id] : c));
-  const picked = AGENCIES.filter((a) => chosen.includes(a.id));
-
+function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s: Session) => void; notice: string | null }) {
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = (job: () => Promise<Session>) => {
+    setBusy(true); setError(null);
+    job().then(onOnline).catch((e: Error) => setError(e.message)).finally(() => setBusy(false));
+  };
+  const named = name.trim().length > 0;
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }}>
-      <h2 style={{ margin: 0 }}>{t("ui.setup.title", { max: MAX_AGENCIES })}</h2>
-      <p style={{ color: C.dim, margin: 0 }}>{t("ui.setup.hint")}</p>
-      {AGENCIES.map((a) => (
-        <label key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
-          <input type="checkbox" checked={chosen.includes(a.id)} onChange={() => toggle(a.id)} />
-          <img src={resolveAssetUrl(`assets/icons/agencies/${a.id}.svg`)} alt="" width={28} height={28} style={{ flexShrink: 0, opacity: 0.9 }} />
-          <span>
-            <strong>{t(a.nameKey)}</strong>
-            <div style={{ color: C.dim, fontSize: 13 }}>{t(a.descriptionKey)}</div>
-          </span>
-        </label>
-      ))}
+    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="menu">
+      <h2 style={{ margin: 0 }}>{t("ui.menu.title")}</h2>
       <div>
-        <button style={{ ...button, borderColor: C.accent }} disabled={picked.length === 0} onClick={() => onStart(picked)}>
-          {t("ui.setup.start")}
+        <button style={{ ...button, borderColor: C.accent }} onClick={onLocal}>{t("ui.menu.local")}</button>
+        <span style={{ color: C.dim, marginLeft: 10, fontSize: 13 }}>{t("ui.menu.localHint")}</span>
+      </div>
+      <hr style={{ borderColor: C.line, width: "100%" }} />
+      <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
+      <form
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+        onSubmit={(e) => {
+          e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
+          if (!named || busy) return;
+          if (code.length === 4) run(() => joinRoom(code, name)); else run(() => createRoom(name));
+        }}
+      >
+        <input value={name} maxLength={24} placeholder={t("ui.menu.name")} aria-label={t("ui.menu.name")} onChange={(e) => setName(e.target.value)} />
+        <button type="button" style={{ ...button, opacity: named && !busy ? 1 : 0.5 }} disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
+          {t("ui.menu.create")}
         </button>
+        <input value={code} maxLength={4} size={5} placeholder={t("ui.menu.code")} aria-label={t("ui.menu.code")} onChange={(e) => setCode(e.target.value.replace(/\s/g, "").toUpperCase())} />
+        <button type="button" style={{ ...button, opacity: named && code.length === 4 && !busy ? 1 : 0.5 }} disabled={!named || code.length !== 4 || busy} onClick={() => run(() => joinRoom(code, name))}>
+          {t("ui.menu.join")}
+        </button>
+      </form>
+      {notice && <div style={{ color: C.gold }}>{notice}</div>}
+      {error && <div style={{ color: C.bad }}>{t("ui.menu.error", { error })}</div>}
+    </div>
+  );
+}
+
+function LocalRoom({ onExit, active }: { onExit: () => void; active: boolean }) {
+  const [room, setRoom] = useState<RoomState>(newLocalRoom);
+  const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div><button style={button} onClick={onExit}>← {t("ui.menu.back")}</button></div>
+      <RoomView
+        room={room} local active={active} send={send}
+        onStart={() => {
+          // За одним екраном «готовий» не потрібен: гравці домовились поруч.
+          setRoom((r) => {
+            if (r.phase !== "lobby") return r;
+            const ready = r.players.reduce<RoomState>((acc, p) => stepRoom(acc, p.id, { type: "ready", ready: true }, ROOM_SETUP), r);
+            return stepRoom(ready, r.hostId, { type: "start" }, ROOM_SETUP);
+          });
+        }}
+        onRestart={() => setRoom(newLocalRoom())}
+      />
+    </div>
+  );
+}
+
+function OnlineRoom({ session, onExit, active }: { session: Session; onExit: (notice?: string) => void; active: boolean }) {
+  const [room, setRoom] = useState<RoomState | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const exitRef = useRef(onExit);
+  exitRef.current = onExit;
+  const leaving = useRef(false); // гравець сам вийшов: 403 від сервера після цього очікуваний, без повідомлення «кімнату втрачено»
+  useEffect(() => {
+    const ctl = new AbortController();
+    let version = 0;
+    (async () => {
+      while (!ctl.signal.aborted) {
+        try {
+          const snap = await poll(session, version, ctl.signal);
+          version = snap.version;
+          if (snap.changed && snap.state) setRoom(snap.state);
+          setError(null);
+        } catch (e) {
+          if (ctl.signal.aborted || leaving.current) return;
+          const message = (e as Error).message;
+          if (message === "unauthorized" || message === "no such room") { exitRef.current(t("ui.menu.roomGone")); return; }
+          setError(message);
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+    })();
+    return () => ctl.abort();
+  }, [session]);
+
+  const act = (action: RoomAction) => {
+    if (action.type === "leave") {
+      leaving.current = true;
+      void sendLeave(session); // з повторами при мережевому збої, щоб місце не лишилось зайнятим
+      onExit(); // і «✕» у лобі, і кнопка «Вийти», і «Ще раз» після гри: одразу в меню, без повідомлення
+      return;
+    }
+    sendAction(session, action).catch((e: Error) => setError(e.message));
+  };
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <button style={button} onClick={() => act({ type: "leave" })}>← {t("ui.menu.leave")}</button>
+        <strong>{t("ui.menu.roomCode", { code: session.code })}</strong>
+        {error && <span style={{ color: C.bad }}>{t("ui.menu.error", { error })}</span>}
+      </div>
+      {room ? (
+        <RoomView room={room} active={active} meId={session.player} send={(_, action) => act(action)} onStart={() => act({ type: "start" })} onRestart={() => act({ type: "leave" })} />
+      ) : (
+        <div style={{ color: C.dim }}>{t("ui.menu.connecting")}</div>
+      )}
+    </div>
+  );
+}
+
+interface RoomViewProps {
+  room: RoomState; local?: boolean; active?: boolean; meId?: string;
+  send: (playerId: string, action: RoomAction) => void; onStart: () => void; onRestart: () => void;
+}
+
+function RoomView({ room, local = false, active = true, meId, send, onStart, onRestart }: RoomViewProps) {
+  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
+  const { consortium } = room;
+  if (consortium.result) return <Results state={consortium} onRestart={onRestart} />;
+  const entry = activeAgency(consortium);
+  const owner = room.assignments.find((a) => a.agencyId === entry?.agency.id);
+  const name = owner ? room.playerNames[owner.playerId] ?? owner.playerId : "";
+  const mine = local || owner?.playerId === meId;
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
+      <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
+        <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
     </div>
   );
@@ -123,7 +245,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   );
 }
 
-export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void }) {
+export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
   const upcoming: Upcoming[] = useMemo(
@@ -174,6 +296,7 @@ export function Turn({ state, dispatch }: { state: ConsortiumState; dispatch: (a
 
   return (
     <DesignScreen
+      active={active}
       state={entry.design} editable={(control) => entry.actionsLeft > 0 || entry.touched.includes(control)} actionsLeft={entry.actionsLeft} upcoming={upcoming} header={header}
       dispatch={(action) => dispatch({ type: "design", action })}
     />

@@ -2,16 +2,10 @@ import type { FlightState } from "../../../core/flight";
 import {
   type BlueprintSpec,
   type SpacecraftVisualAssembly,
+  resolveAssetUrl,
   templateRegistry,
   type VisualTemplate,
 } from "../../graphics";
-
-function resolveAssetUrl(rawUrl: string): string {
-  const baseUrl = import.meta.env.BASE_URL ?? "/";
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const cleanPath = rawUrl.startsWith("/") ? rawUrl.slice(1) : rawUrl;
-  return `${normalizedBase}${cleanPath}`;
-}
 
 /**
  * Кеш і 2D Canvas-адаптер для інтеграції `templateRegistry` (`visual-templates.json`)

@@ -1,0 +1,20 @@
+{
+  "bus": { "file": "spacecraft/bus.png", "widthUnits": 2.0, "anchor": [0.5, 0.5] },
+  "station": { "file": "world/station.png", "widthUnits": 0.6, "anchor": [0.5, 0.0] },
+  "operator": { "file": "crew/operator.png", "widthUnits": 0.8, "anchor": [0.5, 0.0] },
+  "eng-cold": { "file": "modules/eng-cold.png", "widthUnits": 0.8, "anchor": [0.5, 1.0] },
+  "eng-chem": { "file": "modules/eng-chem.png", "widthUnits": 0.9, "anchor": [0.5, 1.0] },
+  "eng-ion": { "file": "modules/eng-ion.png", "widthUnits": 0.8, "anchor": [0.5, 1.0] },
+  "sol-s": { "file": "modules/sol-s.png", "widthUnits": 1.2, "anchor": [1.0, 0.5] },
+  "sol-m": { "file": "modules/sol-m.png", "widthUnits": 1.6, "anchor": [1.0, 0.5] },
+  "sol-l": { "file": "modules/sol-l.png", "widthUnits": 2.0, "anchor": [1.0, 0.5] },
+  "bat-s": { "file": "modules/bat-s.png", "widthUnits": 0.5, "anchor": [0.5, 0.5] },
+  "bat-m": { "file": "modules/bat-m.png", "widthUnits": 0.6, "anchor": [0.5, 0.5] },
+  "bat-l": { "file": "modules/bat-l.png", "widthUnits": 0.7, "anchor": [0.5, 0.5] },
+  "ant-s": { "file": "modules/ant-s.png", "widthUnits": 0.7, "anchor": [0.5, 0.0] },
+  "ant-m": { "file": "modules/ant-m.png", "widthUnits": 0.9, "anchor": [0.5, 0.0] },
+  "ant-l": { "file": "modules/ant-l.png", "widthUnits": 1.1, "anchor": [0.5, 0.0] },
+  "cam-s": { "file": "modules/cam-s.png", "widthUnits": 0.8, "anchor": [0.0, 0.5] },
+  "cam-m": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
+  "cam-l": { "file": "modules/cam-l.png", "widthUnits": 1.2, "anchor": [0.0, 0.5] }
+}

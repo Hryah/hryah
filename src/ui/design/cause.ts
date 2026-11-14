@@ -6,7 +6,9 @@ import { fmt, t } from "../text";
 export function describeEntry(entry: CauseEntry, base: DesignInput): string {
   const params: Record<string, number | string> = {};
   for (const [key, value] of Object.entries(entry.params ?? {})) {
-    if (typeof value === "number") params[key] = fmt(value);
+    if (key === "toggle") params[key] = t(`ui.control.${value}`);
+    else if (key === "enabled") params[key] = t(value ? "ui.enabled" : "ui.off");
+    else if (typeof value === "number") params[key] = fmt(value);
     else if (key === "slot") params[key] = t(`ui.slot.${value}`);
     else if (key === "margin") params[key] = t(`ui.margin.${value}`);
     else if (key === "module") {

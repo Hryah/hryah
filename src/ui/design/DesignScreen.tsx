@@ -4,6 +4,7 @@ import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type 
 import { CompositeSpacecraftSvg } from "../graphics/adapters";
 import { resolveAssetUrl, templateRegistry } from "../graphics/registry";
 import { fmt, t } from "../text";
+import { DesignStage } from "./DesignStage";
 
 // Екран частини 1. Лише читає стан і шле дії: усі розрахунки робить core/design.
 
@@ -18,6 +19,7 @@ export interface Upcoming {
 
 interface Props {
   state: DesignState;
+  active?: boolean;
   dispatch: (action: DesignAction) => void;
   // Чи можна міняти: усе разом або кожен елемент керування окремо ("slot:engine", "fuel", "alt", "launcher").
   editable: boolean | ((control: string) => boolean);
@@ -45,7 +47,7 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 14,
 } as const;
 
-export function DesignScreen({ state, dispatch, editable, upcoming = [], actionsLeft, header }: Props) {
+export function DesignScreen({ state, dispatch, editable, active = true, upcoming = [], actionsLeft, header }: Props) {
   const spec = designPhase.finish(state).result;
   const { mission, catalog } = state.input;
   const { design } = state;
@@ -72,6 +74,8 @@ export function DesignScreen({ state, dispatch, editable, upcoming = [], actions
         </div>
         <CompositeSpacecraftSvg assembly={assembly} altKm={design.altKm} fuelKg={design.fuelKg} />
       </div>
+
+      <DesignStage state={state} active={active} />
 
       <div style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
         <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>{t("ui.margins")}</div>
