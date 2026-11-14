@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import type { CauseEntry, Margin } from "../../core/contracts";
+import { useCallback, useMemo, useState } from "react";
+import type { CauseEntry, Margin, SpacecraftSpec } from "../../core/contracts";
 import { causeChains } from "../../core/debrief";
-import { availableActions, newGame, phaseState, preview, step, type GameAction, type GameState } from "../../core/game";
+import { availableActions, newGame, phaseState, preview, step, type FlightAction, type GameAction, type GameState } from "../../core/game";
 import { summarize, sweepDesigns, type SweepSummary } from "../../core/sim";
-import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
+import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from "../../core/stubs";
+import { FlightScreen } from "../flight";
+import { SpacecraftViewport, type ViewportContext } from "../graphics";
 
 // Дебаг-екран: грати в будь-яку частину без справжнього інтерфейсу.
 // Працює з усім, що реалізує Phase і віддає debugActions. Логіки гри тут немає:
@@ -51,7 +53,21 @@ export function DebugScreen() {
   const snapshots = useMemo(() => history.map(snapshot), [history]);
   const keys = Object.keys(snapshots[snapshots.length - 1] ?? {});
 
-  const dispatch = (action: GameAction) => setHistory((h) => [...h, step(h[h.length - 1]!, action)]);
+  const dispatch = useCallback((action: GameAction) => {
+    setHistory((h) => [...h, step(h[h.length - 1]!, action)]);
+  }, []);
+  const dispatchFlight = useCallback((action: FlightAction) => {
+    setHistory((h) => {
+      const current = h[h.length - 1]!;
+      const next = step(current, { phase: "flight", action });
+      if (current.phase === "flight" && next.phase === "flight" && h.length > 1) {
+        const copy = h.slice(0, -1);
+        copy.push(next);
+        return copy;
+      }
+      return [...h, next];
+    });
+  }, []);
   const restart = (nextSeed: number) => {
     setSeed(nextSeed);
     setHistory([newGame(SAMPLE_MISSION, SAMPLE_CATALOG, nextSeed)]);
@@ -64,9 +80,36 @@ export function DebugScreen() {
   const groups: Record<string, typeof actions> = {};
   for (const a of actions) (groups[a.group] ??= []).push(a);
 
+  const activeSpec: SpacecraftSpec | undefined =
+    state.phase === "design"
+      ? (result as SpacecraftSpec | undefined)
+      : state.phase === "debrief"
+        ? state.record.spec
+        : state.spec;
+
+  const viewportCtx: ViewportContext = {
+    phase: state.phase,
+    mission: state.mission,
+    design: activeSpec?.design ?? SAMPLE_DESIGN,
+    spec: activeSpec,
+    flight:
+      state.phase === "flight"
+        ? (result as ViewportContext["flight"])
+        : state.phase === "orbit"
+          ? state.flightResult
+          : state.phase === "debrief"
+            ? state.record.flight
+            : undefined,
+  };
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(320px, 1.2fr)", gap: 16 }}>
       <section style={panel}>
+        {state.phase === "flight" && (
+          <div style={{ marginBottom: 14 }}>
+            <FlightScreen state={state.flight} dispatch={dispatchFlight} />
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
           <strong style={{ fontSize: 18 }}>Частина: {state.phase}</strong>
           <span style={{ color: C.dim }}>крок {history.length - 1}</span>
@@ -104,6 +147,7 @@ export function DebugScreen() {
       </section>
 
       <section style={{ display: "grid", gap: 16, alignContent: "start" }}>
+        <SpacecraftViewport context={viewportCtx} />
         <div style={panel}>
           <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>Результат частини, якби вона закінчилась зараз</div>
           {hasMargins(result) ? <Margins margins={result.margins} /> : null}

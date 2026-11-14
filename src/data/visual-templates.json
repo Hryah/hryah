@@ -1,0 +1,410 @@
+{
+  "sockets": {
+    "solar": {
+      "slot": "solar",
+      "label": "solar",
+      "pos2d": { "x": 245, "y": 128 },
+      "pos3d": { "x": 0, "y": 0, "z": 0 },
+      "layerOrder": 1
+    },
+    "engine": {
+      "slot": "engine",
+      "label": "engine",
+      "pos2d": { "x": 245, "y": 170 },
+      "pos3d": { "x": 0, "y": -1.1, "z": 0 },
+      "layerOrder": 2
+    },
+    "battery": {
+      "slot": "battery",
+      "label": "battery",
+      "pos2d": { "x": 245, "y": 122 },
+      "pos3d": { "x": 0, "y": 0.1, "z": 0.35 },
+      "layerOrder": 3
+    },
+    "instrument": {
+      "slot": "instrument",
+      "label": "instrument",
+      "pos2d": { "x": 245, "y": 86 },
+      "pos3d": { "x": 0, "y": 0.95, "z": 0 },
+      "layerOrder": 4
+    },
+    "antenna": {
+      "slot": "antenna",
+      "label": "antenna",
+      "pos2d": { "x": 281, "y": 100 },
+      "pos3d": { "x": 0.75, "y": 0.65, "z": 0 },
+      "rotationDeg": -10,
+      "layerOrder": 5
+    }
+  },
+  "slotFallbackIds": {
+    "engine": "eng-chem",
+    "solar": "sol-m",
+    "battery": "bat-m",
+    "antenna": "ant-m",
+    "instrument": "cam-m"
+  },
+  "templates": [
+    {
+      "id": "bus:standard",
+      "category": "spacecraft",
+      "system": "structure",
+      "displayName": "CubeSat / SmallSat Bus",
+      "packName": "NASA 3D / Kenney Space Kit",
+      "model3d": {
+        "url": "assets/models/spacecraft/satellite_bus.glb",
+        "format": "glb",
+        "scale": 1.0,
+        "attribution": "NASA / Kenney CC0"
+      },
+      "blueprint": {
+        "shape": "satellite-bus",
+        "primaryColor": "#2d3748",
+        "secondaryColor": "#4a5568",
+        "accentColor": "#eab308",
+        "scaleFactor": 1.0,
+        "label": "BUS"
+      }
+    },
+    {
+      "id": "eng-cold",
+      "category": "module",
+      "slot": "engine",
+      "system": "propulsion",
+      "displayName": "Cold Gas Thruster",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "engine-cold",
+        "primaryColor": "#64748b",
+        "secondaryColor": "#94a3b8",
+        "accentColor": "#38bdf8",
+        "scaleFactor": 0.85,
+        "label": "ENG-COLD"
+      }
+    },
+    {
+      "id": "eng-chem",
+      "category": "module",
+      "slot": "engine",
+      "system": "propulsion",
+      "displayName": "Hydrazine Chemical Thruster",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "engine-chem",
+        "primaryColor": "#475569",
+        "secondaryColor": "#cbd5e1",
+        "accentColor": "#f97316",
+        "scaleFactor": 1.0,
+        "label": "ENG-CHEM"
+      }
+    },
+    {
+      "id": "eng-ion",
+      "category": "module",
+      "slot": "engine",
+      "system": "propulsion",
+      "displayName": "Hall-Effect Ion Drive",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "engine-ion",
+        "primaryColor": "#1e293b",
+        "secondaryColor": "#60a5fa",
+        "accentColor": "#06b6d4",
+        "scaleFactor": 1.15,
+        "label": "ENG-ION"
+      }
+    },
+    {
+      "id": "sol-s",
+      "category": "module",
+      "slot": "solar",
+      "system": "power",
+      "displayName": "Small Solar Wings",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "solar-small",
+        "primaryColor": "#1e3a8a",
+        "secondaryColor": "#3b82f6",
+        "accentColor": "#93c5fd",
+        "scaleFactor": 0.75,
+        "label": "SOL-S"
+      }
+    },
+    {
+      "id": "sol-m",
+      "category": "module",
+      "slot": "solar",
+      "system": "power",
+      "displayName": "Medium Dual Solar Array",
+      "packName": "NASA 3D / Kenney Space Station Kit",
+      "model3d": { "url": "assets/models/modules/solar_medium.glb", "format": "glb", "scale": 1.0 },
+      "blueprint": {
+        "shape": "solar-medium",
+        "primaryColor": "#1d4ed8",
+        "secondaryColor": "#2563eb",
+        "accentColor": "#60a5fa",
+        "scaleFactor": 1.0,
+        "label": "SOL-M"
+      }
+    },
+    {
+      "id": "sol-l",
+      "category": "module",
+      "slot": "solar",
+      "system": "power",
+      "displayName": "Large Quad Solar Array",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "solar-large",
+        "primaryColor": "#1e40af",
+        "secondaryColor": "#3b82f6",
+        "accentColor": "#fbbf24",
+        "scaleFactor": 1.35,
+        "label": "SOL-L"
+      }
+    },
+    {
+      "id": "bat-s",
+      "category": "module",
+      "slot": "battery",
+      "system": "power",
+      "displayName": "Compact Li-Ion Pack",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "battery-small",
+        "primaryColor": "#065f46",
+        "secondaryColor": "#10b981",
+        "accentColor": "#6ee7b7",
+        "scaleFactor": 0.8,
+        "label": "BAT-S"
+      }
+    },
+    {
+      "id": "bat-m",
+      "category": "module",
+      "slot": "battery",
+      "system": "power",
+      "displayName": "Dual Li-Ion Battery Bank",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "battery-medium",
+        "primaryColor": "#047857",
+        "secondaryColor": "#34d399",
+        "accentColor": "#a7f3d0",
+        "scaleFactor": 1.0,
+        "label": "BAT-M"
+      }
+    },
+    {
+      "id": "bat-l",
+      "category": "module",
+      "slot": "battery",
+      "system": "power",
+      "displayName": "High-Capacity Deep-Eclipse Battery",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "battery-large",
+        "primaryColor": "#064e3b",
+        "secondaryColor": "#10b981",
+        "accentColor": "#fde047",
+        "scaleFactor": 1.2,
+        "label": "BAT-L"
+      }
+    },
+    {
+      "id": "ant-s",
+      "category": "module",
+      "slot": "antenna",
+      "system": "comms",
+      "displayName": "Omni Whip Antenna",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "antenna-whip",
+        "primaryColor": "#7c2d12",
+        "secondaryColor": "#fb923c",
+        "accentColor": "#fed7aa",
+        "scaleFactor": 0.85,
+        "label": "ANT-S"
+      }
+    },
+    {
+      "id": "ant-m",
+      "category": "module",
+      "slot": "antenna",
+      "system": "comms",
+      "displayName": "X-Band Patch Array",
+      "packName": "NASA 3D / Kenney Space Station Kit",
+      "model3d": { "url": "assets/models/modules/antenna_medium.glb", "format": "glb", "scale": 1.0 },
+      "blueprint": {
+        "shape": "antenna-patch",
+        "primaryColor": "#9a3412",
+        "secondaryColor": "#f97316",
+        "accentColor": "#fdba74",
+        "scaleFactor": 1.0,
+        "label": "ANT-M"
+      }
+    },
+    {
+      "id": "ant-l",
+      "category": "module",
+      "slot": "antenna",
+      "system": "comms",
+      "displayName": "Ka-Band High-Gain Parabolic Dish",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "antenna-dish",
+        "primaryColor": "#c2410c",
+        "secondaryColor": "#fb923c",
+        "accentColor": "#fef08a",
+        "scaleFactor": 1.25,
+        "label": "ANT-L"
+      }
+    },
+    {
+      "id": "cam-s",
+      "category": "module",
+      "slot": "instrument",
+      "system": "science",
+      "displayName": "Compact Wide-Field Imager",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "camera-compact",
+        "primaryColor": "#581c87",
+        "secondaryColor": "#a855f7",
+        "accentColor": "#e9d5ff",
+        "scaleFactor": 0.85,
+        "label": "CAM-S"
+      }
+    },
+    {
+      "id": "cam-m",
+      "category": "module",
+      "slot": "instrument",
+      "system": "science",
+      "displayName": "Multispectral Pushbroom Scanner",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "camera-medium",
+        "primaryColor": "#6b21a8",
+        "secondaryColor": "#c084fc",
+        "accentColor": "#38bdf8",
+        "scaleFactor": 1.0,
+        "label": "CAM-M"
+      }
+    },
+    {
+      "id": "cam-l",
+      "category": "module",
+      "slot": "instrument",
+      "system": "science",
+      "displayName": "High-Resolution Orbital Telescope",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "camera-telescope",
+        "primaryColor": "#4c1d95",
+        "secondaryColor": "#8b5cf6",
+        "accentColor": "#f472b6",
+        "scaleFactor": 1.3,
+        "label": "CAM-L"
+      }
+    },
+    {
+      "id": "small",
+      "category": "launcher",
+      "displayName": "Light Launch Vehicle",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "launcher-small",
+        "primaryColor": "#334155",
+        "secondaryColor": "#e2e8f0",
+        "accentColor": "#ef4444",
+        "scaleFactor": 0.85,
+        "label": "LV-SMALL"
+      }
+    },
+    {
+      "id": "medium",
+      "category": "launcher",
+      "displayName": "Medium Launch Vehicle",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "launcher-medium",
+        "primaryColor": "#1e293b",
+        "secondaryColor": "#f8fafc",
+        "accentColor": "#f97316",
+        "scaleFactor": 1.0,
+        "label": "LV-MEDIUM"
+      }
+    },
+    {
+      "id": "heavy",
+      "category": "launcher",
+      "displayName": "Heavy Lift Launch Vehicle",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "launcher-heavy",
+        "primaryColor": "#0f172a",
+        "secondaryColor": "#ffffff",
+        "accentColor": "#eab308",
+        "scaleFactor": 1.2,
+        "label": "LV-HEAVY"
+      }
+    },
+    {
+      "id": "Earth",
+      "category": "body",
+      "displayName": "Earth (NASA Blue Marble)",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "body-earth",
+        "primaryColor": "#0284c7",
+        "secondaryColor": "#15803d",
+        "accentColor": "#7dd3fc",
+        "scaleFactor": 1.0,
+        "label": "EARTH"
+      }
+    },
+    {
+      "id": "Moon",
+      "category": "body",
+      "displayName": "Moon (NASA LRO)",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "body-moon",
+        "primaryColor": "#64748b",
+        "secondaryColor": "#94a3b8",
+        "accentColor": "#cbd5e1",
+        "scaleFactor": 0.85,
+        "label": "MOON"
+      }
+    },
+    {
+      "id": "char:astronaut",
+      "category": "character",
+      "displayName": "NASA Astronaut (EVA EMU)",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "character-astronaut",
+        "primaryColor": "#e2e8f0",
+        "secondaryColor": "#3b82f6",
+        "accentColor": "#f59e0b",
+        "scaleFactor": 1.0,
+        "label": "ASTRONAUT"
+      }
+    },
+    {
+      "id": "char:engineer",
+      "category": "character",
+      "displayName": "Flight Engineer (EVA Suit)",
+      "packName": "Blueprint / Custom Pack",
+      "blueprint": {
+        "shape": "character-engineer",
+        "primaryColor": "#f97316",
+        "secondaryColor": "#1e293b",
+        "accentColor": "#38bdf8",
+        "scaleFactor": 1.0,
+        "label": "ENGINEER"
+      }
+    }
+  ]
+}
