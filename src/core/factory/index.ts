@@ -95,6 +95,16 @@ const MAIN_STAT: Record<SlotId, string> = {
   engine: 'ispS', solar: 'powerW', battery: 'capacityWh', antenna: 'downlinkMbps', instrument: 'dataRateMbps',
 };
 
+// Базовий модуль для id fab-<базовий id>-<агенція>-<n>: найдовший відомий id, з якого починається решта.
+// Не покладається на відсутність дефісів в id агенції чи модуля.
+export function fabBaseOf(id: string, knownIds: Iterable<string>): string | undefined {
+  if (!id.startsWith('fab-')) return undefined;
+  const rest = id.slice(4);
+  let best: string | undefined;
+  for (const k of knownIds) if (rest.startsWith(`${k}-`) && (!best || k.length > best.length)) best = k;
+  return best;
+}
+
 // Модуль власного виробництва: з доброю партією кращий за каталожний, із поганою гірший; серійна ціна нижча.
 export function fabModule(base: ModuleDef, quality: number, id: string): ModuleDef {
   const stat = MAIN_STAT[base.slot];
