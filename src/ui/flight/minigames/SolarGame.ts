@@ -1,4 +1,5 @@
 import type { FlightAction, SolarMinigameState } from "../../../core/flight";
+import { flightAssetCache } from "../render/TemplateAssetCache";
 
 export class SolarGame {
   private activeWheel: "ALPHA" | "BETA" | null = null;
@@ -187,6 +188,25 @@ export class SolarGame {
       mg.panelBetaDeg,
       mg.jamTimerS > 0,
     );
+
+    // 3D GLB прев'ю сонячної панелі (assets/models/modules/solar_medium.glb) у реальному часі за кутами (α, β)
+    const solarGlb = flightAssetCache.getGlbMesh(
+      "assets/models/modules/solar_medium.glb",
+    );
+    if (solarGlb) {
+      const previewCx = (alphaCx + betaCx) * 0.5;
+      const previewCy = alphaCy + 144;
+      flightAssetCache.drawGlbMeshOnCanvas(
+        ctx,
+        solarGlb,
+        previewCx,
+        previewCy,
+        34,
+        (mg.panelAlphaDeg * Math.PI) / 180,
+        (mg.panelBetaDeg * Math.PI) / 180,
+        mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#38bdf8",
+      );
+    }
 
     // Права колонка: Осцилограф потужності (кВт) та індикатор температури мотора
     const rightX = rect.x + rect.w * 0.69;

@@ -16,6 +16,7 @@ import {
 } from "../../../core/flight";
 import type { Camera2D } from "../Camera2D";
 import type { ParticleSystem } from "./ParticleSystem";
+import { flightAssetCache } from "./TemplateAssetCache";
 
 interface StarPoint {
   x: number;
@@ -404,6 +405,19 @@ export class StationRenderer {
         ctx.arc(ox, oy, r, 0, Math.PI * 2);
         ctx.fill();
 
+        const genImg = flightAssetCache.getImage(
+          "assets/sprites/station/machine_generatorLarge.png",
+        );
+        if (genImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(ox, oy, r - 6, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.globalAlpha = 0.55;
+          ctx.drawImage(genImg, ox - r * 0.7, oy - r * 0.7, r * 1.4, r * 1.4);
+          ctx.restore();
+        }
+
         // Обертовий ротор турбіни/вентилятора всередині колони
         ctx.save();
         ctx.translate(ox, oy);
@@ -447,20 +461,30 @@ export class StationRenderer {
 
         // Основний корпус вантажного контейнера
         const boxGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
-        boxGrad.addColorStop(0, "#334155");
+        boxGrad.addColorStop(0, "#1e3a8a");
         boxGrad.addColorStop(1, "#1e293b");
         ctx.fillStyle = boxGrad;
         ctx.beginPath();
         ctx.roundRect(bx, by, bw, bh, 6);
         ctx.fill();
 
+        const cargoImg = flightAssetCache.getImage(
+          "assets/sprites/station/container-wide.png",
+        );
+        if (cargoImg) {
+          ctx.save();
+          ctx.globalAlpha = 0.5;
+          ctx.drawImage(cargoImg, bx + 4, by + 4, bw - 8, bh - 8);
+          ctx.restore();
+        }
+
         ctx.save();
         ctx.beginPath();
         ctx.rect(bx + 6, by + 6, bw - 12, bh - 12);
         ctx.clip();
-        ctx.strokeStyle = "rgba(245, 158, 11, 0.24)";
-        ctx.lineWidth = 4;
-        for (let d = -bh; d < bw + bh; d += 22) {
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.32)";
+        ctx.lineWidth = 3.5;
+        for (let d = -bh; d < bw + bh; d += 18) {
           ctx.beginPath();
           ctx.moveTo(bx + d, by);
           ctx.lineTo(bx + d - bh, by + bh);
@@ -475,7 +499,7 @@ export class StationRenderer {
         ctx.roundRect(bx, by, bw, bh, 6);
         ctx.stroke();
 
-        ctx.fillStyle = "#f59e0b";
+        ctx.fillStyle = "#ef4444";
         const corner = 8;
         ctx.fillRect(bx - 1, by - 1, corner, 4);
         ctx.fillRect(bx - 1, by - 1, 4, corner);
@@ -486,7 +510,7 @@ export class StationRenderer {
         ctx.fillRect(bx + bw - corner + 1, by + bh - 3, corner, 4);
         ctx.fillRect(bx + bw - 3, by + bh - corner + 1, 4, corner);
 
-        ctx.fillStyle = "rgba(226, 232, 240, 0.6)";
+        ctx.fillStyle = "rgba(226, 232, 240, 0.78)";
         ctx.font = "700 9px monospace";
         ctx.textAlign = "center";
         ctx.fillText("CARGO", ox, oy + 3);
@@ -581,22 +605,58 @@ export class StationRenderer {
     ctx.fillStyle = skyGrad;
     ctx.fillRect(px - r, py - r, r * 2, r * 2);
 
-    // Кривий горизонт Землі з хмарами в ілюмінаторі
+    // Кривий горизонт Землі з реальною текстурою NASA (earth_day.jpg + earth_clouds.png) та фолбеком
     const cloudShift = (timeElapsedS * 6) % (r * 2);
-    ctx.fillStyle = "#0369a1";
+    const earthImg = flightAssetCache.getImage(
+      "assets/textures/bodies/earth_day.jpg",
+    );
+    const cloudsImg = flightAssetCache.getImage(
+      "assets/textures/bodies/earth_clouds.png",
+    );
+
+    ctx.save();
     ctx.beginPath();
     ctx.arc(px - r * 0.2, py + r * 1.25, r * 1.15, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.clip();
 
-    ctx.strokeStyle = "rgba(224, 242, 254, 0.55)";
+    if (earthImg) {
+      const shiftX = (timeElapsedS * 4) % (r * 2.4);
+      ctx.drawImage(
+        earthImg,
+        px - r * 1.6 - shiftX,
+        py + r * 0.08,
+        r * 4.8,
+        r * 2.4,
+      );
+    } else {
+      ctx.fillStyle = "#0369a1";
+      ctx.fillRect(px - r * 1.5, py, r * 3, r * 2.5);
+    }
+
+    if (cloudsImg) {
+      ctx.globalAlpha = 0.55;
+      const cShiftX = (timeElapsedS * 7) % (r * 2.4);
+      ctx.drawImage(
+        cloudsImg,
+        px - r * 1.6 - cShiftX,
+        py + r * 0.05,
+        r * 4.8,
+        r * 2.4,
+      );
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    // Атмосферне свічення лімба Землі
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.65)";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(
-      px - r * 0.2 + cloudShift * 0.15,
+      px - r * 0.2 + cloudShift * 0.05,
       py + r * 1.22,
-      r * 1.12,
-      -Math.PI * 0.75,
-      -Math.PI * 0.25,
+      r * 1.13,
+      -Math.PI * 0.78,
+      -Math.PI * 0.22,
     );
     ctx.stroke();
 
@@ -798,10 +858,23 @@ export class StationRenderer {
       ctx.restore();
     }
 
-    // Корпус комп'ютерної стійки з урахуванням mountAngle
+    // Корпус комп'ютерної стійки з урахуванням mountAngle + трапецієподібна ніша в обшивці (як на скетчі)
     ctx.save();
     ctx.translate(term.pos.x, term.pos.y);
     ctx.rotate((term.mountAngle * Math.PI) / 180);
+
+    // Трапецієподібна технічна ніша в стіні модуля (Alcove зі скетчу)
+    ctx.fillStyle = "rgba(7, 12, 24, 0.88)";
+    ctx.strokeStyle = isAnchoredAtThisConsole ? "#38bdf8" : "#475569";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-cw * 0.68, ch * 0.56);
+    ctx.lineTo(-cw * 0.54, -ch * 0.64);
+    ctx.lineTo(cw * 0.54, -ch * 0.64);
+    ctx.lineTo(cw * 0.68, ch * 0.56);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
     // Візуальні труби охолодження (hasCoolingPipes)
     if (preset.hasCoolingPipes) {
@@ -841,11 +914,24 @@ export class StationRenderer {
 
     // Візуальна тарілка радара для Docking комп'ютера (hasRadarDish)
     if (preset.hasRadarDish) {
-      ctx.strokeStyle = "#cbd5e1";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(-cw * 0.3, -ch * 0.5 - 10, 12, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
+      const dishImg = flightAssetCache.getImage(
+        "assets/sprites/station/satelliteDish_detailed.png",
+      );
+      if (dishImg) {
+        ctx.drawImage(dishImg, -cw * 0.48, -ch * 0.5 - 22, 24, 24);
+      } else {
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(
+          -cw * 0.3,
+          -ch * 0.5 - 10,
+          12,
+          Math.PI * 0.15,
+          Math.PI * 0.85,
+        );
+        ctx.stroke();
+      }
     }
 
     // Тінь під шафою консолі
@@ -863,6 +949,17 @@ export class StationRenderer {
     ctx.fill();
     ctx.stroke();
 
+    // Kenney спрайт термінала в корпусі (якщо завантажений)
+    const compSprite = flightAssetCache.getImage(
+      "assets/sprites/station/computer-system.png",
+    );
+    if (compSprite) {
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.drawImage(compSprite, -cw * 0.48, -ch * 0.48, cw * 0.96, ch * 0.96);
+      ctx.restore();
+    }
+
     // Монітор консолі (блимає сам екран під час тривоги!)
     const mw = cw * 0.64;
     const mh = ch * 0.54;
@@ -874,15 +971,37 @@ export class StationRenderer {
     ctx.fill();
     ctx.stroke();
 
+    // Підключення реального VisualTemplate з templateRegistry (src/ui/graphics/registry.ts)
+    const assembly = flightAssetCache.getAssemblyForState(state);
+    const linkedTemplate =
+      term.id === "SOLAR"
+        ? assembly.attachedModules.solar.template
+        : term.id === "OXYGEN"
+          ? assembly.attachedModules.battery.template
+          : term.id === "THERMAL"
+            ? assembly.attachedModules.instrument.template
+            : assembly.attachedModules.engine.template;
+
+    if (linkedTemplate) {
+      flightAssetCache.drawBlueprintShapeOnCanvas(
+        ctx,
+        linkedTemplate.blueprint,
+        -cw * 0.28,
+        -ch * 0.11,
+        mh * 0.68,
+        isAlarm,
+      );
+    }
+
     // Жива телеметрія на екрані монітора
     ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    for (let sx = -cw * 0.38; sx <= cw * 0.15; sx += 5) {
+    for (let sx = -cw * 0.12; sx <= cw * 0.18; sx += 4) {
       const sy =
         -ch * 0.12 +
-        Math.sin(sx * 0.22 + timeElapsedS * 8) * (isAlarm ? 6.5 : 3.5);
-      if (sx === -cw * 0.38) ctx.moveTo(sx, sy);
+        Math.sin(sx * 0.25 + timeElapsedS * 8) * (isAlarm ? 6.5 : 3.5);
+      if (sx === -cw * 0.12) ctx.moveTo(sx, sy);
       else ctx.lineTo(sx, sy);
     }
     ctx.stroke();
@@ -900,11 +1019,17 @@ export class StationRenderer {
       ctx.fill();
     }
 
-    // Клавіатурна дека з підсвіткою клавіш внизу стійки
+    // Клавіатурна дека з підсвіткою клавіш внизу стійки + код підсистеми з templateRegistry
     ctx.fillStyle = "#0f172a";
     ctx.beginPath();
     ctx.roundRect(-cw * 0.42, ch * 0.22, cw * 0.84, ch * 0.18, 3);
     ctx.fill();
+    if (linkedTemplate) {
+      ctx.fillStyle = "#7dd3fc";
+      ctx.font = "700 7px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(linkedTemplate.blueprint.label, 0, ch * 0.34);
+    }
 
     ctx.restore();
 

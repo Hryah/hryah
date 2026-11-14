@@ -56,38 +56,46 @@
         {
           "id": "OBS_1",
           "kind": "PILLAR_CIRCLE",
-          "pos": { "x": 280, "y": 240 },
-          "radiusOrSize": { "w": 44, "h": 44 },
+          "pos": { "x": 240, "y": 240 },
+          "radiusOrSize": { "w": 42, "h": 42 },
           "bounciness": 0.7
+        },
+        {
+          "id": "OBS_CENTER_BOX",
+          "kind": "CARGO_BOX",
+          "pos": { "x": 460, "y": 240 },
+          "radiusOrSize": { "w": 84, "h": 84 },
+          "bounciness": 0.68
         },
         {
           "id": "OBS_2",
           "kind": "PILLAR_CIRCLE",
-          "pos": { "x": 640, "y": 240 },
-          "radiusOrSize": { "w": 44, "h": 44 },
+          "pos": { "x": 680, "y": 240 },
+          "radiusOrSize": { "w": 42, "h": 42 },
           "bounciness": 0.7
         }
       ],
       "handles": [
         { "id": "H_START", "start": { "x": 48, "y": 180 }, "end": { "x": 48, "y": 300 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
         { "id": "H_TOP_1", "start": { "x": 180, "y": 38 }, "end": { "x": 420, "y": 38 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TOP_2", "start": { "x": 520, "y": 38 }, "end": { "x": 760, "y": 38 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_BOT_1", "start": { "x": 160, "y": 442 }, "end": { "x": 360, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_SOLAR_TERM", "start": { "x": 480, "y": 442 }, "end": { "x": 620, "y": 442 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
-        { "id": "H_HAB_DOOR", "start": { "x": 855, "y": 140 }, "end": { "x": 855, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
+        { "id": "H_SOLAR_TERM", "start": { "x": 560, "y": 86 }, "end": { "x": 720, "y": 86 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
+        { "id": "H_BOT_1", "start": { "x": 150, "y": 442 }, "end": { "x": 350, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_BOT_2", "start": { "x": 420, "y": 442 }, "end": { "x": 580, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_BOT_3", "start": { "x": 650, "y": 442 }, "end": { "x": 810, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_HAB_DOOR", "start": { "x": 854, "y": 130 }, "end": { "x": 854, "y": 350 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
       ],
       "computers": [
         {
           "id": "SOLAR",
           "type": "SOLAR",
           "linkedHandleId": "H_SOLAR_TERM",
-          "mountPosition": { "x": 550, "y": 398 },
-          "mountAngle": 0,
+          "mountPosition": { "x": 640, "y": 42 },
+          "mountAngle": 180,
           "causedBy": "design:solar",
           "baseUrgencyS": 45,
           "visualPreset": {
-            "chassisWidth": 96,
-            "chassisHeight": 54,
+            "chassisWidth": 108,
+            "chassisHeight": 52,
             "screenColor": "#0284c7",
             "hasAntenna": true,
             "hasCoolingPipes": false,
@@ -244,26 +252,33 @@
       ],
       "obstacles": [
         {
-          "id": "OBS_VLAB_1",
+          "id": "OBS_VLAB_TOP",
           "kind": "PILLAR_CIRCLE",
-          "pos": { "x": 260, "y": 420 },
-          "radiusOrSize": { "w": 42, "h": 42 },
+          "pos": { "x": 260, "y": 220 },
+          "radiusOrSize": { "w": 44, "h": 44 },
+          "bounciness": 0.7
+        },
+        {
+          "id": "OBS_VLAB_BOT",
+          "kind": "PILLAR_CIRCLE",
+          "pos": { "x": 260, "y": 590 },
+          "radiusOrSize": { "w": 44, "h": 44 },
           "bounciness": 0.7
         }
       ],
       "handles": [
-        { "id": "H_VLAB_R1", "start": { "x": 472, "y": 660 }, "end": { "x": 472, "y": 500 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_VLAB_L1", "start": { "x": 48, "y": 520 }, "end": { "x": 48, "y": 340 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_VLAB_R2", "start": { "x": 472, "y": 340 }, "end": { "x": 472, "y": 180 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_OXYGEN_TERM", "start": { "x": 190, "y": 46 }, "end": { "x": 330, "y": 46 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" }
+        { "id": "H_VLAB_R1", "start": { "x": 472, "y": 680 }, "end": { "x": 472, "y": 520 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_VLAB_L1", "start": { "x": 48, "y": 500 }, "end": { "x": 48, "y": 310 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_OXYGEN_TERM", "start": { "x": 454, "y": 320 }, "end": { "x": 454, "y": 460 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
+        { "id": "H_VLAB_TOP", "start": { "x": 190, "y": 44 }, "end": { "x": 330, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
       ],
       "computers": [
         {
           "id": "OXYGEN",
           "type": "OXYGEN",
           "linkedHandleId": "H_OXYGEN_TERM",
-          "mountPosition": { "x": 260, "y": 90 },
-          "mountAngle": 180,
+          "mountPosition": { "x": 410, "y": 390 },
+          "mountAngle": -90,
           "causedBy": "design:battery",
           "baseUrgencyS": 48,
           "visualPreset": {

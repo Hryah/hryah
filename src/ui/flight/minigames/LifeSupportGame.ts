@@ -7,6 +7,7 @@ import {
   LS_SLOT_POS,
   LS_TRASH_POS,
 } from "../../../core/flight";
+import { flightAssetCache } from "../render/TemplateAssetCache";
 
 export class LifeSupportGame {
   private dragMode: "RED_FILTER" | "GREEN_FILTER" | "AMMONIA_VALVE" | "O2_VALVE" | null = null;
@@ -308,6 +309,40 @@ export class LifeSupportGame {
     ctx.roundRect(mg.greenFilterPos.x - 32, mg.greenFilterPos.y - 42, 64, 84, 8);
     ctx.fill();
     ctx.stroke();
+
+    const barrelSprite = flightAssetCache.getImage(
+      "assets/sprites/station/machine_barrelLarge.png",
+    );
+    if (barrelSprite) {
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      ctx.drawImage(
+        barrelSprite,
+        mg.greenFilterPos.x - 24,
+        mg.greenFilterPos.y - 34,
+        48,
+        68,
+      );
+      ctx.restore();
+    }
+
+    // 3D GLB телеметричний датчик СЖЗ у шапці щита (assets/models/modules/antenna_medium.glb)
+    const sensorGlb = flightAssetCache.getGlbMesh(
+      "assets/models/modules/antenna_medium.glb",
+    );
+    if (sensorGlb) {
+      flightAssetCache.drawGlbMeshOnCanvas(
+        ctx,
+        sensorGlb,
+        670,
+        26,
+        15,
+        timeElapsedS * 1.6,
+        0.35,
+        "#fdba74",
+      );
+    }
+
     ctx.fillStyle = "#dcfce7";
     ctx.font = "700 10px monospace";
     ctx.fillText("НОВИЙ", mg.greenFilterPos.x, mg.greenFilterPos.y - 4);

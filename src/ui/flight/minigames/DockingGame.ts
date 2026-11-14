@@ -1,4 +1,5 @@
 import type { DockingMinigameState, FlightAction } from "../../../core/flight";
+import { flightAssetCache } from "../render/TemplateAssetCache";
 
 export class DockingGame {
   private keysHeld = { w: false, a: false, s: false, d: false };
@@ -227,6 +228,23 @@ export class DockingGame {
     ctx.save();
     ctx.translate(tx, ty);
     ctx.scale(scale, scale);
+
+    // Реальна 3D GLB модель стикувального модуля (assets/models/spacecraft/satellite_bus.glb через parseGlbBuffer)
+    const busGlb = flightAssetCache.getGlbMesh(
+      "assets/models/spacecraft/satellite_bus.glb",
+    );
+    if (busGlb) {
+      flightAssetCache.drawGlbMeshOnCanvas(
+        ctx,
+        busGlb,
+        0,
+        0,
+        52,
+        mg.offsetXPx * 0.012,
+        -0.38 + mg.offsetYPx * 0.01,
+        mg.inLockZone ? "rgba(61, 220, 132, 0.85)" : "rgba(46, 196, 182, 0.8)",
+      );
+    }
 
     // 3D-каркас корпусу модуля в перспективі позаду стикувального кільця
     ctx.strokeStyle = "rgba(46, 196, 182, 0.32)";
