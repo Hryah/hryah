@@ -63,32 +63,48 @@ export function createOrbitScene(): Scene<OrbitView> {
 
   return {
     mount(stage: Stage) {
+      // Якщо mount кине виняток до присвоєння parts, dispose() нічого не знає про вже створене: звільняємо його тут.
+      const created: THREE.Object3D[] = [];
+      const own = <T extends THREE.Object3D>(object: T): T => { created.push(object); return object; };
+      let craft: SpriteHandle | null = null;
+      let chargeMaterial: THREE.SpriteMaterial | null = null;
+      try {
       const planet = createPlanet(PLANET_RADIUS);
+      own(planet.group);
       const stars = createStars(400, 30, 11);
-      const ring = createOrbitRing(ORBIT_RADIUS);
-      const shadow = createArcSector(PLANET_RADIUS * 1.02, ORBIT_RADIUS + 0.5, SHADOW_CENTER, 0, 'shadow', 0.55);
-      const passSector = createArcSector(PLANET_RADIUS * 1.02, ORBIT_RADIUS, STATION_ANGLE, 0, 'accent', 0.1);
+      own(stars.points);
+      const ring = own(createOrbitRing(ORBIT_RADIUS));
+      const shadow = own(createArcSector(PLANET_RADIUS * 1.02, ORBIT_RADIUS + 0.5, SHADOW_CENTER, 0, 'shadow', 0.55));
+      const passSector = own(createArcSector(PLANET_RADIUS * 1.02, ORBIT_RADIUS, STATION_ANGLE, 0, 'accent', 0.1));
       shadow.position.y = -0.01;
       passSector.position.y = -0.02;
 
-      const station = createBox(0.22, 0.3, 0.22, 'hull');
+      const station = own(createBox(0.22, 0.3, 0.22, 'hull'));
       const surface = onCircle(STATION_ANGLE, PLANET_RADIUS);
       stationPosition.set(surface.x, 0, surface.z);
       station.position.copy(stationPosition).multiplyScalar(1.05);
       // вісь коробки вздовж радіуса планети
       station.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), stationPosition.clone().normalize());
 
-      const beam = createBeam('accent');
-      const craft = createSprite('bus', spriteSource);
-      craft.setScale(CRAFT_SCALE);
+      const beam = own(createBeam('accent'));
+      const bus = createSprite('bus', spriteSource);
+      craft = bus;
+      bus.setScale(CRAFT_SCALE);
 
-      const chargeMaterial = new THREE.SpriteMaterial({ color: palette.calm, depthTest: false });
-      const chargeBar = new THREE.Sprite(chargeMaterial);
+      const material = new THREE.SpriteMaterial({ color: palette.calm, depthTest: false });
+      chargeMaterial = material;
+      const chargeBar = new THREE.Sprite(material);
       chargeBar.center.set(0, 0.5);
       chargeBar.renderOrder = 2;
 
-      stage.root.add(stars.points, planet.group, ring, shadow, passSector, station, beam, craft.object, chargeBar);
-      parts = { planet, stars, ring, shadow, pass: passSector, station, beam, craft, chargeBar, chargeMaterial };
+      stage.root.add(stars.points, planet.group, ring, shadow, passSector, station, beam, bus.object, chargeBar);
+      parts = { planet, stars, ring, shadow, pass: passSector, station, beam, craft: bus, chargeBar, chargeMaterial: material };
+      } catch (error) {
+        for (const object of created) disposeObject(object);
+        craft?.dispose();
+        chargeMaterial?.dispose();
+        throw error;
+      }
     },
 
     update(view, dtS, timeS) {
