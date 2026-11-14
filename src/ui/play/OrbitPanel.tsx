@@ -16,7 +16,7 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
   return (
     <div style={{ display: "grid", gap: 12 }} data-testid="orbit-panel">
       <div style={{ color: "#8a90a8" }}>
-        {tr("ui.orbit")} {Math.min(state.completedOrbits + 1, total)} / {total} · {num(state.deliveredMb)} / {num(state.input.mission.requiredDataMb)} Mb · {num(state.chargeWh, 1)} / {num(view.capacityWh, 1)} Wh
+        {tr("ui.orbit")} {view.nextOrbit} / {total} · {num(state.deliveredMb)} / {num(state.input.mission.requiredDataMb)} Mb · {num(state.chargeWh, 1)} / {num(view.capacityWh, 1)} Wh
       </div>
       <OrbitScene turn={state.completedOrbits} totalTurns={total} storm={view.stormNext && !done}
         safeMode={state.toggles.safeMode} complete={done} />
@@ -24,6 +24,7 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
         {tr("ui.onboardStorage")}: {num(state.bufferMb)} / {num(view.bufferCapacityMb)} Mb · {tr("ui.thermalStatus")}:{" "}
         {tr(state.coldStress >= 2 ? "ui.cold" : state.coldStress > 0 ? "ui.cooling" : "ui.stable")}
         {!done && <> · {tr("ui.endingCharge")}: {num(view.forecast.chargeWh, 1)} Wh · +{num(view.forecast.deliveredMb)} Mb</>}
+        {!done && view.forecast.lostMb > 0 && <span style={{ color: "#f4b46a" }}> · {tr("ui.dataLoss")}: {num(view.forecast.lostMb)} Mb</span>}
       </div>
       {!done && view.forecast.powerFailure && <div style={{ color: "#f4b46a" }}>{tr("ui.powerRisk")}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -31,18 +32,22 @@ export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (
           // Безпечний режим перевизначає решту перемикачів: показуємо, що реально працює.
           const overridden = state.toggles.safeMode && id !== "safeMode";
           const on = overridden ? view.activeSystems[id] : state.toggles[id];
+          // Увімкнено, але система не працює (холод, пошкодження з польоту): показуємо «недоступно», а не «увімкнено».
+          const unavailable = !done && !overridden && state.toggles[id] && !view.activeSystems[id];
+          const note = unavailable ? tr("controls.unavailable")
+            : overridden ? tr(id === "heater" ? "controls.forcedHeater" : "controls.overridden") : null;
           return (
-          <button key={id} role="switch" aria-checked={on} disabled={done || overridden}
-            style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${on ? "#5ad19a" : "#2a2f45"}`, background: "#161a2b", color: "inherit", cursor: "pointer" }}
+          <button key={id} role="switch" aria-checked={on && !unavailable} disabled={done || overridden}
+            style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${on && !unavailable ? "#5ad19a" : "#2a2f45"}`, background: "#161a2b", color: "inherit", cursor: done || overridden ? "default" : "pointer" }}
             onClick={() => dispatch({ type: "toggle", id })}>
-            {tr(`ui.control.${id}`)}: {tr(on ? "ui.enabled" : "ui.off")}{overridden ? ` (${tr("controls.overridden")})` : ""}
+            {tr(`ui.control.${id}`)}: {tr(on ? "ui.enabled" : "ui.off")}{note ? ` (${note})` : ""}
           </button>
           );
         })}
       </div>
       {!done && view.stormNext && <div style={{ color: "#f4b46a" }}>{tr("ui.stormWarning")}</div>}
       <div>
-        <button disabled={done} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #5ad19a", background: "#161a2b", color: "inherit", cursor: "pointer" }}
+        <button disabled={done} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #5ad19a", background: "#161a2b", color: "inherit", cursor: done ? "default" : "pointer" }}
           onClick={() => dispatch({ type: "tick", dtS: state.input.flight.orbit.periodS })}>
           {tr("ui.nextOrbit")}
         </button>

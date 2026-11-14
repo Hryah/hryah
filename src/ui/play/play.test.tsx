@@ -64,5 +64,6 @@ describe("наскрізна гра: екран показує поточну ч
     const html = render(g);
     expect(html).toContain("Onboard storage");
     expect(html).toContain("by safe mode");
+    expect(html).toContain("Enabled by safe mode"); // обігрівач у безпечному режимі не «призупинений»
   });
 });
