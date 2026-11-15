@@ -4,6 +4,7 @@ import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION, stubDesign } from "../st
 import {
   ALL_GRAB_HANDLES,
   buildOctagonWallsFromChamfer,
+  closestPointOnSegment,
   computeBallisticTrajectoryWithBounces,
   computeSlingshotLaunch,
   computeTrajectoryPreview,
@@ -14,6 +15,7 @@ import {
   getActiveWalls,
   LS_SLOT_POS,
   LS_TRASH_POS,
+  PHYSICS_CONSTANTS,
   STATION_LEVEL_CONFIG,
   stepZeroGPhysics,
 } from "./index";
@@ -320,7 +322,7 @@ describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platfor
     const input = makeInput();
     let state = flightPhase.init(input, 21);
 
-    // Перевіряємо ковзання вздовж поручня H_START (вертикальний поручень x=48, y=190..290)
+    // Перевіряємо ковзання вздовж поручня H_START (вертикальний поручень x=52, y=180..300)
     const startY = state.astronaut.pos.y;
     state = flightPhase.step(state, {
       type: "slide_along_handle",
@@ -329,16 +331,16 @@ describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platfor
       dtS: 0.1,
     });
     expect(state.astronaut.pos.y).toBeGreaterThan(startY);
-    expect(state.astronaut.pos.x).toBe(48);
+    expect(state.astronaut.pos.x).toBe(52);
 
-    // Перевіряємо прогноз рикошетної траєкторії та захоплення цільового поручня H_MID_1
+    // Перевіряємо прогноз рикошетної траєкторії та захоплення цільового поручня
     const activeWalls = getActiveWalls(state.unlockedModuleIds, state.openedSeals);
     const activeHandles = getActiveHandles(state.unlockedModuleIds);
     const circleObs = getActiveCircleObstacles(state.unlockedModuleIds);
 
-    // 1. Пряме наведення на верхній поручень H_TOP_1 (x=210..290, y=54)
+    // 1. Пряме наведення на верхній поручень H_TOP_1 (x=180..420, y=52)
     const lockTop = computeBallisticTrajectoryWithBounces(
-      { x: 48, y: 240 },
+      { x: 52, y: 240 },
       { vx: 300, vy: -275 },
       state.astronaut.radius,
       activeWalls,
@@ -350,9 +352,9 @@ describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platfor
     expect(lockTop.targetPoint).not.toBeNull();
     expect(lockTop.requiresActiveGrab).toBe(false);
 
-    // 2. Постріл прямо в центральну колону COL_HAB_CENTER (x=420, y=240) фіксує точку рикошету
+    // 2. Постріл прямо в перешкоду OBS_1 (x=240, y=240) фіксує точку рикошету
     const bouncePreview = computeBallisticTrajectoryWithBounces(
-      { x: 48, y: 240 },
+      { x: 52, y: 240 },
       { vx: 380, vy: 0 },
       state.astronaut.radius,
       activeWalls,
@@ -362,5 +364,211 @@ describe("flightPhase — RoomCamera, Octagon LevelBlueprint & 2D Zero-G Platfor
     );
     expect(bouncePreview.bouncePoints.length).toBeGreaterThan(0);
     expect(bouncePreview.targetHandleId).toBe("H_START");
+  });
+
+  it("ізоляція колізій, Safe Clearance поручнів та чистий виліт вгору з H_HUB_NORTH", () => {
+    const input = makeInput();
+    const s0 = flightPhase.init(input, 9);
+    const allModuleIds = STATION_LEVEL_CONFIG.map((m) => m.id);
+    const allOpenWalls = getActiveWalls(allModuleIds, ["NORTH", "EAST", "SOUTH"]);
+    const allCircles = getActiveCircleObstacles(allModuleIds);
+
+    // 1. Safe Clearance: усі поручні відсунуті від внутрішньої лінії стіни (14px) щонайменше на R_player + 14px (і при закритих, і при відкритих шлюзах)
+    for (const mod of STATION_LEVEL_CONFIG) {
+      const innerClearanceMin =
+        mod.theme.wallThickness + PHYSICS_CONSTANTS.playerRadiusPx + 14;
+      for (const completedDockings of [0, 3]) {
+        const modWalls = buildOctagonWallsFromChamfer(mod, completedDockings);
+        for (const h of mod.handles) {
+          for (const t of [0, 0.5, 1]) {
+            const px = mod.worldPos.x + h.start.x + (h.end.x - h.start.x) * t;
+            const py = mod.worldPos.y + h.start.y + (h.end.y - h.start.y) * t;
+            for (const w of modWalls) {
+              const cp = closestPointOnSegment(px, py, w.ax, w.ay, w.bx, w.by);
+              const dist = Math.hypot(px - cp.x, py - cp.y);
+              expect(dist, `${h.id} vs ${w.id} (wave ${completedDockings})`).toBeGreaterThanOrEqual(
+                innerClearanceMin - 0.5,
+              );
+            }
+            for (const c of allCircles) {
+              expect(Math.hypot(px - c.wx, py - c.wy)).toBeGreaterThan(
+                c.radius + PHYSICS_CONSTANTS.playerRadiusPx + 10,
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Корпуси терміналів (зокрема верхніх SOLAR та DOCKING_1) не мають твердої фізичної колізії
+    for (const termId of ["SOLAR", "DOCKING_1"] as const) {
+      const term = s0.terminals.find((t) => t.id === termId)!;
+      const flyThrough = stepZeroGPhysics(
+        {
+          ...s0.astronaut,
+          pos: { x: term.pos.x - 40, y: term.pos.y },
+          vel: { vx: 320, vy: 0 },
+          state: "FLYING",
+          anchoredHandleId: null,
+        },
+        0.25,
+        allOpenWalls,
+        [],
+        allCircles,
+      );
+      expect(flyThrough.wallImpactSpeedPxS).toBe(0);
+      expect(flyThrough.astronaut.pos.x).toBeGreaterThan(term.pos.x + 25);
+    }
+
+    // 3. Clean Reflection: дотичний удар не гасить тангенціальну швидкість множенням на restitution
+    const grazeOut = stepZeroGPhysics(
+      {
+        ...s0.astronaut,
+        pos: { x: 200, y: 18 },
+        vel: { vx: 400, vy: -80 },
+        state: "FLYING",
+        anchoredHandleId: null,
+      },
+      0.016,
+      allOpenWalls,
+      [],
+      allCircles,
+    );
+    expect(grazeOut.astronaut.pos.y).toBeGreaterThanOrEqual(s0.astronaut.radius);
+    expect(grazeOut.astronaut.vel.vy).toBeGreaterThan(0);
+    expect(grazeOut.astronaut.vel.vx).toBeGreaterThan(395);
+
+    // Двопрохідне виштовхування в куті/стику фаски без залипання
+    let cornerAstro: typeof s0.astronaut = {
+      ...s0.astronaut,
+      pos: { x: 64, y: 40 },
+      vel: { vx: -160, vy: -220 },
+      state: "FLYING",
+      anchoredHandleId: null,
+    };
+    for (let i = 0; i < 6; i++) {
+      cornerAstro = stepZeroGPhysics(cornerAstro, 0.02, allOpenWalls, [], allCircles).astronaut;
+    }
+    expect(cornerAstro.vel.vx).toBeGreaterThan(0);
+    expect(cornerAstro.vel.vy).toBeGreaterThan(0);
+    expect(cornerAstro.pos.y).toBeGreaterThanOrEqual(s0.astronaut.radius);
+
+    // 4. Виліт крізь відкриті шлюзи з пристінних поручнів H_HUB_NORTH і H_HUB_EAST не блокується стінами/шлюзом
+    const doorLaunches = [
+      {
+        handleId: "H_HUB_NORTH",
+        seals: ["NORTH"],
+        targetModuleId: "MOD_VERTICAL_LAB",
+        dragX: 0,
+        dragY: 160,
+        checkAxis: (v: { vx: number; vy: number }) => v.vy < -400,
+      },
+      {
+        handleId: "H_HUB_EAST",
+        seals: ["NORTH", "EAST"],
+        targetModuleId: "MOD_THERMAL_BAY",
+        dragX: -160,
+        dragY: 0,
+        checkAxis: (v: { vx: number; vy: number }) => v.vx > 400,
+      },
+    ];
+    for (const tc of doorLaunches) {
+      const handle = ALL_GRAB_HANDLES.find((h) => h.id === tc.handleId)!;
+      let hubState: FlightState = {
+        ...s0,
+        activeModuleId: "MOD_INTERSECTION",
+        unlockedModuleIds: [
+          "MOD_HABITAT",
+          "MOD_INTERSECTION",
+          "MOD_VERTICAL_LAB",
+          "MOD_THERMAL_BAY",
+        ],
+        openedSeals: tc.seals,
+        astronaut: {
+          ...s0.astronaut,
+          pos: { x: (handle.ax + handle.bx) * 0.5, y: (handle.ay + handle.by) * 0.5 },
+          state: "ANCHORED",
+          anchoredHandleId: tc.handleId,
+        },
+      };
+      hubState = flightPhase.step(hubState, {
+        type: "slingshot_start",
+        screenX: 500,
+        screenY: 200,
+      });
+      hubState = flightPhase.step(hubState, {
+        type: "slingshot_move",
+        screenX: 500 + tc.dragX,
+        screenY: 200 + tc.dragY,
+      });
+      expect(tc.checkAxis(hubState.astronaut.slingshot.launchVector)).toBe(true);
+      hubState = flightPhase.step(hubState, { type: "slingshot_release" });
+      hubState = flightPhase.step(hubState, { type: "tick", dtS: 0.22 });
+      expect(hubState.activeModuleId).toBe(tc.targetModuleId);
+    }
+  });
+
+  it("левел-дизайн модулів гарантує >=45px простору навколо ілюмінаторів і 18–24px між консоллю та поручнем", () => {
+    for (const mod of STATION_LEVEL_CONFIG) {
+      for (let pi = 0; pi < mod.theme.portholes.length; pi++) {
+        const p = mod.theme.portholes[pi]!;
+        for (const h of mod.handles) {
+          const cp = closestPointOnSegment(p.x, p.y, h.start.x, h.start.y, h.end.x, h.end.y);
+          const gap = Math.hypot(p.x - cp.x, p.y - cp.y) - p.r;
+          expect(gap, `${mod.id} porthole#${pi} vs ${h.id}`).toBeGreaterThanOrEqual(45);
+        }
+        for (const t of mod.computers) {
+          const rad = (t.mountAngle * Math.PI) / 180;
+          const dx = p.x - t.mountPosition.x;
+          const dy = p.y - t.mountPosition.y;
+          const lx = dx * Math.cos(-rad) - dy * Math.sin(-rad);
+          const ly = dx * Math.sin(-rad) + dy * Math.cos(-rad);
+          const hw = t.visualPreset.chassisWidth * 0.5;
+          const hh = t.visualPreset.chassisHeight * 0.5;
+          const gap =
+            Math.hypot(Math.max(-hw - lx, 0, lx - hw), Math.max(-hh - ly, 0, ly - hh)) -
+            p.r;
+          expect(gap, `${mod.id} porthole#${pi} vs ${t.id}`).toBeGreaterThanOrEqual(45);
+        }
+        for (const obs of mod.obstacles) {
+          let gap: number;
+          if (obs.kind === "PILLAR_CIRCLE") {
+            gap = Math.hypot(p.x - obs.pos.x, p.y - obs.pos.y) - p.r - obs.radiusOrSize.w;
+          } else {
+            const hw = obs.radiusOrSize.w * 0.5;
+            const hh = obs.radiusOrSize.h * 0.5;
+            const dx = Math.max(obs.pos.x - hw - p.x, 0, p.x - (obs.pos.x + hw));
+            const dy = Math.max(obs.pos.y - hh - p.y, 0, p.y - (obs.pos.y + hh));
+            gap = Math.hypot(dx, dy) - p.r;
+          }
+          expect(gap, `${mod.id} porthole#${pi} vs ${obs.id}`).toBeGreaterThanOrEqual(45);
+        }
+      }
+
+      for (const comp of mod.computers) {
+        const linked = mod.handles.find((h) => h.id === comp.linkedHandleId);
+        expect(linked, `${comp.id} linkedHandle`).toBeDefined();
+        if (!linked) continue;
+        const rad = (comp.mountAngle * Math.PI) / 180;
+        let minGap = Infinity;
+        for (let i = 0; i <= 20; i++) {
+          const u = i / 20;
+          const hx = linked.start.x + (linked.end.x - linked.start.x) * u;
+          const hy = linked.start.y + (linked.end.y - linked.start.y) * u;
+          const dx = hx - comp.mountPosition.x;
+          const dy = hy - comp.mountPosition.y;
+          const lx = dx * Math.cos(-rad) - dy * Math.sin(-rad);
+          const ly = dx * Math.sin(-rad) + dy * Math.cos(-rad);
+          const hw = comp.visualPreset.chassisWidth * 0.5;
+          const hh = comp.visualPreset.chassisHeight * 0.5;
+          minGap = Math.min(
+            minGap,
+            Math.hypot(Math.max(-hw - lx, 0, lx - hw), Math.max(-hh - ly, 0, ly - hh)),
+          );
+        }
+        expect(minGap, `${comp.id} <-> ${linked.id}`).toBeGreaterThanOrEqual(18);
+        expect(minGap, `${comp.id} <-> ${linked.id}`).toBeLessThanOrEqual(24);
+      }
+    }
   });
 });

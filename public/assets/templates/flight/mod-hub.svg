@@ -21,48 +21,5 @@
     <line x1="412" y1="18" x2="412" y2="682" stroke="#788FB3" stroke-width="2" opacity="0.32"/>
     <line x1="18" y1="288" x2="682" y2="288" stroke="#788FB3" stroke-width="2" opacity="0.32"/>
     <line x1="18" y1="412" x2="682" y2="412" stroke="#788FB3" stroke-width="2" opacity="0.32"/>
-    <!-- Central Cupola Porthole (350,350) r=75 -->
-    <g id="porthole-hub-c">
-      <!-- Outer bolted flange -->
-      <circle cx="350" cy="350" r="87" fill="#788FB3" stroke="#0D1736" stroke-width="4.5"/>
-      <circle cx="350" cy="350" r="80" fill="#C0C8DD" stroke="#0D1736" stroke-width="3.5"/>
-      <!-- 8 Perimeter bolts -->
-      <circle cx="433.5" cy="350.0" r="2.6" fill="#0D1736"/><circle cx="409.0" cy="409.0" r="2.6" fill="#0D1736"/><circle cx="350.0" cy="433.5" r="2.6" fill="#0D1736"/><circle cx="291.0" cy="409.0" r="2.6" fill="#0D1736"/><circle cx="266.5" cy="350.0" r="2.6" fill="#0D1736"/><circle cx="291.0" cy="291.0" r="2.6" fill="#0D1736"/><circle cx="350.0" cy="266.5" r="2.6" fill="#0D1736"/><circle cx="409.0" cy="291.0" r="2.6" fill="#0D1736"/>
-      <!-- Starry deep-space interior lens -->
-      <circle cx="350" cy="350" r="75" fill="#091326" stroke="#0D1736" stroke-width="4"/>
-      <circle cx="326.0" cy="331.2" r="2.1" fill="#FFFFFF" opacity="0.85"/>
-      <circle cx="371.0" cy="372.5" r="1.6" fill="#B2D7E8" opacity="0.8"/>
-      <circle cx="363.5" cy="318.5" r="1.4" fill="#FFFFFF" opacity="0.65"/>
-      <circle cx="338.8" cy="383.8" r="1.2" fill="#3EA2F6" opacity="0.75"/>
-      <!-- Subtle orbital planet rim curve -->
-      <path d="M 296.0,381.5 Q 350.0,356.0 405.5,378.5"
-            fill="none" stroke="#3EA2F6" stroke-width="4.5" opacity="0.32" stroke-linecap="round"/>
-      <!-- Diagonal glass reflection glare -->
-      <ellipse cx="324.5" cy="324.5" rx="21.0" ry="9.8"
-               transform="rotate(-38 324.5 324.5)" fill="#B2D7E8" opacity="0.62"/>
-      <circle cx="344.0" cy="312.5" r="5.6" fill="#FFFFFF" opacity="0.72"/>
-    </g>
   </g>
-  <!-- 4 Corner Armored Wall Segments leaving 120px open doorways at N/E/S/W -->
-  <path d="M 7,290 L 7,160 L 160,7 L 290,7" fill="none" stroke="#0D1736" stroke-width="20" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 7,290 L 7,160 L 160,7 L 290,7" fill="none" stroke="#C0C8DD" stroke-width="10" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 410,7 L 540,7 L 693,160 L 693,290" fill="none" stroke="#0D1736" stroke-width="20" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 410,7 L 540,7 L 693,160 L 693,290" fill="none" stroke="#C0C8DD" stroke-width="10" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 693,410 L 693,540 L 540,693 L 410,693" fill="none" stroke="#0D1736" stroke-width="20" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 693,410 L 693,540 L 540,693 L 410,693" fill="none" stroke="#C0C8DD" stroke-width="10" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 290,693 L 160,693 L 7,540 L 7,410" fill="none" stroke="#0D1736" stroke-width="20" stroke-linejoin="round" stroke-linecap="butt"/><path d="M 290,693 L 160,693 L 7,540 L 7,410" fill="none" stroke="#C0C8DD" stroke-width="10" stroke-linejoin="round" stroke-linecap="butt"/>
-  <g>
-      <rect x="-3.0" y="278.0" width="18" height="14" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <rect x="-3.0" y="408.0" width="18" height="14" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <line x1="7.0" y1="290.0" x2="7.0" y2="410.0" stroke="#3EA2F6" stroke-width="3" stroke-dasharray="8 8" opacity="0.55"/>
-    </g>
-  <g>
-      <rect x="685.0" y="278.0" width="18" height="14" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <rect x="685.0" y="408.0" width="18" height="14" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <line x1="693.0" y1="290.0" x2="693.0" y2="410.0" stroke="#3EA2F6" stroke-width="3" stroke-dasharray="8 8" opacity="0.55"/>
-    </g>
-  <g>
-      <rect x="278.0" y="-2.0" width="14" height="18" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <rect x="408.0" y="-2.0" width="14" height="18" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <line x1="290.0" y1="7.0" x2="410.0" y2="7.0" stroke="#3EA2F6" stroke-width="3" stroke-dasharray="8 8" opacity="0.55"/>
-    </g>
-  <g>
-      <rect x="278.0" y="684.0" width="14" height="18" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <rect x="408.0" y="684.0" width="14" height="18" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3.5"/>
-      <line x1="290.0" y1="693.0" x2="410.0" y2="693.0" stroke="#3EA2F6" stroke-width="3" stroke-dasharray="8 8" opacity="0.55"/>
-    </g>
 </svg>
