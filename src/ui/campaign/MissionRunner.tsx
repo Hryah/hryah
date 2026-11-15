@@ -29,6 +29,7 @@ export interface MissionRunnerProps {
   spec: SpacecraftSpec;
   seeds: { flight: number; orbit: number };
   active: boolean;
+  windowNumber?: number;
   onReport: (report: MissionReport) => void;
 }
 
@@ -36,7 +37,7 @@ type Stage =
   | { kind: "flight" }
   | { kind: "orbit"; flight: FlightResult };
 
-export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, onReport }: MissionRunnerProps) {
+export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, windowNumber, onReport }: MissionRunnerProps) {
   // Місія й апарат за час одного запуску не змінюються; фіксуємо їх, щоб опитування кімнати не перераховувало орбіту.
   const [{ mission, spec }] = useState(() => ({ mission: missionProp, spec: specProp }));
   const [stage, setStage] = useState<Stage>({ kind: "flight" });
@@ -164,6 +165,9 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
       <OrbitPrototype
         campaign={{
           state: orbit,
+          windowNumber,
+          craftName: agencyName,
+          locked: full,
           onAction: (a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a])),
           footer: (
             <div style={{ display: "grid", gap: 4, justifyItems: "end" }}>

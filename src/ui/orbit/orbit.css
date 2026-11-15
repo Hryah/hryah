@@ -223,11 +223,13 @@ button:focus-visible, a:focus-visible { outline: 2px solid #c4ef8b; outline-offs
   font-size: 14px;
   color: #ffecd1;
 }
-.orbit-app.is-campaign .mission-sidebar { background: #00111d; padding: 22px 18px; }
+.orbit-app.is-campaign .mission-sidebar { background: #00111d; }
+/* Відступи й висоти лише в діапазонах, де їх не задають власні брейкпоїнти екрана (≤990, ≥1500 px). */
+@media (min-width: 991px) { .orbit-app.is-campaign .mission-sidebar { padding: 22px 18px; } }
 .orbit-app.is-campaign .mission-number { background: rgba(78, 205, 196, 0.12); border-color: rgba(78, 205, 196, 0.45); }
 .orbit-app.is-campaign .phase-nav-item.current { background: rgba(78, 205, 196, 0.12); border-color: rgba(78, 205, 196, 0.45); }
 .orbit-app.is-campaign .sidebar-bottom small { display: none; }
-.orbit-app.is-campaign .orbit-main { padding: 0 28px; }
+@media (min-width: 1151px) and (max-width: 1499px) { .orbit-app.is-campaign .orbit-main { padding-inline: 28px; } }
 .orbit-app.is-campaign .orbit-topbar { height: 44px; }
 .orbit-app.is-campaign [data-testid="orbit-objective"] {
   margin-top: 14px; border: 1px solid rgba(255, 125, 0, 0.45); border-radius: 8px; padding: 10px 14px;
@@ -237,8 +239,13 @@ button:focus-visible, a:focus-visible { outline: 2px solid #c4ef8b; outline-offs
 .orbit-app.is-campaign .page-heading h1 { font-size: 26px; }
 .orbit-app.is-campaign .page-heading p { display: none; }
 .orbit-app.is-campaign .page-heading .eyebrow { color: #ff7d00; }
-.orbit-app.is-campaign .orbital-viewport { height: 320px; background: #00111d; }
-.orbit-app.is-campaign .orbital-viewport .orbit-scene { height: 280px; }
+.orbit-app.is-campaign .orbital-viewport { background: #00111d; }
+@media (min-width: 761px) and (max-width: 1499px) {
+  .orbit-app.is-campaign .orbital-viewport { height: 320px; }
+  .orbit-app.is-campaign .orbital-viewport .orbit-scene { height: 280px; }
+}
+.orbit-app.is-campaign .command-actions { flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.orbit-app.is-campaign .advance-button:disabled { opacity: .5; cursor: default; }
 .orbit-app.is-campaign .operation-grid { gap: 16px; }
 .orbit-app.is-campaign .telemetry-resource { padding: 12px 0 10px; }
 .orbit-app.is-campaign .system-card { background: rgba(21, 97, 109, 0.14); padding-top: 10px; }

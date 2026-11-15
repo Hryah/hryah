@@ -46,11 +46,15 @@ export interface OrbitCampaignMode {
   state: OrbitState;
   onAction: (action: OrbitAction) => void;
   footer?: ReactNode;
+  windowNumber?: number;   // номер вікна запуску кампанії (у сайдбарі замість «01»)
+  craftName?: string;      // назва агенції (замість демо-назви апарата)
+  locked?: boolean;        // ліміт дій звіту вичерпано: решту витків дограє автопілот кімнати
 }
 
 export function OrbitPrototype({ initialState, campaign }: { initialState?: OrbitState; campaign?: OrbitCampaignMode } = {}) {
   const [preset, setPreset] = useState<Preset>('balanced');
-  const [localHistory, setHistory] = useState<OrbitState[]>(() => [initialState ?? createDemoOrbit('balanced', 42)]);
+  // У кампанії стан приходить ззовні: демо-орбіту не створюємо.
+  const [localHistory, setHistory] = useState<OrbitState[]>(() => (campaign ? [] : [initialState ?? createDemoOrbit('balanced', 42)]));
   const [helpOpen, setHelpOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const history = campaign ? [campaign.state] : localHistory;
@@ -97,15 +101,17 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
 
   return <div className={`orbit-app ${campaign ? 'is-campaign' : ''}`}>
     <aside className="mission-sidebar">
-      <a className="orbit-brand" href="#orbit" aria-label={t('ui.home')}><span className="brand-symbol"><Icon name="orbit" size={25} /></span>hryah<span className="brand-dot">.</span></a>
+      {campaign
+        ? <span className="orbit-brand"><span className="brand-symbol"><Icon name="orbit" size={25} /></span>hryah<span className="brand-dot">.</span></span>
+        : <a className="orbit-brand" href="#orbit" aria-label={t('ui.home')}><span className="brand-symbol"><Icon name="orbit" size={25} /></span>hryah<span className="brand-dot">.</span></a>}
       <div className="sidebar-section-label">{t('ui.missionControl')}</div>
-      <div className="mission-identity"><span className="mission-number">01</span><div><strong>{t(state.input.mission.titleKey)}</strong><small>{state.input.mission.body.name}</small></div></div>
+      <div className="mission-identity"><span className="mission-number">{String(campaign?.windowNumber ?? 1).padStart(2, '0')}</span><div><strong>{t(state.input.mission.titleKey)}</strong><small>{state.input.mission.body.name}</small></div></div>
       <nav className="phase-navigation" aria-label={t('ui.missionStages')}>
         {(['design', 'flight', 'orbit', 'debrief'] as const).map((phase, i) => <div key={phase} className={`phase-nav-item ${((i === 2 && !done) || (i === 3 && done)) ? 'current' : ''} ${i < 2 || (done && i === 2) ? 'finished' : ''}`}><span className="phase-step">{i < 2 || (done && i === 2) ? <Icon name="check" size={14} /> : `0${i + 1}`}</span><span>{t(`ui.stage.${phase}`)}</span>{i === 2 && !done && <span className="live-dot" />}</div>)}
       </nav>
       <div className="sidebar-divider" />
       <div className="sidebar-section-label">{t('ui.spacecraft')}</div>
-      <div className="craft-name">HRYAH–01 <span>LEO</span></div>
+      <div className="craft-name">{campaign?.craftName ?? 'HRYAH–01'} <span>{state.input.mission.body.name === 'Earth' ? 'LEO' : state.input.mission.body.name}</span></div>
       <dl className="craft-facts"><div><dt>{t('ui.altitude')}</dt><dd>{number(state.input.flight.orbit.altKm)} <span>km</span></dd></div><div><dt>{t('ui.period')}</dt><dd>{number(view.periodMin, 1)} <span>min</span></dd></div><div><dt>{t('ui.resolution')}</dt><dd className={view.resolutionOk ? '' : 'text-amber'}>{number(view.resolutionM, 2)} <span>m</span></dd></div></dl>
       {!campaign && <button className="sidebar-config" onClick={() => setSetupOpen(!setupOpen)}><Icon name="orbit" size={17} />{t('ui.changeLoadout')}<Icon name="chevron" size={14} /></button>}
       <div className="sidebar-bottom"><div><span className="live-dot" />{t('ui.systemsOnline')}</div><small>{t('ui.prototypeLabel')}</small>{!campaign && <a href="#debug"><Icon name="code" size={15} />{t('ui.openDebug')}</a>}</div>
@@ -138,7 +144,7 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
           <div className="section-heading"><h2>{t('ui.spacecraftSystems')}</h2><span>{t('ui.systemsHint')}</span></div>
           <div className="system-grid">{controls.filter(control => view.controls.includes(control.id)).map(({ id, icon }) => {
             const system = systems[id];
-            return <button key={id} className={['system-card', system.commandOn ? 'on' : '', id === 'safeMode' ? 'safety' : '', system.commandOn && !system.effectiveOn ? 'blocked' : ''].join(' ')} role="switch" aria-checked={system.commandOn} aria-label={t('ui.control.' + id)} disabled={done} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t('ui.control.' + id)}</strong><small>{t('ui.control.' + id + '.description')}</small><div className="system-footer"><span>{t(system.commandOn ? 'clarity.command.on' : 'clarity.command.off')}</span></div><div className="system-actual"><span>{t(id === 'safeMode' ? system.effectiveOn ? 'clarity.safe.on' : 'clarity.safe.off' : system.effectiveOn ? 'clarity.actual.on' : 'clarity.actual.off')}</span><small>{t(id === 'safeMode' && system.reason === 'ready' ? 'clarity.safe.ready' : 'clarity.reason.' + system.reason)}{system.forcedBySafe && <span> · {t('clarity.forcedHeater')}</span>}</small>{system.effectiveOn && <small>{t(id === 'safeMode' ? 'clarity.safe.duration' : 'clarity.operation', { seconds: system.operationS })}</small>}</div></button>;
+            return <button key={id} className={['system-card', system.commandOn ? 'on' : '', id === 'safeMode' ? 'safety' : '', system.commandOn && !system.effectiveOn ? 'blocked' : ''].join(' ')} role="switch" aria-checked={system.commandOn} aria-label={t('ui.control.' + id)} disabled={done || campaign?.locked} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t('ui.control.' + id)}</strong><small>{t('ui.control.' + id + '.description')}</small><div className="system-footer"><span>{t(system.commandOn ? 'clarity.command.on' : 'clarity.command.off')}</span></div><div className="system-actual"><span>{t(id === 'safeMode' ? system.effectiveOn ? 'clarity.safe.on' : 'clarity.safe.off' : system.effectiveOn ? 'clarity.actual.on' : 'clarity.actual.off')}</span><small>{t(id === 'safeMode' && system.reason === 'ready' ? 'clarity.safe.ready' : 'clarity.reason.' + system.reason)}{system.forcedBySafe && <span> · {t('clarity.forcedHeater')}</span>}</small>{system.effectiveOn && <small>{t(id === 'safeMode' ? 'clarity.safe.duration' : 'clarity.operation', { seconds: system.operationS })}</small>}</div></button>;
           })}</div>
         </section>
 
@@ -163,7 +169,7 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
         </section>
       </div>
 
-      <section className="turn-command panel"><div><div className="eyebrow">{t('ui.nextOrbitSequence')}</div><div className="sequence"><span><span className="sequence-dot sun" />{t('ui.sunlight')}</span><Icon name="chevron" size={12} /><span>{t(view.sequenceKey)}</span><Icon name="chevron" size={12} /><span>{t('ui.groundPass')}</span><Icon name="chevron" size={12} /><span><span className="sequence-dot shadow" />{t('ui.eclipse')}</span></div></div><div className="command-actions">{!campaign && <button className="undo-button" disabled={history.length < 2} onClick={() => setHistory(previous => previous.slice(0, -1))}>{t('ui.undo')}</button>}{campaign && done ? null : <button className="advance-button" onClick={done ? () => reset() : advance}>{t(done ? 'ui.flyAgain' : 'ui.nextOrbit')}<span>{done ? <Icon name="reset" size={17} /> : <><kbd>N</kbd><Icon name="arrow" size={18} /></>}</span></button>}{campaign?.footer}</div></section>
+      <section className="turn-command panel"><div><div className="eyebrow">{t('ui.nextOrbitSequence')}</div><div className="sequence"><span><span className="sequence-dot sun" />{t('ui.sunlight')}</span><Icon name="chevron" size={12} /><span>{t(view.sequenceKey)}</span><Icon name="chevron" size={12} /><span>{t('ui.groundPass')}</span><Icon name="chevron" size={12} /><span><span className="sequence-dot shadow" />{t('ui.eclipse')}</span></div></div><div className="command-actions">{!campaign && <button className="undo-button" disabled={history.length < 2} onClick={() => setHistory(previous => previous.slice(0, -1))}>{t('ui.undo')}</button>}{campaign && done ? null : <button className="advance-button" disabled={!done && campaign?.locked} onClick={done ? () => reset() : advance}>{t(done ? 'ui.flyAgain' : 'ui.nextOrbit')}<span>{done ? <Icon name="reset" size={17} /> : <><kbd>N</kbd><Icon name="arrow" size={18} /></>}</span></button>}{campaign?.footer}</div></section>
 
       {done && <section className={`mission-outcome panel ${outcome.success ? 'success' : 'failure'}`} aria-live="polite"><span className="outcome-symbol"><Icon name={outcome.success ? 'check' : 'activity'} size={28} /></span><div><div className="eyebrow">{t('ui.missionDebrief')}</div><h2>{t(outcome.success ? 'ui.successTitle' : 'ui.failureTitle')}</h2><p>{t(outcome.success ? (state.input.mission.orbitObjective?.type === 'cargo' ? 'ui.successDescriptionCargo' : 'ui.successDescription') : 'ui.failureDescription', { delivered: number(outcome.deliveredMb), turns: outcome.survivedOrbits, total: totals })}</p></div><div className="outcome-score"><strong>{number(outcome.score)}</strong><span>{t('ui.missionScore')}</span></div></section>}
 
