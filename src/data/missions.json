@@ -244,5 +244,53 @@
         "costMUsd": 30
       }
     ]
+  },
+  "station-resupply": {
+    "id": "station-resupply",
+    "titleKey": "mission.stationResupply.title",
+    "briefKey": "mission.stationResupply.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 60,
+    "dvRequiredMs": 350,
+    "altRangeKm": [
+      400,
+      420
+    ],
+    "requiredResolutionM": 1000000,
+    "requiredDataMb": 1,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ],
+    "kind": "cargo",
+    "stationNeeds": {
+      "water": 18,
+      "food": 14,
+      "parts": 24,
+      "experiment": 30
+    }
   }
 }

@@ -88,5 +88,21 @@
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
     }
+  },
+  "lifeline": {
+    "titleKey": "scenario.lifeline.title",
+    "briefKey": "scenario.lifeline.brief",
+    "missionId": "station-resupply",
+    "catalog": "cargo",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 250,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
   }
 }

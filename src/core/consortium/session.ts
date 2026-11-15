@@ -246,16 +246,20 @@ function runOf(state: ConsortiumState, e: AgencyEntry): AgencyRun | null {
   const windowStart = state.campaign?.windowStartTurn ?? 0;
   let flightLog: CauseEntry[] = [];
   let orbitOut;
+  let reachedOrbit: boolean;
+  const [lo, hi] = mission.altRangeKm;
   if (e.report) {
     const flight = sanitizeFlight(mission, spec, e.report.flight);
+    reachedOrbit = flight.deploymentStatus !== 'lost' && flight.orbit.altKm >= lo && flight.orbit.altKm <= hi;
     orbitOut = replayOrbit(mission, spec, flight, log, e.report.orbitActions, seedsFor(state, e.agency.id).orbit);
   } else {
     const flight = stubFlight({ mission, spec, log });
+    reachedOrbit = spec.dvMs >= mission.dvRequiredMs;
     flightLog = flight.log;
     orbitOut = stubOrbit({ mission, spec, flight: flight.result, log: [...log, ...flight.log] });
   }
   return {
-    agencyId: e.agency.id, launchTurn: e.launch.turn - windowStart, spec, outcome: orbitOut.result,
+    agencyId: e.agency.id, launchTurn: e.launch.turn - windowStart, spec, outcome: orbitOut.result, reachedOrbit,
     log: [...log, ...flightLog, ...orbitOut.log],
   };
 }
@@ -272,7 +276,7 @@ function settle(state: ConsortiumState): ConsortiumState {
   if (ready.campaign) return closeRound(ready);
   const runs = ready.agencies.map((e) => runOf(ready, e)).filter((r): r is AgencyRun => r !== null);
   const { awaiting: _a, ...rest } = ready;
-  return { ...rest, result: { runs, settlement: settleRewards(ready.base.mission, runs) } };
+  return { ...rest, result: { runs, settlement: settleRewards(ready.base.mission, runs, undefined, ready.base.catalog) } };
 }
 
 // Кінець вікна в кампанії: виплати, гранти, дослідження, потім нове вікно або підсумок кампанії.
@@ -281,14 +285,15 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   const { config } = campaign;
   const mission = campaign.trueMission;
   const runs = state.agencies.map((e) => runOf(state, e)).filter((r): r is AgencyRun => r !== null);
-  const settlement = settleRewards(mission, runs);
+  const settlement = settleRewards(mission, runs, undefined, state.base.catalog);
 
   const results: AgencyRoundResult[] = [];
   const agencies = state.agencies.map((e) => {
     const run = runs.find((r) => r.agencyId === e.agency.id);
     const account = e.account!;
     const launched = run !== undefined;
-    const valuePts = run ? runValueMUsd(mission, run) : 0;
+    // Внесок у програму — та сама цінність, що й у виплаті (для вантажу з урахуванням повторів).
+    const valuePts = run ? settlement.payouts.find((p) => p.agencyId === e.agency.id)?.valueMUsd ?? 0 : 0;
     const payoutMUsd = settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0;
     const missedInRow = launched ? 0 : account.missedInRow + 1;
     const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
@@ -408,6 +413,7 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       const control = `develop:${action.order.slot}`;
       if (entry.touched.includes(control) || entry.actionsLeft <= 0) return state;
       if (entry.projects.some((p) => p.slot === action.order.slot)) return state;
+      if (entry.design.input.mission.kind === 'cargo') return state; // камера вантажному рейсу не потрібна
       let project: DevProject;
       try {
         project = startDevelopment(developerProfile(entry, state.turn), action.order, state.turn, state.seed);

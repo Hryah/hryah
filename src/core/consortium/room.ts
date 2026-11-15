@@ -130,7 +130,7 @@ export interface RoomSetup {
 export function effectiveSetup(setup: RoomSetup, scenarioId: string | undefined): RoomSetup {
   const scenario = scenarioId ? setup.scenarios?.[scenarioId] : undefined;
   if (!scenario) return setup;
-  return { ...setup, base: { ...setup.base, mission: scenario.mission }, campaign: scenario.campaign };
+  return { ...setup, base: { mission: scenario.mission, catalog: scenario.catalog ?? setup.base.catalog }, campaign: scenario.campaign };
 }
 
 export function newRoom(hostId: string, hostName: string, agencyIds: string[], seed = 1, minPlayers = 1): LobbyState {

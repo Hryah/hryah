@@ -26,5 +26,9 @@
   "ant-ka": { "file": "modules/ant-m.png", "widthUnits": 0.9, "anchor": [0.5, 0.0] },
   "ant-laser": { "file": "modules/ant-s.png", "widthUnits": 0.7, "anchor": [0.5, 0.0] },
   "cam-ms": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
-  "cam-swir": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] }
+  "cam-swir": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
+  "cargo-water": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
+  "cargo-food": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
+  "cargo-parts": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
+  "cargo-experiment": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] }
 }

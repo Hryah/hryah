@@ -2,7 +2,7 @@
 // Пул росте від різноманітності (різні прилади й висоти), ділиться пропорційно внескам,
 // а переможець, якщо значно кращий за решту, отримує бонус. Усі числа в TUNING умовні.
 
-import type { CauseEntry, Mission, MissionOutcome, SpacecraftSpec } from '../contracts';
+import type { Catalog, CargoKind, CauseEntry, Mission, MissionOutcome, SpacecraftSpec } from '../contracts';
 
 export const TUNING = {
   qualityMin: 0.25,        // найгірша якість (знімок значно гірший за вимогу)
@@ -25,6 +25,7 @@ export interface AgencyRun {
   spec: SpacecraftSpec;
   outcome: MissionOutcome;
   log: CauseEntry[];   // журнал причин усіх частин: з нього розбір будує «чому так вийшло»
+  reachedOrbit?: boolean; // вийшов на робочу орбіту місії (для вантажу: дістався до станції); відсутнє = так
 }
 
 export interface Payout {
@@ -55,9 +56,48 @@ export function timeFactor(launchTurn: number, t: Tuning = TUNING): number {
   return Math.max(t.timeFloor, 1 - t.timeDecayPerTurn * launchTurn);
 }
 
-export function runValueMUsd(mission: Mission, run: AgencyRun, t: Tuning = TUNING): number {
+export function cargoKindOf(catalog: Catalog | undefined, run: Pick<AgencyRun, 'spec'>): CargoKind | undefined {
+  const id = run.spec.design.modules.instrument;
+  const instruments = (catalog?.modules ?? []).filter((x) => x.slot === 'instrument');
+  // Контейнер власного виробництва (fab-<базовий id>-<агенція>-<n>) має тип свого базового контейнера.
+  const fabBase = id.startsWith('fab-')
+    ? instruments.map((x) => x.id).filter((k) => id.slice(4).startsWith(`${k}-`)).sort((a, b) => b.length - a.length)[0]
+    : undefined;
+  const m = instruments.find((x) => x.id === (fabBase ?? id));
+  return m && m.slot === 'instrument' ? m.cargoKind : undefined;
+}
+
+// Цінність запуску. Зйомка: дані × якість × час. Вантаж: потреба станції в цьому типі контейнера × частка
+// витків підходу, які апарат пережив, × час (порожній чи загублений рейс нічого не дає).
+export function runValueMUsd(mission: Mission, run: AgencyRun, t: Tuning = TUNING, catalog?: Catalog): number {
+  if (mission.kind === 'cargo') {
+    // Не дістався до орбіти станції — вантаж не доставлено, хоч би скільки витків апарат прожив.
+    if (run.reachedOrbit === false) return 0;
+    const kind = cargoKindOf(catalog, run);
+    const need = kind ? mission.stationNeeds?.[kind] ?? 0 : 0;
+    const survived = clamp(run.outcome.survivedOrbits / Math.max(1, mission.durationOrbits), 0, 1);
+    return money(need * survived * timeFactor(run.launchTurn, t));
+  }
   const raw = (run.outcome.deliveredMb / t.mbPerMUsd) * qualityFactor(mission, run.spec, t) * timeFactor(run.launchTurn, t);
   return money(raw);
+}
+
+// Вантаж: кожен наступний контейнер того самого типу станції потрібен менше (три бочки води гірші за воду, їжу й запчастини).
+export const CARGO_REPEAT_FACTOR = 0.5;
+
+function runValues(mission: Mission, runs: AgencyRun[], t: Tuning, catalog?: Catalog): number[] {
+  const values = runs.map((r) => runValueMUsd(mission, r, t, catalog));
+  if (mission.kind !== 'cargo') return values;
+  const order = runs.map((_, i) => i).sort((a, b) => (values[b] ?? 0) - (values[a] ?? 0) || runs[a]!.launchTurn - runs[b]!.launchTurn);
+  const seen = new Map<string, number>();
+  const out = [...values];
+  for (const i of order) {
+    const kind = cargoKindOf(catalog, runs[i]!) ?? '';
+    const k = seen.get(kind) ?? 0;
+    out[i] = money((values[i] ?? 0) * CARGO_REPEAT_FACTOR ** k);
+    seen.set(kind, k + 1);
+  }
+  return out;
 }
 
 // Скільки різних апаратів (прилад + смуга висоти) у консорціумі.
@@ -71,8 +111,8 @@ export function diversityMultiplier(runs: AgencyRun[], t: Tuning = TUNING): numb
   return 1 + Math.min(t.diversityMax, t.diversityStep * (distinctDesigns(runs, t) - 1));
 }
 
-export function settleRewards(mission: Mission, runs: AgencyRun[], t: Tuning = TUNING): Settlement {
-  const values = runs.map((r) => runValueMUsd(mission, r, t));
+export function settleRewards(mission: Mission, runs: AgencyRun[], t: Tuning = TUNING, catalog?: Catalog): Settlement {
+  const values = runValues(mission, runs, t, catalog);
   const total = values.reduce((a, b) => a + b, 0);
   const diversity = diversityMultiplier(runs, t);
   const basePool = total * diversity;

@@ -32,7 +32,7 @@ function score(input: DesignInput, design: Design): number | null {
   if (spec.margins.some((m) => (m.id === 'mass' || m.id === 'budget') && !m.ok)) return null;
   const flight = stubFlight({ mission: input.mission, spec, log });
   const orbit = stubOrbit({ mission: input.mission, spec, flight: flight.result, log });
-  const value = runValueMUsd(input.mission, { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [] });
+  const value = runValueMUsd(input.mission, { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [], reachedOrbit: spec.dvMs >= input.mission.dvRequiredMs }, undefined, input.catalog);
   return value - COST_WEIGHT * spec.costMUsd;
 }
 

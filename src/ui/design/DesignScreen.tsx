@@ -38,7 +38,7 @@ function keyStat(m: ModuleDef): string {
     case "solar": return `${m.powerW} W`;
     case "battery": return `${m.capacityWh} Wh`;
     case "antenna": return `${m.downlinkMbps} Mbps`;
-    case "instrument": return `⌀ ${m.apertureM} m`;
+    case "instrument": return m.cargoKind ? `${t(`ui.cargoKind.${m.cargoKind}`)} · ${m.powerW} W` : `⌀ ${m.apertureM} m`;
   }
 }
 
@@ -83,6 +83,8 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
           {MARGIN_ORDER.map((id) => {
             const m = spec.margins.find((x) => x.id === id);
             if (!m) return null;
+            // Вантажний рейс нічого не знімає: запас різкості для нього не має сенсу.
+            if (id === "science" && mission.kind === "cargo") return null;
             // Для різкості менше краще, для решти більше.
             const ratio = id === "science" ? m.need / m.have : m.have / m.need;
             const width = Math.max(0, Math.min(1.5, Number.isFinite(ratio) ? ratio : 0)) / 1.5;
