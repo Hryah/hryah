@@ -5,3 +5,4 @@ export * from './room';
 export * from './campaign';
 export * from './scenarios';
 export * from './research';
+export * from './trl';

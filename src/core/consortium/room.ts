@@ -9,7 +9,7 @@ import type { Market } from './market';
 import { rolls } from './seed';
 import { botAction } from './bot';
 import { isMissionReport, type CampaignConfig, type MissionReport } from './campaign';
-import type { ScenarioSetup } from './scenarios';
+import { DEFAULT_SCENARIO, type ScenarioSetup } from './scenarios';
 import {
   activeAgency, applyReport, forfeitReport, newConsortium, stepConsortium, type ConsortiumAction, type ConsortiumState,
 } from './session';
@@ -78,6 +78,7 @@ function isConsortiumAction(a: unknown): a is ConsortiumAction {
     case 'launch': case 'wait': return true;
     case 'research': return isStr(a.nodeId);
     case 'analyze': return isStr(a.line) && isStr(a.depositId);
+    case 'qualify': return isStr(a.moduleId);
     case 'factory': {
       const o = a.order;
       return isObj(o) && isStr(o.line) && isStr(o.depositId) && isStr(o.baseModuleId)
@@ -278,6 +279,7 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       const play = effectiveSetup(setup, state.scenarioId);
       const consortium = newConsortium(play.base, play.market, agencies, play.deadlineTurn, state.seed, {
         ...(play.campaign ? { campaign: play.campaign } : {}), reportsFrom: play.campaign ? reportsFrom : [],
+        ...(setup.scenarios ? { scenarioId: state.scenarioId ?? DEFAULT_SCENARIO } : {}),
       });
       const playerNames = Object.fromEntries(state.players.map((p) => [p.id, p.name]));
       return autoPlay({ phase: 'play', seed: state.seed, assignments, playerNames, left: [], ...(bots.length ? { bots } : {}), consortium }, bots);

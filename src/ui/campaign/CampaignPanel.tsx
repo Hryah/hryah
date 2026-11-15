@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { programProgress, type ConsortiumState } from "../../core/consortium";
+import { programProgress, SCENARIOS, type ConsortiumState } from "../../core/consortium";
 import { causeChains } from "../../core/debrief";
 import { describeEntry } from "../design/cause";
 import { fmt, t } from "../text";
@@ -92,6 +92,11 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
                       })
                     : t("ui.campaign.roundMissed", { grant: fmt(r.grantMUsd), research: r.researchPts })}
                 </div>
+                {mine && r.launched && r.optimalPts > 0 && (
+                  <div style={{ color: C.dim, marginLeft: 16 }}>
+                    {t("ui.campaign.optimal", { optimal: fmt(r.optimalPts, 1), percent: fmt(Math.min(999, (r.valuePts / r.optimalPts) * 100), 0) })}
+                  </div>
+                )}
                 {chains.map((chain) => {
                   // Події ховаємо як шум, але якщо причина лише подія, показуємо її, щоб відмова не лишилась без пояснення.
                   const real = chain.causes.filter((c) => c.kind !== "event");
@@ -124,6 +129,10 @@ export function CampaignStandings({ state }: { state: ConsortiumState }) {
     <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 8 }} data-testid="campaign-standings">
       <h2 style={{ margin: 0 }}>{t(progress >= 1 ? "ui.campaign.programDone" : "ui.campaign.programEnded", { percent: fmt(progress * 100, 1) })}</h2>
       {top && <div style={{ color: C.gold }}>🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}</div>}
+      {(() => {
+        const key = state.campaign.scenarioId ? SCENARIOS[state.campaign.scenarioId]?.def.analogKey : undefined;
+        return key ? <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.brief.analog", { analog: t(key) })}</div> : null;
+      })()}
       {ranked.map((e, i) => (
         <div key={e.agency.id} style={{ color: C.dim }}>
           {i + 1}. {t(e.agency.nameKey)} · {fmt(e.account?.programPts ?? 0, 1)} · {fmt(e.account?.fundsMUsd ?? 0)} M$

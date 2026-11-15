@@ -10,7 +10,7 @@
 //
 // Стан: звичайні JSON-дані, step чиста. Рандому тут нема.
 
-import type { CauseEntry, Design, DesignInput, Mission, SpacecraftSpec } from '../contracts';
+import type { CauseEntry, Damage, Design, DesignInput, Mission, SpacecraftSpec } from '../contracts';
 import { applyAgency, type AgencyProfile } from '../design/agency';
 import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
@@ -21,6 +21,8 @@ import { applyDamage } from './damage';
 import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder, type DevProject } from './develop';
 import { applyMarket, checkMarket, type Market } from './market';
 import { applyResearch, RESEARCH } from './research';
+import { qualifyCostMUsd, rollTrlFailures, trlOf } from './trl';
+import { optimalValue } from './planner';
 import {
   depositsOf, emptyFactory, glassDefectFactor, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
 } from '../factory';
@@ -35,6 +37,7 @@ export interface Launch {
   turn: number;
   spec: SpacecraftSpec;
   log: CauseEntry[];
+  damage?: Damage[];       // відмови незрілих технологій (TRL), що проявились після запуску
 }
 
 // Рахунок агенції в кампанії.
@@ -45,6 +48,7 @@ export interface Account {
   knowsConditions: boolean;  // після першого запуску агенція знає справжні умови місії
   missedInRow: number;       // скільки вікон поспіль без запуску
   unlocked: string[];        // відкриті вузли досліджень
+  trlGain?: Record<string, number>; // досвід агенції з модулем: +1 TRL за вдалий запуск чи наземні випробування
   lastDesign?: Design;       // проєкт останнього запуску (для серії)
 }
 
@@ -67,6 +71,8 @@ export interface AgencyRoundResult {
   payoutMUsd: number;
   grantMUsd: number;
   researchPts: number;
+  optimalPts: number;      // скільки дав би найкращий доступний проєкт зі знанням справжніх умов (для розбору)
+  optimalDesign?: Design;
 }
 
 export interface RoundSummary {
@@ -82,6 +88,7 @@ export interface CampaignState {
   windowStartTurn: number;
   trueMission: Mission;    // справжні умови; агенція бачить їх у проєктуванні лише після першого запуску
   rounds: RoundSummary[];  // підсумки закритих вікон
+  scenarioId?: string;     // сценарій кімнати (для брифінгу, назви й реальної місії-аналога)
 }
 
 export interface ConsortiumState {
@@ -105,10 +112,12 @@ export type ConsortiumAction =
   | { type: 'wait' }
   | { type: 'research'; nodeId: string }
   | { type: 'factory'; order: FactoryOrder }
-  | { type: 'analyze'; line: string; depositId: string };
+  | { type: 'analyze'; line: string; depositId: string }
+  | { type: 'qualify'; moduleId: string };
 
 export interface ConsortiumOptions {
   campaign?: CampaignConfig;
+  scenarioId?: string;
   reportsFrom?: string[];
 }
 
@@ -158,7 +167,7 @@ export function newConsortium(
   const config = options.campaign;
   if (config) checkCampaign(config);
   const campaign: CampaignState | undefined = config
-    ? { config, round: 0, windowStartTurn: 0, trueMission: hiddenMission(base.mission, seed), rounds: [] }
+    ? { config, round: 0, windowStartTurn: 0, trueMission: hiddenMission(base.mission, seed), rounds: [], ...(options.scenarioId ? { scenarioId: options.scenarioId } : {}) }
     : undefined;
   const head = { base, market, ...(campaign ? { campaign } : {}) };
   const entries: AgencyEntry[] = agencies.map((agency) => {
@@ -231,7 +240,7 @@ function startTurn(state: ConsortiumState, turn: number): ConsortiumState {
 export function flownSpec(entry: AgencyEntry): SpacecraftSpec | null {
   if (!entry.launch) return null;
   const used = entry.projects.find((p) => p.module.id === entry.design.design.modules.instrument);
-  return applyDamage(entry.launch.spec, used ? defectDamage(used) : []);
+  return applyDamage(entry.launch.spec, [...(used ? defectDamage(used) : []), ...(entry.launch.damage ?? [])]);
 }
 
 function launchLog(entry: AgencyEntry): CauseEntry[] {
@@ -311,7 +320,11 @@ function closeRound(state: ConsortiumState): ConsortiumState {
     const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
     const grantMUsd = money(config.grantMUsd * grantFactor);
     const researchPts = (run ? Math.floor(run.outcome.deliveredMb / config.mbPerResearchPt) : 0) + (launched ? 0 : config.missedResearchPts);
-    results.push({ agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts });
+    const optimal = optimalValue(e.design.input, mission);
+    results.push({
+      agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts,
+      optimalPts: optimal.value, ...(optimal.design ? { optimalDesign: optimal.design } : {}),
+    });
     const next: Account = {
       fundsMUsd: money(account.fundsMUsd + payoutMUsd + grantMUsd),
       researchPts: account.researchPts + researchPts,
@@ -319,6 +332,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
       knowsConditions: account.knowsConditions || launched,
       missedInRow,
       unlocked: account.unlocked,
+      ...(e.launch ? { trlGain: flightHeritage(account.trlGain ?? {}, e) } : account.trlGain ? { trlGain: account.trlGain } : {}),
       ...(e.launch ? { lastDesign: e.launch.spec.design } : account.lastDesign ? { lastDesign: account.lastDesign } : {}),
     };
     return { ...e, account: next };
@@ -457,7 +471,12 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       const account = entry.account
         ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - result.costMUsd + refund) }
         : undefined;
-      const launched: AgencyEntry = { ...entry, design: frozen, launch: { turn: state.turn, spec: result, log }, ...(account ? { account } : {}) };
+      // Незрілі технології можуть відмовити після запуску (лише в кампанії: там є досвід і випробування).
+      const trl = account
+        ? rollTrlFailures(state.seed, entry.agency.id, state.campaign?.round ?? 0, result.design, account.trlGain ?? {}, state.base.catalog.modules.map((m) => m.id))
+        : { damage: [], log: [] };
+      const launch = { turn: state.turn, spec: result, log: [...log, ...trl.log], ...(trl.damage.length ? { damage: trl.damage } : {}) };
+      const launched: AgencyEntry = { ...entry, design: frozen, launch, ...(account ? { account } : {}) };
       return endAgencyTurn(replaceAt(state, state.active, launched));
     }
     case 'wait':
@@ -465,6 +484,21 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
     case 'factory':
     case 'analyze':
       return stepFactory(state, entry, action);
+    case 'qualify': {
+      // Наземні випробування модуля: 1 дія й трохи грошей, +1 TRL для цієї агенції.
+      const account = entry.account;
+      const module = entry.design.input.catalog.modules.find((m) => m.id === action.moduleId);
+      if (!account || !module || entry.actionsLeft <= 0 || entry.touched.includes(`qualify:${module.id}`)) return state;
+      const gain = account.trlGain ?? {};
+      if (trlOf(module.id, gain, state.base.catalog.modules.map((m) => m.id)) >= 9) return state;
+      const cost = qualifyCostMUsd(module.costMUsd);
+      if (account.fundsMUsd <= cost) return state;
+      const next: Account = { ...account, fundsMUsd: money(account.fundsMUsd - cost), trlGain: { ...gain, [module.id]: (gain[module.id] ?? 0) + 1 } };
+      return replaceAt(state, state.active, {
+        ...entry, account: next, actionsLeft: entry.actionsLeft - 1, touched: [...entry.touched, `qualify:${module.id}`],
+        design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, next, entry.factory) },
+      });
+    }
     case 'research': {
       // Дослідження не забирає дій ходу: лише очки.
       const node = RESEARCH[action.nodeId];
@@ -507,6 +541,14 @@ function stepFactory(state: ConsortiumState, entry: AgencyEntry, action: Extract
     ...entry, account: nextAccount, factory: nextFactory, actionsLeft: entry.actionsLeft - 1,
     design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, nextAccount, nextFactory) },
   });
+}
+
+// Вдалий запуск — це досвід: кожен модуль, що не відмовив, стає на рівень зрілішим для цієї агенції.
+function flightHeritage(gain: Record<string, number>, e: AgencyEntry): Record<string, number> {
+  const failed = new Set((e.launch?.log ?? []).filter((x) => x.id.startsWith('design:trl-')).map((x) => String(x.params?.module)));
+  const next = { ...gain };
+  for (const id of Object.values(e.launch!.spec.design.modules)) if (!failed.has(id)) next[id] = (next[id] ?? 0) + 1;
+  return next;
 }
 
 function sameDesign(a: Design | undefined, b: Design): boolean {
