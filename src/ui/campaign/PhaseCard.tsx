@@ -37,12 +37,13 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export const useCardsEnabled = () => useSyncExternalStore(subscribe, cardsEnabled, cardsEnabled);
 
 // Повернути вікна після «не показувати» (або вимкнути їх наперед).
-export function CardsToggle() {
+// className — щоб кнопка взяла стиль екрана (наприклад, пульта); без нього — власний.
+export function CardsToggle({ className }: { className?: string }) {
   const on = useCardsEnabled();
   return (
     <button
-      type="button" aria-pressed={on} onClick={() => setCardsEnabled(!on)}
-      style={{ justifySelf: "start", padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent", color: on ? C.accent : C.dim, cursor: "pointer", fontSize: 13 }}
+      type="button" aria-pressed={on} onClick={() => setCardsEnabled(!on)} className={className}
+      style={className ? undefined : { justifySelf: "start", padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent", color: on ? C.accent : C.dim, cursor: "pointer", fontSize: 13 }}
     >
       {t(on ? "ui.card.toggleOn" : "ui.card.toggleOff")}
     </button>

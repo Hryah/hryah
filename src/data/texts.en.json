@@ -580,5 +580,6 @@
   "ui.card.toggleOn": "ℹ Phase windows: on",
   "ui.card.toggleOff": "ℹ Phase windows: off",
   "ui.retro.on": "Retro style on",
-  "ui.retro.off": "Retro style off"
+  "ui.retro.off": "Retro style off",
+  "ui.factory.route": "Your route"
 }

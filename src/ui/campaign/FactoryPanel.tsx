@@ -15,7 +15,8 @@ import {
 } from "../../core/factory";
 import { fmt, t } from "../text";
 
-// Фабрика-граф: сировина → переробка → обробка → модуль. Колонки — стадії, картки — варіанти.
+// Фабрика-граф: сировина → переробка → обробка → модуль. Три колонки — стадії з варіантами (①②③),
+// під ними панель «маршрут»: що обрано, у який модуль перетворюємо, очікувана якість, ціна й кнопка замовлення.
 // Екран лише показує план із ядра (planBatch / expectedQuality) і шле дію; правила рахує core/factory.
 
 const ARROW = (
@@ -79,10 +80,12 @@ export function FactoryPanel({
   const affordable = plan.batch !== undefined && entry.account.fundsMUsd >= plan.batch.costMUsd;
   const canOrder = plan.ok && affordable && entry.actionsLeft > 0 && !entry.launch;
   const cured = new Set([...(line.stages[0][steps[0]]?.cures ?? []), ...(line.stages[1][steps[1]]?.cures ?? [])]);
+  // Відомі вади обраної сировини, які обраний маршрут не лікує.
+  const uncured = known.filter((f) => !cured.has(f));
 
   const stageColumn = (index: 0 | 1, ids: string[]) => (
     <div className="mc-conveyor-stage">
-      <div className="mc-label">{t(index === 0 ? "ui.factory.refine" : "ui.factory.finish")}</div>
+      <div className="mc-label">{index === 0 ? "②" : "③"} {t(index === 0 ? "ui.factory.refine" : "ui.factory.finish")}</div>
       {ids.map((id) => {
         const o = line.stages[index][id]!;
         const selected = steps[index] === id;
@@ -146,7 +149,7 @@ export function FactoryPanel({
 
       <div className="mc-conveyor">
         <div className="mc-conveyor-stage">
-          <div className="mc-label">{t("ui.factory.raw")}</div>
+          <div className="mc-label">① {t("ui.factory.raw")}</div>
           {deposits.map((id) => {
             const dep = line.deposits[id]!;
             const flaws = knownFlaws(factory, lineId, id, turn);
@@ -196,9 +199,17 @@ export function FactoryPanel({
         {stageColumn(0, stage0)}
         {ARROW}
         {stageColumn(1, stage1)}
-        {ARROW}
-        <div className="mc-conveyor-stage">
-          <div className="mc-label">{t("ui.factory.product")}</div>
+      </div>
+
+      <div className="mc-route" data-testid="factory-route">
+        <div className="mc-route-path">
+          <span className="mc-label">{t("ui.factory.route")}</span>
+          <span className="mc-route-step">{t(line.deposits[safeDeposit]!.nameKey)}</span>
+          <span aria-hidden="true">→</span>
+          <span className="mc-route-step">{t(line.stages[0][steps[0]]!.nameKey)}</span>
+          <span aria-hidden="true">→</span>
+          <span className="mc-route-step">{t(line.stages[1][steps[1]]!.nameKey)}</span>
+          <span aria-hidden="true">→</span>
           <select
             className="mc-select"
             value={safeBaseId}
@@ -211,22 +222,31 @@ export function FactoryPanel({
               </option>
             ))}
           </select>
-          {plan.batch && (
-            <div className="mc-tabular" style={{ fontSize: 13, display: "grid", gap: 3 }}>
-              <span style={{ color: "var(--c-status-ok)", fontWeight: 600 }}>
-                {t("ui.factory.expected", { q: fmt((expected ?? 0) * 100, 0) })}
+        </div>
+        <div className="mc-route-result">
+          <div className="mc-tabular" style={{ display: "grid", gap: 3, fontSize: 13 }}>
+            {plan.batch && (
+              <>
+                <span style={{ color: (expected ?? 0) >= 0.8 ? "var(--c-status-ok)" : "var(--c-orange)", fontWeight: 700, fontSize: 16 }}>
+                  {t("ui.factory.expected", { q: fmt((expected ?? 0) * 100, 0) })}
+                </span>
+                <span style={{ color: "var(--c-text-muted)" }}>
+                  {t("ui.factory.cost", { cost: fmt(plan.batch.costMUsd), turns: plan.batch.readyTurn - turn })}
+                </span>
+              </>
+            )}
+            {uncured.length > 0 && (
+              <span style={{ color: "var(--c-orange)" }}>
+                ⚠ {t("ui.factory.left", { flaws: uncured.map((f) => t(line.flaws[f]!.nameKey)).join(", ") })}
               </span>
-              <span style={{ color: "var(--c-text-muted)" }}>
-                {t("ui.factory.cost", { cost: fmt(plan.batch.costMUsd), turns: plan.batch.readyTurn - turn })}
-              </span>
-            </div>
-          )}
-          {!plan.ok && plan.reason === "workshop" && (
-            <span style={{ color: "var(--c-status-bad)", fontSize: 12 }}>{t("ui.factory.busy")}</span>
-          )}
+            )}
+            {!plan.ok && plan.reason === "workshop" && (
+              <span style={{ color: "var(--c-status-bad)" }}>{t("ui.factory.busy")}</span>
+            )}
+          </div>
           <button
             type="button"
-            className={`mc-btn mc-btn-sm ${canOrder ? "mc-btn-primary" : ""}`}
+            className={`mc-btn ${canOrder ? "mc-btn-primary" : ""}`}
             disabled={!canOrder}
             onClick={() => dispatch({ type: "factory", order })}
           >

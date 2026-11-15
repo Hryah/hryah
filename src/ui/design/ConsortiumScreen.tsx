@@ -652,6 +652,7 @@ export function Turn({
             <span className={`mc-stat-pill ${entry.actionsLeft > 0 ? "" : "is-warn"}`}>
               {t("ui.console.controlsLeftShort", { n: entry.actionsLeft })}
             </span>
+            {campaign && <CardsToggle className="mc-btn mc-btn-sm" />}
           </div>
         </div>
 
@@ -674,7 +675,7 @@ export function Turn({
         </div>
       </header>
 
-      <div className="mc-grid">
+      <div className={`mc-grid ${tab === "design" ? "" : "is-wide"}`}>
         <aside className="mc-col-left" aria-label={t("ui.console.missionControl")}>
           <div className="mc-label" style={{ paddingLeft: 4 }}>
             {t("ui.console.missionControl")}
@@ -683,7 +684,6 @@ export function Turn({
           {campaign ? (
             <>
               <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} />
-              <CardsToggle />
             </>
           ) : (
             <div className="mc-panel" style={{ display: "grid", gap: 8 }}>
