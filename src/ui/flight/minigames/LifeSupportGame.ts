@@ -11,6 +11,8 @@ import { flightAssetCache } from "../render/TemplateAssetCache";
 import { drawFittedText } from "./textFit";
 
 const ESC_BTN = { x: 800 - 104 - 24, y: 11, w: 104, h: 30 };
+const O2_BUTTON_POS = { x: LS_O2_BUTTON_POS.x + 26, y: LS_O2_BUTTON_POS.y };
+const O2_BUTTON_RADIUS = 44;
 
 export class LifeSupportGame {
   private dragMode: "RED_FILTER" | "GREEN_FILTER" | "AMMONIA_VALVE" | "O2_VALVE" | null = null;
@@ -100,7 +102,8 @@ export class LifeSupportGame {
 
     // Перевірка клапана нагнітання O2 (Крок 3: затиснути і відпустити в 70-85 кПа)
     if (
-      Math.hypot(lx - LS_O2_BUTTON_POS.x, ly - LS_O2_BUTTON_POS.y) <= 58
+      Math.hypot(lx - O2_BUTTON_POS.x, ly - O2_BUTTON_POS.y) <=
+      O2_BUTTON_RADIUS + 14
     ) {
       this.dragMode = "O2_VALVE";
       dispatch({ type: "ls_hold_o2", held: true });
@@ -541,8 +544,8 @@ export class LifeSupportGame {
     );
 
     // Клапан-кнопка нагнітання O2
-    const btnX = LS_O2_BUTTON_POS.x + 26;
-    const btnY = LS_O2_BUTTON_POS.y;
+    const btnX = O2_BUTTON_POS.x;
+    const btnY = O2_BUTTON_POS.y;
     ctx.fillStyle = mg.pressureLocked
       ? "#14532d"
       : mg.o2ValveHeld
@@ -555,7 +558,7 @@ export class LifeSupportGame {
         : "#38bdf8";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(btnX, btnY, 44, 0, Math.PI * 2);
+    ctx.arc(btnX, btnY, O2_BUTTON_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 

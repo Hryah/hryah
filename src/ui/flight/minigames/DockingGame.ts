@@ -2,6 +2,9 @@ import type { DockingMinigameState, FlightAction } from "../../../core/flight";
 import { flightAssetCache } from "../render/TemplateAssetCache";
 import { drawFittedText } from "./textFit";
 
+const PANEL_W = 820;
+const PANEL_H = 520;
+
 export class DockingGame {
   private keysHeld = { w: false, a: false, s: false, d: false };
   private mouseThrust = { x: 0, y: 0, active: false };
@@ -12,28 +15,43 @@ export class DockingGame {
   }
 
   public getPanelRect(viewportW: number, viewportH: number) {
-    const w = Math.min(820, viewportW - 32);
-    const h = Math.min(520, viewportH - 110);
-    const x = (viewportW - w) * 0.5;
-    const y = (viewportH - h) * 0.5 + 22;
-    return { x, y, w, h };
+    const scale = Math.max(
+      0.1,
+      Math.min(1, (viewportW - 32) / PANEL_W, (viewportH - 96) / PANEL_H),
+    );
+    const drawW = PANEL_W * scale;
+    const drawH = PANEL_H * scale;
+    const x = (viewportW - drawW) * 0.5;
+    const y = (viewportH - drawH) * 0.5 + 22;
+    return { x, y, w: drawW, h: drawH, scale };
   }
 
-  private getLayout(viewportW: number, viewportH: number) {
+  private toLocal(
+    sx: number,
+    sy: number,
+    viewportW: number,
+    viewportH: number,
+  ): { lx: number; ly: number } {
     const rect = this.getPanelRect(viewportW, viewportH);
+    return {
+      lx: (sx - rect.x) / rect.scale,
+      ly: (sy - rect.y) / rect.scale,
+    };
+  }
+
+  private getLayout() {
     const escW = 104;
     const escH = 30;
-    const escX = rect.x + rect.w - escW - 24;
-    const escY = rect.y + 11;
-    const rightX = rect.x + rect.w * 0.59;
-    const rightW = rect.w * 0.382;
-    const sightCx = rect.x + rect.w * 0.33;
-    const sightCy = rect.y + rect.h * 0.54;
-    const sightR = Math.min(182, rect.h * 0.36, rightX - sightCx - 16);
+    const escX = PANEL_W - escW - 24;
+    const escY = 11;
+    const rightX = PANEL_W * 0.59;
+    const rightW = PANEL_W * 0.382;
+    const sightCx = PANEL_W * 0.33;
+    const sightCy = PANEL_H * 0.54;
+    const sightR = Math.min(182, PANEL_H * 0.36, rightX - sightCx - 16);
     const joyCx = rightX + rightW * 0.5;
-    const joyCy = rect.y + rect.h * 0.72;
+    const joyCy = PANEL_H * 0.72;
     return {
-      rect,
       escX,
       escY,
       escW,
@@ -83,20 +101,21 @@ export class DockingGame {
     viewportH: number,
     dispatch: (action: FlightAction) => void,
   ): void {
-    const layout = this.getLayout(viewportW, viewportH);
+    const { lx, ly } = this.toLocal(sx, sy, viewportW, viewportH);
+    const layout = this.getLayout();
     // Перевірка кнопки закриття [ESC]
     if (
-      sx >= layout.escX - 2 &&
-      sx <= layout.escX + layout.escW + 2 &&
-      sy >= layout.escY - 2 &&
-      sy <= layout.escY + layout.escH + 2
+      lx >= layout.escX - 2 &&
+      lx <= layout.escX + layout.escW + 2 &&
+      ly >= layout.escY - 2 &&
+      ly <= layout.escY + layout.escH + 2
     ) {
       this.resetInput();
       dispatch({ type: "close_minigame" });
       return;
     }
 
-    this.updatePointerThrust(sx, sy, viewportW, viewportH, true, dispatch);
+    this.updatePointerThrust(lx, ly, true, dispatch);
   }
 
   public handlePointerMove(
@@ -107,7 +126,8 @@ export class DockingGame {
     dispatch: (action: FlightAction) => void,
   ): void {
     if (!this.mouseThrust.active) return;
-    this.updatePointerThrust(sx, sy, viewportW, viewportH, true, dispatch);
+    const { lx, ly } = this.toLocal(sx, sy, viewportW, viewportH);
+    this.updatePointerThrust(lx, ly, true, dispatch);
   }
 
   public handlePointerUp(dispatch: (action: FlightAction) => void): void {
@@ -117,23 +137,18 @@ export class DockingGame {
   }
 
   private updatePointerThrust(
-    sx: number,
-    sy: number,
-    viewportW: number,
-    viewportH: number,
+    lx: number,
+    ly: number,
     active: boolean,
     dispatch: (action: FlightAction) => void,
   ): void {
-    const { sightCx, sightCy, joyCx, joyCy } = this.getLayout(
-      viewportW,
-      viewportH,
-    );
+    const { sightCx, sightCy, joyCx, joyCy } = this.getLayout();
 
     // Керування або через віртуальний джойстик справа, або кліком/перетягуванням прямо на екрані СОІ
-    const distJoy = Math.hypot(sx - joyCx, sy - joyCy);
+    const distJoy = Math.hypot(lx - joyCx, ly - joyCy);
     if (distJoy <= 85) {
-      const dx = (sx - joyCx) / 55;
-      const dy = (sy - joyCy) / 55;
+      const dx = (lx - joyCx) / 55;
+      const dy = (ly - joyCy) / 55;
       this.mouseThrust = {
         x: Math.max(-1, Math.min(1, dx)),
         y: Math.max(-1, Math.min(1, dy)),
@@ -141,8 +156,8 @@ export class DockingGame {
       };
     } else {
       // Натискання на екран СОІ штовхає мішень до центру
-      const dx = ( sightCx - sx ) / 90;
-      const dy = ( sightCy - sy ) / 90;
+      const dx = (sightCx - lx) / 90;
+      const dy = (sightCy - ly) / 90;
       this.mouseThrust = {
         x: Math.max(-1, Math.min(1, -dx)),
         y: Math.max(-1, Math.min(1, -dy)),
@@ -168,35 +183,50 @@ export class DockingGame {
     viewportW: number,
     viewportH: number,
   ): void {
-    const { rect, escX, escY, escW, escH, sightCx, sightCy, sightR } =
-      this.getLayout(viewportW, viewportH);
+    const rect = this.getPanelRect(viewportW, viewportH);
+    const {
+      escX,
+      escY,
+      escW,
+      escH,
+      sightCx,
+      sightCy,
+      sightR,
+      rightX,
+      rightW,
+      joyCx,
+      joyCy,
+    } = this.getLayout();
 
     ctx.save();
     // Напівпрозоре затемнення фону (станція позаду продовжує жити!)
     ctx.fillStyle = "rgba(3, 7, 15, 0.62)";
     ctx.fillRect(0, 0, viewportW, viewportH);
 
+    ctx.translate(rect.x, rect.y);
+    ctx.scale(rect.scale, rect.scale);
+
     // Корпус приладу СОІ (Система Оптичної Індикації)
     ctx.fillStyle = "#081410";
     ctx.strokeStyle = mg.collisionFlashTimerS > 0 ? "#ff4766" : "#2ec4b6";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 14);
+    ctx.roundRect(0, 0, PANEL_W, PANEL_H, 14);
     ctx.fill();
     ctx.stroke();
 
     // Верхня планка заголовка
     ctx.fillStyle = "#0d241c";
     ctx.beginPath();
-    ctx.roundRect(rect.x + 3, rect.y + 3, rect.w - 6, 46, [12, 12, 0, 0]);
+    ctx.roundRect(3, 3, PANEL_W - 6, 46, [12, 12, 0, 0]);
     ctx.fill();
 
     drawFittedText(
       ctx,
       `СОІ · РУЧНЕ СТИКУВАННЯ [${mg.terminalId}]`,
-      rect.x + 18,
-      rect.y + 31,
-      escX - (rect.x + 18) - 14,
+      18,
+      31,
+      escX - 18 - 14,
       { fontSize: 15, minFontSize: 11, color: "#3ddc84" },
     );
 
@@ -376,13 +406,9 @@ export class DockingGame {
     }
 
     // Права приладова колонка: Дистанція Z (10м -> 0м), швидкість Vz, похибка R, віртуальний джойстик
-    const { rightX, rightW, joyCx, joyCy } = this.getLayout(
-      viewportW,
-      viewportH,
-    );
     const padX = 18;
     const padY = 22;
-    const cardY = rect.y + 66;
+    const cardY = 66;
     const cardH = 196;
     const textMaxW = rightW - padX * 2;
 

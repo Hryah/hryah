@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ALL_GRAB_HANDLES,
   type FlightAction,
@@ -38,6 +38,20 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
 
   stateRef.current = state;
   dispatchRef.current = dispatch;
+
+  const resetSlingshotDrag = useCallback(() => {
+    pointerDragRef.current = {
+      active: false,
+      pointerId: -1,
+      startX: 0,
+      startY: 0,
+      maxDragDist: 0,
+      startedAnchored: false,
+    };
+    if (stateRef.current.astronaut.slingshot.isDragging) {
+      dispatchRef.current({ type: "slingshot_cancel" });
+    }
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -81,6 +95,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       if (s.gameMode === "MINIGAME_ACTIVE") {
         if (e.code === "Escape") {
           e.preventDefault();
+          resetSlingshotDrag();
           loop?.dockingGame.resetInput();
           loop?.solarGame.resetInput();
           loop?.lifeSupportGame.resetInput();
@@ -110,6 +125,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
         }
         if (e.code === "KeyE" || e.code === "Enter") {
           e.preventDefault();
+          resetSlingshotDrag();
           send({ type: "open_terminal" });
           return;
         }
@@ -155,13 +171,51 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       }
     };
 
+    const onWindowPointerUp = (e: PointerEvent) => {
+      const s = stateRef.current;
+      const loop = loopRef.current;
+      const send = dispatchRef.current;
+
+      if (e.target !== canvasRef.current || s.gameMode === "MINIGAME_ACTIVE") {
+        resetSlingshotDrag();
+        if (e.target !== canvasRef.current && loop) {
+          if (s.gameMode === "MINIGAME_ACTIVE") {
+            loop.dockingGame.handlePointerUp(send);
+            loop.solarGame.handlePointerUp();
+            loop.lifeSupportGame.resetInput();
+          }
+          if (s.astronaut.activeGrabHeld) {
+            send({ type: "set_active_grab", held: false });
+          }
+        }
+      }
+    };
+
+    const onWindowBlur = () => {
+      resetSlingshotDrag();
+      const loop = loopRef.current;
+      if (loop) {
+        loop.resetRoamKeys();
+        loop.dockingGame.resetInput();
+        loop.solarGame.resetInput();
+        loop.lifeSupportGame.resetInput();
+      }
+      if (stateRef.current.astronaut.activeGrabHeld) {
+        dispatchRef.current({ type: "set_active_grab", held: false });
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("blur", onWindowBlur);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("blur", onWindowBlur);
     };
-  }, []);
+  }, [resetSlingshotDrag]);
 
   const getRelativeScreenPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -332,6 +386,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     if (!loop) return;
 
     if (s.gameMode === "MINIGAME_ACTIVE") {
+      resetSlingshotDrag();
       if (s.activeMinigame.type === "DOCKING") {
         loop.dockingGame.handlePointerUp(send);
       } else if (s.activeMinigame.type === "SOLAR") {
@@ -407,16 +462,10 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
-    pointerDragRef.current.active = false;
+    resetSlingshotDrag();
     const s = stateRef.current;
-    const send = dispatchRef.current;
-    if (s.gameMode === "STATION_ROAM") {
-      if (s.astronaut.slingshot.isDragging) {
-        send({ type: "slingshot_cancel" });
-      }
-      if (s.astronaut.activeGrabHeld) {
-        send({ type: "set_active_grab", held: false });
-      }
+    if (s.gameMode === "STATION_ROAM" && s.astronaut.activeGrabHeld) {
+      dispatchRef.current({ type: "set_active_grab", held: false });
     }
   };
 
