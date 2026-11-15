@@ -490,5 +490,9 @@
   "ui.campaign.colonySaved": "The colony is supplied for the winter.",
   "ui.brief.reputation": "Reputation: {rep}. Sponsors adjust our grant by {percent}%.",
   "ui.campaign.reputation": "Reputation",
-  "ui.slot.cargo": "Cargo container"
+  "ui.slot.cargo": "Cargo container",
+  "ui.designPreview.title": "Spacecraft preview",
+  "ui.designPreview.stage": "3D stand",
+  "ui.designPreview.svg": "2D schematic",
+  "ui.designPreview.blueprint": "Blueprint"
 }
