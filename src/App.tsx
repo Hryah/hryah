@@ -9,6 +9,7 @@ import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
 import { Gallery } from "./scenes/gallery";
 import { t } from "./ui/text";
+import { RetroProvider, RetroToggle } from "./ui/style/RetroStyle";
 
 const RoomScreen = lazy(() =>
   import("./ui/room/RoomScreen").then((module) => ({
@@ -54,7 +55,7 @@ export function App() {
   }, [view]);
 
   return (
-    <>
+    <RetroProvider>
       <div hidden={view !== "orbit"}><OrbitPrototype /></div>
       <div hidden={view === "orbit"} lang="uk" style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b0d17", color: "#e8eaf3" }}>
         <div style={{ background: color, color: "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
@@ -72,6 +73,7 @@ export function App() {
             <a href="#mission" style={{ color: view === "mission" ? color : "#8a90a8" }}>{t("ui.nav.mission")}</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
             <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
+            <RetroToggle />
           </nav>
           <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
           <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>
@@ -87,6 +89,6 @@ export function App() {
           )}
         </main>
       </div>
-    </>
+    </RetroProvider>
   );
 }

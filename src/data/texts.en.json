@@ -494,5 +494,7 @@
   "ui.designPreview.title": "Spacecraft preview",
   "ui.designPreview.stage": "3D stand",
   "ui.designPreview.svg": "2D schematic",
-  "ui.designPreview.blueprint": "Blueprint"
+  "ui.designPreview.blueprint": "Blueprint",
+  "ui.retro.on": "Retro style on",
+  "ui.retro.off": "Retro style off"
 }

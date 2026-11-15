@@ -1,0 +1,22 @@
+/* Ретро-фільтр для графіки, яку малює не рушій WebGL: canvas польоту й каюти, SVG орбіти й превʼю апарата.
+   Текст і кнопки інтерфейсу не фільтруються. Пікселі не згладжуються. */
+.retro .retro-surface,
+.retro .orbit-scene,
+.retro .room-stage canvas {
+  filter: url(#hryah-retro);
+  image-rendering: pixelated;
+}
+
+.retro-toggle {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #2a2f4a;
+  background: transparent;
+  color: #8a90a8;
+  cursor: pointer;
+  font-size: 13px;
+}
+.retro-toggle[aria-pressed="true"] {
+  color: #a7e8d3;
+  border-color: #a7e8d3;
+}
