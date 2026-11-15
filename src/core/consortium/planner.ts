@@ -101,21 +101,41 @@ function searchTarget(input: DesignInput, taken: Taken): Design | null {
   }
 
   // Покоординатний спуск: по черзі пробуємо кожен модуль слота, решту тримаємо; три проходи вистачає.
-  let modules = Object.fromEntries(SLOTS.map((slot, i) => [slot, [...bySlot[i]!].sort((a, b) => a.costMUsd - b.costMUsd)[0]!.id])) as Record<SlotId, string>;
-  let best = evaluate(modules);
-  for (let pass = 0; pass < 3; pass++) {
-    let improved = false;
-    SLOTS.forEach((slot, i) => {
-      for (const m of bySlot[i]!) {
-        if (m.id === modules[slot]) continue;
-        const candidate = { ...modules, [slot]: m.id };
-        const r = evaluate(candidate);
-        if (r && (best === null || r.value > best.value)) { best = r; modules = candidate; improved = true; }
-      }
-    });
-    if (!improved) break;
+  // Стартів два: найдешевші модулі та найдешевші з найефективнішим двигуном. Слабкий двигун (холодний газ) вимагає стільки
+  // палива, що жоден інший модуль уже не влазить у носій: з одного старту спуск застрягав би на слабкому проєкті.
+  const cheapest = (list: ModuleDef[]) => [...list].sort((a, b) => a.costMUsd - b.costMUsd)[0]!.id;
+  const descend = (start: Record<SlotId, string>): { design: Design; value: number } | null => {
+    let modules = start;
+    let best = evaluate(modules);
+    for (let pass = 0; pass < 3; pass++) {
+      let improved = false;
+      SLOTS.forEach((slot, i) => {
+        for (const m of bySlot[i]!) {
+          if (m.id === modules[slot]) continue;
+          const candidate = { ...modules, [slot]: m.id };
+          const r = evaluate(candidate);
+          if (r && (best === null || r.value > best.value)) { best = r; modules = candidate; improved = true; }
+        }
+      });
+      if (!improved) break;
+    }
+    return best;
+  };
+  const cheap = Object.fromEntries(SLOTS.map((slot, i) => [slot, cheapest(bySlot[i]!)])) as Record<SlotId, string>;
+  const engines = bySlot[SLOTS.indexOf('engine')]!.filter((m): m is Extract<ModuleDef, { slot: 'engine' }> => m.slot === 'engine');
+  const antennas = bySlot[SLOTS.indexOf('antenna')]!.filter((m): m is Extract<ModuleDef, { slot: 'antenna' }> => m.slot === 'antenna');
+  const efficient = [...engines].sort((a, b) => b.ispS - a.ispS)[0]?.id ?? cheap.engine;
+  const fastest = [...antennas].sort((a, b) => b.downlinkMbps - a.downlinkMbps)[0]?.id ?? cheap.antenna;
+  // Старти: найдешевший проєкт і, для кожного приладу, проєкт із ним, найефективнішим двигуном і найшвидшою антеною.
+  // Перехід до важкого приладу (власне дзеркало) вимагає змінити одразу двигун і антену, а спуск міняє по одному слоту.
+  const instrumentSlot = SLOTS.indexOf('instrument');
+  const starts: Record<SlotId, string>[] = [cheap, ...bySlot[instrumentSlot]!.map((m) => ({ ...cheap, engine: efficient, antenna: fastest, instrument: m.id }))];
+  let winner: { design: Design; value: number } | null = null;
+  for (const start of starts) {
+    const r = descend(start);
+    if (r && (winner === null || r.value > winner.value)) winner = r;
   }
-  return best?.design ?? null;
+  return winner?.design ?? null;
 }
 
 
