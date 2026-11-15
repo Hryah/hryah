@@ -48,7 +48,8 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
   const expected = expectedQuality(entry.agency, factory, order, turn);
   const known = knownFlaws(factory, lineId, safeDeposit, turn);
   const analyzedKey = `${lineId}:${safeDeposit}`;
-  const canAnalyze = safeDeposit !== IMPORT_DEPOSIT && !factory.analyzed.includes(analyzedKey) && entry.actionsLeft > 0 && !entry.launch;
+  const canAnalyze = safeDeposit !== IMPORT_DEPOSIT && !factory.analyzed.includes(analyzedKey) && entry.actionsLeft > 0 && !entry.launch
+    && entry.account.fundsMUsd >= MATERIALS.analyzeCostMUsd;
   const affordable = plan.batch !== undefined && entry.account.fundsMUsd > plan.batch.costMUsd;
   const canOrder = plan.ok && affordable && entry.actionsLeft > 0 && !entry.launch;
   const cured = new Set([...(line.stages[0][steps[0]]?.cures ?? []), ...(line.stages[1][steps[1]]?.cures ?? [])]);
@@ -147,7 +148,7 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
             const l = MATERIALS.lines[b.line]!;
             return (
               <div key={b.id}>
-                {ready ? "✅" : "⏳"} {t(l.nameKey)} · {t(l.deposits[b.depositId]!.nameKey)} →{" "}
+                {ready ? "✅" : "⏳"} {t(b.module.nameKey)} · {t(l.deposits[b.depositId]!.nameKey)} →{" "}
                 {ready
                   ? <span style={{ color: b.quality >= 0.8 ? C.ok : C.gold }}>
                       {t("ui.factory.quality", { q: fmt(b.quality * 100, 0) })}
