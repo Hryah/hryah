@@ -87,7 +87,7 @@
     "campaign": {
       "rounds": 2,
       "windowTurns": 5,
-      "programGoal": 1500,
+      "programGoal": 800,
       "grantMUsd": 30,
       "missedGrantFactor": 0.5,
       "missedTwiceGrantFactor": 0.25,

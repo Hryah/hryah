@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createDemoOrbit, orbitPhase, orbitClarity, orbitDebrief, type OrbitAction, type OrbitState, type ToggleId } from '../../core/orbit';
 import { resolveAssetUrl } from '../graphics/registry';
 import { OrbitScene } from './OrbitScene';
@@ -73,21 +73,25 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
   ];
   const reset = (nextPreset = preset) => { setPreset(nextPreset); setHistory([createDemoOrbit(nextPreset, 42)]); };
   const advance = () => {
-    if (done) return;
+    // Клавіша N іде сюди ж: після ліміту дій звіту (locked) витки дограє автопілот кімнати.
+    if (done || campaign?.locked) return;
     const tick: OrbitAction = { type: 'tick', dtS: state.input.flight.orbit.periodS };
     if (campaign) campaign.onAction(tick);
     else setHistory(previous => [...previous, orbitPhase.step(previous[previous.length - 1]!, tick)]);
   };
+  // Обробник клавіші N читає свіжий стан через ref, а слухач на window реєструється один раз за монтування.
+  const keyHandler = useRef<(event: KeyboardEvent) => void>(() => {});
+  keyHandler.current = (event: KeyboardEvent) => {
+    if ((!campaign && window.location.hash !== '#orbit') || helpOpen || setupOpen || event.key.toLowerCase() !== 'n' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(event.target.tagName)) return;
+    event.preventDefault();
+    advance();
+  };
   useEffect(() => {
-    const key = (event: KeyboardEvent) => {
-      if ((!campaign && window.location.hash !== '#orbit') || helpOpen || setupOpen || event.key.toLowerCase() !== 'n' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(event.target.tagName)) return;
-      event.preventDefault();
-      advance();
-    };
+    const key = (event: KeyboardEvent) => keyHandler.current(event);
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  });
+  }, []);
   const toggle = (id: ToggleId) => {
     if (campaign) { campaign.onAction({ type: 'toggle', id }); return; }
     setHistory(previous => {

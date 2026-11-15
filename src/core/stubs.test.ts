@@ -1,3 +1,4 @@
+import missionsData from "../data/missions.json";
 import { describe, expect, it } from "vitest";
 import { causeChains, danglingCauses } from "./debrief";
 import type { Mission } from "./contracts";
@@ -136,5 +137,29 @@ describe("межі висоти орбітальної заглушки", () => 
     expect(run.outcome.success).toBe(false);
     expect(failure?.causedBy).toEqual(["flight:low-orbit"]);
     expect(danglingCauses(run.log)).toEqual([]);
+  });
+});
+
+describe("заглушка орбіти поважає ціль місії (як справжня орбіта)", () => {
+  const design = stubDesign({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG });
+  const flight = stubFlight({ mission: SAMPLE_MISSION, spec: design.result, log: design.log });
+  const run = (mission: Mission, spec = design.result) =>
+    stubOrbit({ mission, spec, flight: { ...flight.result, orbit: { ...flight.result.orbit, altKm: mission.altRangeKm[0] } }, log: design.log });
+
+  it("проліт знімає лише на своїх витках і вважає успіхом будь-які дані", () => {
+    const guest = (missionsData as unknown as Record<string, Mission>)["guest"]!;
+    if (guest.orbitObjective?.type !== "flyby") throw new Error("guest має бути прольотом");
+    const [a, b] = guest.orbitObjective.imagingOrbits;
+    const allOrbits = run({ ...guest, orbitObjective: undefined, requiredDataMb: 0 }).result.deliveredMb;
+    const flyby = run(guest).result;
+    expect(flyby.deliveredMb).toBeCloseTo((allOrbits * (b - a + 1)) / guest.durationOrbits, 6);
+    expect(flyby.success).toBe(flyby.deliveredMb > 0 && run(guest).log.every((e) => e.kind !== "failure"));
+  });
+
+  it("вантажний рейс без контейнера — провал із причиною, а не успіх", () => {
+    const lifeline = (missionsData as unknown as Record<string, Mission>)["station-resupply"] ?? (missionsData as unknown as Record<string, Mission>)["lifeline"]!;
+    const out = run(lifeline, { ...design.result, cargoKind: undefined });
+    expect(out.result.success).toBe(false);
+    expect(out.log).toContainEqual(expect.objectContaining({ id: "orbit:cargo-missing", kind: "failure", causedBy: ["design:instrument"] }));
   });
 });
