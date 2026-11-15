@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { resolveAssetUrl } from '../graphics/registry';
+import { t } from '../text';
 import text from './texts.en.json';
 
 export interface OrbitSceneProps {
@@ -8,6 +9,7 @@ export interface OrbitSceneProps {
   storm: boolean;
   safeMode: boolean;
   complete: boolean;
+  bodyName?: string;
   className?: string;
 }
 
@@ -24,7 +26,7 @@ const STARS = [
 
 /** The orbit positions and effects here are visual presentation only. */
 export function OrbitScene({
-  turn, totalTurns, storm, safeMode, complete, className = '',
+  turn, totalTurns, storm, safeMode, complete, bodyName, className = '',
 }: OrbitSceneProps) {
   const rawId = useId();
   const id = `earth-${rawId.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -35,6 +37,10 @@ export function OrbitScene({
   const satelliteX = 450 + orbitalX * Math.cos(tilt) - orbitalY * Math.sin(tilt);
   const satelliteY = 224 + orbitalX * Math.sin(tilt) + orbitalY * Math.cos(tilt);
   const signalColor = storm ? '#f4b46a' : safeMode ? '#8da4b7' : '#a7e8d3';
+  const title = bodyName ? t('scene.missionTitle', { body: bodyName }) : text['scene.title'];
+  const description = safeMode ? text['scene.safeDescription'] : bodyName
+    ? t(storm ? 'scene.missionStormDescription' : 'scene.missionDescription', { body: bodyName })
+    : storm ? text['scene.stormDescription'] : text['scene.description'];
 
   return (
     <svg
@@ -44,9 +50,9 @@ export function OrbitScene({
       aria-labelledby={`${id}-title ${id}-description`}
       style={{ display: 'block', width: '100%', height: '100%', overflow: 'visible' }}
     >
-      <title id={`${id}-title`}>{text['scene.title']}</title>
+      <title id={`${id}-title`}>{title}</title>
       <desc id={`${id}-description`}>
-        {storm ? text['scene.stormDescription'] : safeMode ? text['scene.safeDescription'] : text['scene.description']}
+        {description}
       </desc>
       <defs>
         <radialGradient id={`${id}-ocean`} cx="32%" cy="28%" r="76%">
