@@ -17,6 +17,26 @@ function finishMission(initial: OrbitState): OrbitState {
 }
 
 describe('orbit prototype presentation', () => {
+  it('uses readable module names in causal paths and immediate cause summaries', () => {
+    const state = finishMission(createDemoOrbit('comms'));
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={state} />);
+    expect(html).toContain('Problems and player decisions');
+    expect(html).toContain(sharedMessages['antenna.s']);
+    expect(html).not.toContain('ant-s');
+    expect(html).not.toMatch(/Selected cam-|Selected bat-|Selected sol-|Selected eng-/);
+  });
+
+  it('describes SAFE as protection rather than a scheduled instrument', () => {
+    const safe = orbitPhase.step(createDemoOrbit(), { type: 'toggle', id: 'safeMode' });
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={safe} />);
+    const card = html.match(/<button[^>]*aria-label="Safe mode"[^>]*>[\s\S]*?<\/button>/)?.[0];
+    expect(card).toBeDefined();
+    expect(card).toContain('Protection enabled for the next turn');
+    expect(card).toContain('Protection planned for');
+    expect(card).not.toContain('Scheduled in its operating window');
+    expect(card).not.toContain('Operating for');
+  });
+
   it('shows memory forecast and turn cost before a command is executed', () => {
     const html = renderToStaticMarkup(<OrbitPrototype />);
     for (const label of ['Energy consumed', 'Solar energy available', 'Ending memory', 'Peak memory before downlink', 'Time simulated', 'Command: ON', 'Next turn: operating']) {
@@ -40,7 +60,8 @@ describe('orbit prototype presentation', () => {
     const html = renderToStaticMarkup(<OrbitPrototype initialState={end} />);
     expect(html).toContain('Problems and player decisions');
     expect(html).toContain('Heater command changed to Off');
-    expect(html).toContain('ant-s');
+    expect(html).toContain(sharedMessages['antenna.s']);
+    expect(html).not.toContain('ant-s');
     expect(html).toContain('cause-path');
     expect(html).not.toMatch(/\bclarity\.[\w.]+|\borbit\.clarity\.[\w.]+/);
   });

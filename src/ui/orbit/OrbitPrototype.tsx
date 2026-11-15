@@ -4,6 +4,9 @@ import { resolveAssetUrl } from '../graphics/registry';
 import { OrbitScene } from './OrbitScene';
 import messages from './texts.en.json';
 import sharedMessages from '../../data/texts.en.json';
+import { SAMPLE_CATALOG } from '../../core/stubs';
+import type { CauseEntry } from '../../core/contracts';
+import { describeEntry } from '../design/cause';
 import './orbit.css';
 
 const copy: Record<string, string> = { ...sharedMessages, ...messages };
@@ -77,6 +80,8 @@ export function OrbitPrototype({ initialState }: { initialState?: OrbitState } =
     return [...previous.slice(0, -1), orbitPhase.step(active, { type: 'toggle', id })];
   });
   const visibleLog = [...state.log].reverse().slice(0, done ? 10 : 5);
+  const entryText = (entry: CauseEntry) =>
+    describeEntry(entry, { mission: state.input.mission, catalog: SAMPLE_CATALOG });
 
   return <div className="orbit-app">
     <aside className="mission-sidebar">
@@ -120,7 +125,7 @@ export function OrbitPrototype({ initialState }: { initialState?: OrbitState } =
           <div className="section-heading"><h2>{t('ui.spacecraftSystems')}</h2><span>{t('ui.systemsHint')}</span></div>
           <div className="system-grid">{controls.map(({ id, icon }) => {
             const system = systems[id];
-            return <button key={id} className={['system-card', system.commandOn ? 'on' : '', id === 'safeMode' ? 'safety' : '', system.commandOn && !system.effectiveOn ? 'blocked' : ''].join(' ')} role="switch" aria-checked={system.commandOn} aria-label={t('ui.control.' + id)} disabled={done} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t('ui.control.' + id)}</strong><small>{t('ui.control.' + id + '.description')}</small><div className="system-footer"><span>{t(system.commandOn ? 'clarity.command.on' : 'clarity.command.off')}</span></div><div className="system-actual"><span>{t(system.effectiveOn ? 'clarity.actual.on' : 'clarity.actual.off')}</span><small>{t('clarity.reason.' + system.reason)}{system.forcedBySafe && <span> · {t('clarity.forcedHeater')}</span>}</small>{system.effectiveOn && <small>{t('clarity.operation', { seconds: system.operationS })}</small>}</div></button>;
+            return <button key={id} className={['system-card', system.commandOn ? 'on' : '', id === 'safeMode' ? 'safety' : '', system.commandOn && !system.effectiveOn ? 'blocked' : ''].join(' ')} role="switch" aria-checked={system.commandOn} aria-label={t('ui.control.' + id)} disabled={done} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t('ui.control.' + id)}</strong><small>{t('ui.control.' + id + '.description')}</small><div className="system-footer"><span>{t(system.commandOn ? 'clarity.command.on' : 'clarity.command.off')}</span></div><div className="system-actual"><span>{t(id === 'safeMode' ? system.effectiveOn ? 'clarity.safe.on' : 'clarity.safe.off' : system.effectiveOn ? 'clarity.actual.on' : 'clarity.actual.off')}</span><small>{t(id === 'safeMode' && system.reason === 'ready' ? 'clarity.safe.ready' : 'clarity.reason.' + system.reason)}{system.forcedBySafe && <span> · {t('clarity.forcedHeater')}</span>}</small>{system.effectiveOn && <small>{t(id === 'safeMode' ? 'clarity.safe.duration' : 'clarity.operation', { seconds: system.operationS })}</small>}</div></button>;
           })}</div>
         </section>
 
@@ -150,9 +155,9 @@ export function OrbitPrototype({ initialState }: { initialState?: OrbitState } =
       {done && <section className={`mission-outcome panel ${outcome.success ? 'success' : 'failure'}`} aria-live="polite"><span className="outcome-symbol"><Icon name={outcome.success ? 'check' : 'activity'} size={28} /></span><div><div className="eyebrow">{t('ui.missionDebrief')}</div><h2>{t(outcome.success ? 'ui.successTitle' : 'ui.failureTitle')}</h2><p>{t(outcome.success ? 'ui.successDescription' : 'ui.failureDescription', { delivered: number(outcome.deliveredMb), turns: outcome.survivedOrbits, total: totals })}</p></div><div className="outcome-score"><strong>{number(outcome.score)}</strong><span>{t('ui.missionScore')}</span></div></section>}
 
 
-      {done && debrief.length > 0 && <section className="event-log panel" aria-label={t('clarity.causeChains')}><div className="panel-title"><h2>{t('clarity.causeChains')}</h2></div><p className="cause-detail">{t('clarity.chainHint')}</p>{debrief.map(problem => <details className="cause-problem" key={problem.failure.id}><summary>{t(problem.failure.messageKey, problem.failure.params)}</summary>{problem.paths.map((path, index) => <ol className="cause-path" key={index}>{path.map(entry => <li key={entry.id} className={entry.kind === 'decision' ? 'text-green' : ''}>{t(entry.messageKey, entry.params)} <small>{t('clarity.eventTime', { minutes: entry.tS / 60 })}</small></li>)}</ol>)}</details>)}</section>}
+      {done && debrief.length > 0 && <section className="event-log panel" aria-label={t('clarity.causeChains')}><div className="panel-title"><h2>{t('clarity.causeChains')}</h2></div><p className="cause-detail">{t('clarity.chainHint')}</p>{debrief.map(problem => <details className="cause-problem" key={problem.failure.id}><summary>{entryText(problem.failure)}</summary>{problem.paths.map((path, index) => <ol className="cause-path" key={index}>{path.map(entry => <li key={entry.id} className={entry.kind === 'decision' ? 'text-green' : ''}>{entryText(entry)} <small>{t('clarity.eventTime', { minutes: entry.tS / 60 })}</small></li>)}</ol>)}</details>)}</section>}
 
-      <section className="event-log panel"><div className="panel-title"><h2>{t('ui.missionLog')}<span className="log-count">{number(state.log.length)}</span></h2><span className="small-label">{t('ui.latestEvents')}</span></div><div className="log-entries" aria-live="polite">{visibleLog.map(entry => <div className={`log-entry ${entry.kind}`} key={entry.id}><span className="log-time">T+{number(entry.tS / 60, 1)}<small> MIN</small></span><span className="log-marker" /><span className="log-message">{t(entry.messageKey, entry.params)}{entry.kind === 'failure' && entry.causedBy && <small className="cause-detail">{t('ui.causedBy')} {entry.causedBy.map(id => { const cause = [...state.input.log, ...state.log].find(item => item.id === id); return cause ? t(cause.messageKey, cause.params) : id; }).join(' · ')}</small>}</span><span className="log-type">{t(`ui.log.${entry.kind}`)}</span></div>)}</div></section>
+      <section className="event-log panel"><div className="panel-title"><h2>{t('ui.missionLog')}<span className="log-count">{number(state.log.length)}</span></h2><span className="small-label">{t('ui.latestEvents')}</span></div><div className="log-entries" aria-live="polite">{visibleLog.map(entry => <div className={`log-entry ${entry.kind}`} key={entry.id}><span className="log-time">T+{number(entry.tS / 60, 1)}<small> MIN</small></span><span className="log-marker" /><span className="log-message">{entryText(entry)}{entry.kind === 'failure' && entry.causedBy && <small className="cause-detail">{t('ui.causedBy')} {entry.causedBy.map(id => { const cause = [...state.input.log, ...state.log].find(item => item.id === id); return cause ? entryText(cause) : id; }).join(' · ')}</small>}</span><span className="log-type">{t(`ui.log.${entry.kind}`)}</span></div>)}</div></section>
       <footer className="orbit-footer"><span>{t('ui.footer')}</span><span>HRYAH–01 <span className="footer-separator">/</span> {t('ui.simulationOnly')}</span></footer>
     </main>
 

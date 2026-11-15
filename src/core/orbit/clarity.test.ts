@@ -75,6 +75,27 @@ describe('orbit planning clarity', () => {
     expect(f.cost.cameraS).toBe(0);
   });
 
+  it('reports an empty ground pass separately from a later eclipse power failure', () => {
+    const { input } = createDemoOrbit();
+    const state = toggle(orbitPhase.init({ ...input,
+      spec: { ...input.spec, panelPowerW: 0, batteryWh: 30 } }, 42), 'camera');
+    const { systems, view } = orbitClarity(freeze(state));
+    expect(view.forecast.powerFailure).toBe(true);
+    expect(view.forecast.cost.elapsedS).toBeGreaterThan(view.sunlightS);
+    expect(systems.transmitter).toMatchObject({ reason: 'noData', effectiveOn: false, operationS: 0 });
+    expect(view.forecast.nextState).toEqual(tick(state));
+  });
+
+  it('reports power failure if the empty transmitter cannot reach its ground pass', () => {
+    const { input } = createDemoOrbit();
+    const state = toggle(orbitPhase.init({ ...input,
+      spec: { ...input.spec, panelPowerW: 0, batteryWh: 1 } }, 42), 'camera');
+    const { systems, view } = orbitClarity(state);
+    expect(view.forecast.powerFailure).toBe(true);
+    expect(view.forecast.cost.elapsedS).toBeLessThan(view.idleSunS);
+    expect(systems.transmitter.reason).toBe('powerFailure');
+  });
+
   it('is pure, deterministic and JSON-safe; forecast matches ticks including damage and failure', () => {
     for (const preset of ['balanced', 'comms', 'power'] as const) {
       let state = createDemoOrbit(preset, 71);
@@ -97,6 +118,85 @@ describe('orbit planning clarity', () => {
 });
 
 describe('orbit debrief causal paths', () => {
+  it('does not blame commands for systems that never operated before power loss', () => {
+    const { input } = createDemoOrbit();
+    let state = orbitPhase.init({ ...input,
+      spec: { ...input.spec, panelPowerW: 0, batteryWh: 1 } }, 42);
+    for (const id of ['camera', 'transmitter', 'heater'] as const) state = toggle(toggle(state, id), id);
+    const decisions = state.log.filter(entry => entry.kind === 'decision').map(entry => entry.id);
+    const end = tick(state);
+    expect(end.status).toBe('failed');
+    const failure = end.log.find(entry => entry.messageKey === 'orbit.proto.powerFailure');
+    expect(failure).toBeDefined();
+    for (const id of decisions) expect(failure!.causedBy).not.toContain(id);
+    expect(danglingCauses([...end.input.log, ...end.log])).toEqual([]);
+  });
+
+  it('does not blame earlier SAFE commands for a heater disabled by damage', () => {
+    const { input } = createDemoOrbit();
+    let state = orbitPhase.init({ ...input, flight: { ...input.flight,
+      damage: [{ system: 'thermal', severity: 1 }] } }, 42);
+    state = toggle(toggle(state, 'safeMode'), 'safeMode');
+    const decisions = state.log.filter(entry => entry.kind === 'decision').map(entry => entry.id);
+    const end = finish(state);
+    const shadows = end.log.filter(entry => entry.messageKey === 'orbit.clarity.unheatedShadow');
+    expect(shadows.length).toBeGreaterThan(0);
+    for (const shadow of shadows) {
+      expect(shadow.causedBy).toContain('orbit:arrival');
+      for (const id of decisions) expect(shadow.causedBy).not.toContain(id);
+    }
+    const cold = orbitDebrief(end).find(problem => problem.failure.messageKey === 'orbit.proto.cameraCold');
+    expect(cold).toBeDefined();
+    expect(cold!.paths.flat().some(entry => decisions.includes(entry.id))).toBe(false);
+    expect(danglingCauses([...end.input.log, ...end.log])).toEqual([]);
+  });
+
+  it('links a missed cold-locked image to cold rather than an earlier camera-on command', () => {
+    const { input } = createDemoOrbit();
+    let state = orbitPhase.init({ ...input,
+      mission: { ...input.mission, requiredDataMb: 24_000 } }, 42);
+    state = toggle(toggle(state, 'camera'), 'camera');
+    const cameraOn = state.log.at(-1)!;
+    state = tick(tick(toggle(state, 'heater')));
+    const cold = state.log.find(entry => entry.messageKey === 'orbit.proto.cameraCold')!;
+    const end = finish(state);
+    const missed = end.log.filter(entry => entry.messageKey === 'orbit.clarity.missedImaging');
+    expect(missed.length).toBeGreaterThan(0);
+    for (const entry of missed) {
+      expect(entry.causedBy).toContain(cold.id);
+      expect(entry.causedBy).not.toContain(cameraOn.id);
+    }
+    const shortfall = orbitDebrief(end).find(problem => problem.failure.messageKey === 'orbit.proto.insufficientData');
+    expect(shortfall).toBeDefined();
+    expect(shortfall!.paths.flat().map(entry => entry.id)).not.toContain(cameraOn.id);
+    expect(danglingCauses([...end.input.log, ...end.log])).toEqual([]);
+  });
+
+  it.each([['science', 'camera', 'orbit.clarity.missedImaging'],
+    ['comms', 'transmitter', 'orbit.clarity.missedDownlink']] as const)(
+    'does not blame an ON command for %s damage', (system, id, messageKey) => {
+      const { input } = createDemoOrbit();
+      let state = orbitPhase.init({ ...input, flight: { ...input.flight,
+        damage: [{ system, severity: 1 }] } }, 42);
+      state = toggle(toggle(state, id), id);
+      const commandOn = state.log.at(-1)!;
+      const end = finish(state);
+      const missed = end.log.filter(entry => entry.messageKey === messageKey);
+      expect(missed.length).toBeGreaterThan(0);
+      for (const entry of missed) {
+        expect(entry.causedBy).toContain('orbit:arrival');
+        expect(entry.causedBy).not.toContain(commandOn.id);
+      }
+      expect(danglingCauses([...end.input.log, ...end.log])).toEqual([]);
+    });
+
+  it('keeps the active SAFE command as the cause of a blocked imaging window', () => {
+    const safe = toggle(createDemoOrbit(), 'safeMode');
+    const command = safe.log.at(-1)!;
+    const missed = tick(safe).log.find(entry => entry.messageKey === 'orbit.clarity.missedImaging');
+    expect(missed?.causedBy).toContain(command.id);
+  });
+
   it('preserves the command that missed a window even after it was restored', () => {
     const off = toggle(createDemoOrbit(), 'camera');
     const offDecision = off.log.at(-1)!;

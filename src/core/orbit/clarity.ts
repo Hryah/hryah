@@ -34,6 +34,8 @@ export function orbitClarity(state: OrbitState) {
     else if ((id === 'camera' && view.imagingS <= 0)
       || (id === 'transmitter' && view.passS <= 0)
       || (id === 'heater' && view.shadowS <= 0)) reason = 'noWindow';
+    else if (id === 'transmitter' && operationS <= 0
+      && (!forecast.powerFailure || forecast.cost.elapsedS > view.idleSunS + view.imagingS)) reason = 'noData';
     else if (operationS <= 0 && forecast.powerFailure) reason = 'powerFailure';
     else if (id === 'transmitter' && operationS <= 0) reason = 'noData';
     return { commandOn, effectiveOn: reason === 'ready', reason, operationS, forcedBySafe };

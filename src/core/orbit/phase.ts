@@ -106,13 +106,16 @@ function eventIds(state: OrbitState, keys: string[]): string[] {
   return state.log.filter((entry) => keys.includes(entry.messageKey)).map((entry) => entry.id);
 }
 
-function causes(state: OrbitState, ids: string[], toggles: ToggleId[] = []): string[] {
+function causes(state: OrbitState, ids: string[], commands: Partial<Record<ToggleId, boolean>> = {}): string[] {
   const all = [...state.input.log, ...state.log];
   const existing = all.map((e) => e.id);
   const result = ids.filter((id) => existing.includes(id));
-  for (const toggle of toggles) {
+  // Each event selects the command values that actually contributed to it.
+  for (const toggle of Object.keys(commands) as ToggleId[]) {
+    const enabled = commands[toggle];
+    if (enabled === undefined || state.toggles[toggle] !== enabled) continue;
     const entry = [...state.log].reverse().find((e) => e.kind === 'decision' && e.params?.toggle === toggle);
-    if (entry && !result.includes(entry.id)) result.push(entry.id);
+    if (entry?.params?.enabled === (enabled ? 1 : 0) && !result.includes(entry.id)) result.push(entry.id);
   }
   if (state.input.flight.damage.length > 0) result.push('orbit:arrival');
   return result.length > 0 ? [...new Set(result)] : ['orbit:arrival'];
@@ -192,6 +195,7 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
   const storm = state.stormOrbit === orbit;
   const generationW = caps.panelPowerW * (storm ? STORM_POWER_FACTOR : 1);
   const linkMbps = caps.downlinkMbps * (storm ? STORM_LINK_FACTOR : 1);
+  const operated = { camera: false, transmitter: false, heater: false };
 
   if (storm) {
     addEntry(state, 'orbit.proto.storm', 'event', 'power', { orbit });
@@ -203,6 +207,7 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
     const deficitW = loadW - generation;
     const untilEmptyS = deficitW > 0 ? Math.max(0, state.chargeWh) * 3600 / deficitW : Infinity;
     const elapsedS = Math.min(durationS, untilEmptyS);
+    if (elapsedS > 0 && operation !== 'idle' && (operation !== 'heater' || active.heater)) operated[operation] = true;
     state.chargeWh = stepCharge(state.chargeWh, caps.capacityWh, generation - loadW, elapsedS);
     state.tS += elapsedS;
     if (cost) {
@@ -225,7 +230,7 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
       if (lostMb > 0.000001) {
         addEntry(state, 'orbit.proto.overflow', 'failure', 'comms', { lostMb },
           causes(state, ['design:instrument', 'design:antenna', ...eventIds(state, ['orbit.proto.storm'])],
-          ['camera', 'transmitter']));
+          { camera: true, transmitter: false }));
       }
     } else if (operation === 'transmitter') {
       const sentMb = downlinkMb(state.bufferMb, linkMbps, 0, elapsedS, true);
@@ -238,7 +243,11 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
       state.chargeWh = 0;
       addEntry(state, 'orbit.proto.powerFailure', 'failure', 'power', { orbit },
         causes(state, ['design:battery', 'design:solar', 'design:instrument',
-          ...eventIds(state, ['orbit.proto.storm'])], ['camera', 'transmitter', 'heater', 'safeMode']));
+          ...eventIds(state, ['orbit.proto.storm'])], {
+          ...(operated.camera ? { camera: true } : {}),
+          ...(operated.transmitter ? { transmitter: true } : {}),
+          ...(operated.heater ? state.toggles.heater ? { heater: true } : { safeMode: true } : {}),
+        }));
     }
   };
 
@@ -246,13 +255,14 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
   move(caps.idleSunS, generationW, segmentLoadW(spec, 'sunIdle', active));
   if (state.status === 'active' && caps.imagingS > 0 && !active.camera) {
     addEntry(state, 'orbit.clarity.missedImaging', 'event', 'science', {},
-      causes(state, ['design:instrument', ...eventIds(state, ['orbit.proto.cameraCold'])],
-        state.toggles.safeMode ? ['safeMode'] : ['camera']));
+      causes(state, ['design:instrument', ...(state.coldStress >= 2 ? eventIds(state, ['orbit.proto.cameraCold']) : [])],
+        state.toggles.safeMode ? { safeMode: true } : caps.instrumentRateMbps > 0 ? { camera: false } : {}));
   }
   move(caps.imagingS, generationW, segmentLoadW(spec, 'imaging', active), active.camera ? 'camera' : 'idle');
   if (state.status === 'active' && caps.passS > 0 && state.bufferMb > 0 && !active.transmitter) {
     addEntry(state, 'orbit.clarity.missedDownlink', 'event', 'comms', {},
-      causes(state, ['design:antenna'], state.toggles.safeMode ? ['safeMode'] : ['transmitter']));
+      causes(state, ['design:antenna'], state.toggles.safeMode ? { safeMode: true }
+        : caps.downlinkMbps > 0 ? { transmitter: false } : {}));
   }
   const transmitS = transmitSeconds(caps.passS, state.bufferMb, linkMbps, active.transmitter);
   move(transmitS, generationW, segmentLoadW(spec, 'transmit', active), 'transmitter');
@@ -263,7 +273,7 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
     const previousStress = state.coldStress;
     if (caps.shadowS > 0 && !active.heater) {
       addEntry(state, 'orbit.clarity.unheatedShadow', 'event', 'thermal', {},
-        causes(state, [], ['heater', 'safeMode']));
+        causes(state, [], caps.heaterFactor > 0 ? { heater: false } : {}));
     }
     if (caps.shadowS > 0) state.coldStress = clamp(state.coldStress + (active.heater ? -caps.heaterFactor : 1), 0, 2);
     if (state.coldStress >= 2 && previousStress < 2) {
