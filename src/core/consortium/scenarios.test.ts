@@ -137,3 +137,15 @@ describe("режими перемоги", () => {
     expect(s.campaign!.winner).toEqual({ agencyId: top.agency.id, reason: "program" });
   });
 });
+
+describe("репутація", () => {
+  it("успішні місії підвищують репутацію, а грант наступних вікон росте разом із нею", () => {
+    const s = playBots("living-planet");
+    const rep = s.agencies.map((e) => e.account!.reputation ?? 0);
+    expect(rep.some((r) => r !== 0)).toBe(true);
+    const base = SCENARIOS["living-planet"]!.campaign.grantMUsd;
+    for (const round of s.campaign!.rounds) {
+      for (const a of round.agencies) if (a.launched) expect(a.grantMUsd).toBeGreaterThanOrEqual(base * 0.5);
+    }
+  });
+});

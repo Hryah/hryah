@@ -486,5 +486,7 @@
   "scenario.colony.brief": "A Mars base needs supplies before winter. Windows open rarely; between them you can only build and test. Fill the programme or the colony freezes.",
   "scenario.colony.analog": "NASA's Mars Design Reference Architecture: cargo is pre-positioned one launch window ahead of the crew, because the next chance is 26 months away.",
   "ui.campaign.colonyLost": "The colony did not get enough supplies before winter.",
-  "ui.campaign.colonySaved": "The colony is supplied for the winter."
+  "ui.campaign.colonySaved": "The colony is supplied for the winter.",
+  "ui.brief.reputation": "Reputation: {rep}. Sponsors adjust our grant by {percent}%.",
+  "ui.campaign.reputation": "Reputation"
 }

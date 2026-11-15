@@ -33,6 +33,7 @@ import { runValueMUsd, settleRewards, type AgencyRun, type Settlement } from './
 // Повторні зміни вже зачепленого за цей хід елемента безкоштовні: пальне чи орбіту не доведеться тицяти по одному кроку.
 export const ACTIONS_PER_TURN = 4;
 export const DEFAULT_DEADLINE_TURN = 12;
+export const REPUTATION_STEP = 0.1; // ±10% гранту за кожен пункт репутації (у межах ×0,5…×1,5)
 
 export interface Launch {
   turn: number;
@@ -50,7 +51,8 @@ export interface Account {
   missedInRow: number;       // скільки вікон поспіль без запуску
   unlocked: string[];        // відкриті вузли досліджень
   trlGain?: Record<string, number>;
-  groundStations?: number;   // власні наземні станції: довші сеанси зв'язку // досвід агенції з модулем: +1 TRL за вдалий запуск чи наземні випробування
+  groundStations?: number;   // власні наземні станції: довші сеанси зв'язку
+  reputation?: number;       // репутація агенції: +1 за успішну місію, −1 за провал; впливає на гранти // досвід агенції з модулем: +1 TRL за вдалий запуск чи наземні випробування
   lastDesign?: Design;       // проєкт останнього запуску (для серії)
 }
 
@@ -336,7 +338,10 @@ function closeRound(state: ConsortiumState): ConsortiumState {
     const payoutMUsd = money((settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0) * saturationFactor);
     const missedInRow = launched ? 0 : account.missedInRow + 1;
     const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
-    const grantMUsd = money(config.grantMUsd * grantFactor);
+    // Репутація: успіх збільшує довіру спонсорів, провал (апарат втрачено або місія не вдалася) зменшує.
+    const reputation = (account.reputation ?? 0) + (run ? (run.outcome.success && run.reachedOrbit !== false ? 1 : -1) : 0);
+    const reputationFactor = Math.min(1.5, Math.max(0.5, 1 + REPUTATION_STEP * reputation));
+    const grantMUsd = money(config.grantMUsd * grantFactor * reputationFactor);
     const researchPts = (run ? Math.floor(run.outcome.deliveredMb / config.mbPerResearchPt) : 0) + (launched ? 0 : config.missedResearchPts);
     const optimal = optimalValue(e.design.input, mission);
     results.push({
@@ -349,6 +354,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
       programPts: money(account.programPts + valuePts),
       knowsConditions: account.knowsConditions || launched,
       missedInRow,
+      reputation,
       unlocked: account.unlocked,
       ...(e.launch ? { trlGain: flightHeritage(account.trlGain ?? {}, e) } : account.trlGain ? { trlGain: account.trlGain } : {}),
       ...(e.launch ? { lastDesign: e.launch.spec.design } : account.lastDesign ? { lastDesign: account.lastDesign } : {}),
