@@ -4,6 +4,20 @@
 
 Статуси передачі: **локально → закомічено → злито → опубліковано**. Перехід підтверджується станом Git або перевіреною публікацією; локальна збірка не означає, що сайт опублікований.
 
+## 2026-11-15 — PR #63: пульт керування місією для планування консорціуму
+
+**Статус: відкрито draft PR #63 (`feature/nikita-planning-ui` → `experimental`, база `b3483bc`, коміт `4c67d37` + правки за рев'ю в робочому дереві). Злиття й публікація не підтверджені.**
+
+Перероблено лише візуал і розкладку екрана планування режиму консорціуму (`Turn`, `Lobby`, `Results` та панелі кампанії) у космічному стилі «пульт керування місією» за затвердженою палітрою (`#001524`, `#15616d`, `#ffecd1`, `#ff7d00`, `#78290f`) без змін ігрових правил, `src/core/`, `contracts.ts`, `game.ts`, `physics.ts`, `stubs.ts`, CI, деплою чи оригіналів SVG.
+
+- **Розкладка і HUD (`src/ui/design/planning-console.css`, `ConsortiumScreen.tsx`, `src/App.tsx`):** додано sticky верхню панель (кошти, дослідження, репутація, вікно запуску, хід, ліміт дій, чипси агенцій) і 3-колонковий пульт із колапсом у 1 колонку при ширині `<1200px` та підтримкою `prefers-reduced-motion`. Ліворуч: згортуваний `BriefingPanel` і `CampaignPanel` (підсвітка лише власних агенцій за `myAgencyIds`, прогрес, згортувані результати минулого вікна). По центру: 5 доступних вкладок (`role="tablist"`/`role="tab"`, клавіатурна навігація `ArrowLeft`/`ArrowRight`/`Home`/`End`) для `Design`, `Factory` (4-етапний конвеєр), `Ground segment`, `Technology`, `Research`; під час чужого ходу або поза кампанією таби економіки/досліджень вимкнені з пояснювальним повідомленням. Праворуч (sticky з динамічним `--mc-sticky-offset`, що відстежує висоту шапки через `ResizeObserver`): `DesignCheckPanel` із кольоровими індикаторами запасів та головною кнопкою `Launch` і `Wait a turn`. `Design` лишається змонтованим із `active={active && tab === "design"}`, а при зміні активної агенції в hot-seat скидаються `tab`, фільтр `category` через `resetKey` і стан `DevelopPanel`. Стилі `.mc-app-backdrop` і `maxWidth: 1760` у `App.tsx` обмежено лише на `#play`.
+- **Інтерфейси та тексти:** додано 25 англійських ключів `ui.console.*` у `src/data/texts.en.json`; `DesignScreen` отримав `layoutMode?: "standalone" | "console"` (типово `"standalone"` для `#play`), `resetKey?: string`, експортовані `DEDICATED_MODULE_SPRITES` (із `sprites.json`) і `resolveDedicatedSpriteUrl`; `Turn` приймає `initialTab?: WorkspaceTab`.
+- **Спрайти модулів та асети (`src/data/sprites.json`, `DesignScreen.tsx`, `scripts/module-sprites-check.mjs`, `package.json`):** у `sprites.json` залишено лише `bus`, `station`, `operator` і 15 базових модулів із прозорими 2x PNG; додаткові модулі (`catalog-extra.json`, `custom-*`) і носії відображають палітрові SVG-плейсхолдери (`data-placeholder="module"` / `"launcher"`), `cargo-*` зберігає векторний контейнер `#78350f`. Додано `scripts/module-sprites-check.mjs` у `npm run assets:check` (єдине джерело модулів із `catalog.json`, перевірка прозорості SVG/PNG і `IHDR[12] === 0`).
+
+**Перевірки:** `npm run typecheck`, `npm run assets:check` (`scripts/module-sprites-check.mjs` і 3 Node-тести SVG), `npm test` (43 файли / 480 Vitest тестів включно з регресіями у `render.test.tsx` та `stage-activity.test.tsx`), `npm run build` (зберігається попередження Vite про великий чанк) і `git diff --check`. Інтерактивний браузерний прохід базової версії `4c67d37` (`1440x900`, `1024x800`, `prefers-reduced-motion: reduce`) пройшов із 0 помилок консолі.
+
+**Наступне одне завдання:** після явного підтвердження закомітити й запушити правки за рев'ю в гілку `feature/nikita-planning-ui` (PR #63).
+
 ## 2026-11-15 — інформаційні вікна між фазами кампанії
 
 **Гілка: `feature/illia-phase-cards`, база `b3483bc`. Злиття й публікація не підтверджені.**

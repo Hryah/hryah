@@ -7,9 +7,13 @@ import { fmt, t } from "../text";
 // Стан кампанії над ходом: вікно, рахунок агенцій, прогрес наукової програми й підсумок минулого вікна.
 // Лише показує стан ядра.
 
-const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", bad: "#ff5c7a", accent: "#5ca8ff", gold: "#ffd166" };
-
-export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; myAgencyIds: string[] }) {
+export function CampaignPanel({
+  state,
+  myAgencyIds,
+}: {
+  state: ConsortiumState;
+  myAgencyIds: string[];
+}) {
   const campaign = state.campaign;
   const [open, setOpen] = useState(true);
   if (!campaign) return null;
@@ -22,24 +26,30 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
   const windowLeft = state.deadlineTurn - state.turn + 1;
 
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 10 }} data-testid="campaign-panel">
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
-        <strong style={{ fontSize: 18 }}>{t("ui.campaign.window", { n: campaign.round + 1, total: campaign.config.rounds })}</strong>
-        {!state.result && <span style={{ color: C.accent }}>{t("ui.campaign.windowLeft", { n: Math.max(0, windowLeft) })}</span>}
+    <div className="mc-panel" style={{ display: "grid", gap: 12 }} data-testid="campaign-panel">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <strong style={{ fontSize: 16, color: "var(--c-cream)" }}>
+          {t("ui.campaign.window", { n: campaign.round + 1, total: campaign.config.rounds })}
+        </strong>
+        {!state.result && (
+          <span className="mc-stat-pill is-accent mc-tabular" style={{ fontSize: 12 }}>
+            {t("ui.campaign.windowLeft", { n: Math.max(0, windowLeft) })}
+          </span>
+        )}
       </div>
 
-      <div>
-        <div style={{ color: C.dim, fontSize: 13, marginBottom: 4 }}>
+      <div style={{ display: "grid", gap: 5 }}>
+        <div className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>
           {t("ui.campaign.program", { percent: fmt(progress * 100, 1) })}
         </div>
-        <div style={{ height: 10, borderRadius: 5, background: C.line, overflow: "hidden" }}>
-          <div style={{ width: `${progress * 100}%`, height: "100%", background: C.ok }} />
+        <div className="mc-progress-track">
+          <div className="mc-progress-fill" style={{ width: `${Math.min(100, progress * 100)}%` }} />
         </div>
       </div>
 
-      <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 14 }}>
+      <table className="mc-table">
         <thead>
-          <tr style={{ color: C.dim, textAlign: "left", fontSize: 12 }}>
+          <tr>
             <th>{t("ui.result.agency")}</th>
             <th>{t("ui.campaign.funds")}</th>
             <th>{t("ui.campaign.research")}</th>
@@ -50,11 +60,12 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
           {state.agencies.map((e) => {
             const a = e.account;
             if (!a) return null;
-            const mine = myAgencyIds.includes(e.agency.id);
+            const highlight = myAgencyIds.includes(e.agency.id);
             return (
-              <tr key={e.agency.id} style={{ borderTop: `1px solid ${C.line}`, color: mine ? C.gold : "inherit" }}>
-                <td style={{ padding: "4px 0" }}>
-                  {t(e.agency.nameKey)}{a.knowsConditions ? "" : ` · ${t("ui.campaign.unknownConditions")}`}
+              <tr key={e.agency.id} className={highlight ? "is-player" : undefined}>
+                <td>
+                  {t(e.agency.nameKey)}
+                  {a.knowsConditions ? "" : ` · ${t("ui.campaign.unknownConditions")}`}
                 </td>
                 <td>{fmt(a.fundsMUsd)} M$</td>
                 <td>{a.researchPts}</td>
@@ -66,53 +77,80 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
       </table>
 
       {last && (
-        <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 8, display: "grid", gap: 6 }}>
+        <div style={{ borderTop: "1px solid var(--c-border-soft)", paddingTop: 10, display: "grid", gap: 8 }}>
           <button
-            style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", padding: 0, textAlign: "left", fontWeight: 700 }}
+            type="button"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--c-cream)",
+              cursor: "pointer",
+              padding: 0,
+              textAlign: "left",
+              fontWeight: 700,
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+            aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? "▾" : "▸"} {t("ui.campaign.lastWindow", { n: last.round + 1 })}
+            <span>{open ? "▾" : "▸"} {t("ui.campaign.lastWindow", { n: last.round + 1 })}</span>
           </button>
-          {open && last.agencies.map((r) => {
-            const run = last.runs.find((x) => x.agencyId === r.agencyId);
-            const mine = myAgencyIds.includes(r.agencyId);
-            const chains = mine && run ? causeChains(run.log) : [];
-            return (
-              <div key={r.agencyId} style={{ fontSize: 13 }}>
-                <div style={{ color: r.launched ? "inherit" : C.dim }}>
-                  {nameOf(r.agencyId)}:{" "}
-                  {r.launched && state.base.mission.kind === "cargo"
-                    ? t(run?.reachedOrbit === false ? "ui.campaign.cargoMissed" : "ui.campaign.cargoLine", {
-                        value: fmt(r.valuePts, 1), payout: fmt(r.payoutMUsd), grant: fmt(r.grantMUsd), research: r.researchPts,
-                        orbits: run?.outcome.survivedOrbits ?? 0, total: state.base.mission.durationOrbits,
-                      })
-                    : r.launched
-                    ? t("ui.campaign.roundLine", {
-                        mb: fmt(run?.outcome.deliveredMb ?? 0, 0), value: fmt(r.valuePts, 1), payout: fmt(r.payoutMUsd), grant: fmt(r.grantMUsd), research: r.researchPts,
-                      })
-                    : t("ui.campaign.roundMissed", { grant: fmt(r.grantMUsd), research: r.researchPts })}
+          {open &&
+            last.agencies.map((r) => {
+              const run = last.runs.find((x) => x.agencyId === r.agencyId);
+              const mine = myAgencyIds.includes(r.agencyId);
+              const chains = mine && run ? causeChains(run.log) : [];
+              return (
+                <div key={r.agencyId} style={{ fontSize: 12, display: "grid", gap: 3 }}>
+                  <div style={{ color: r.launched ? "var(--c-cream)" : "var(--c-text-dim)" }}>
+                    <strong>{nameOf(r.agencyId)}</strong>:{" "}
+                    {r.launched && state.base.mission.kind === "cargo"
+                      ? t(run?.reachedOrbit === false ? "ui.campaign.cargoMissed" : "ui.campaign.cargoLine", {
+                          value: fmt(r.valuePts, 1),
+                          payout: fmt(r.payoutMUsd),
+                          grant: fmt(r.grantMUsd),
+                          research: r.researchPts,
+                          orbits: run?.outcome.survivedOrbits ?? 0,
+                          total: state.base.mission.durationOrbits,
+                        })
+                      : r.launched
+                        ? t("ui.campaign.roundLine", {
+                            mb: fmt(run?.outcome.deliveredMb ?? 0, 0),
+                            value: fmt(r.valuePts, 1),
+                            payout: fmt(r.payoutMUsd),
+                            grant: fmt(r.grantMUsd),
+                            research: r.researchPts,
+                          })
+                        : t("ui.campaign.roundMissed", { grant: fmt(r.grantMUsd), research: r.researchPts })}
+                  </div>
+                  {mine && r.launched && r.optimalPts > 0 && (
+                    <div style={{ color: "var(--c-text-dim)", marginLeft: 12 }}>
+                      {t("ui.campaign.optimal", {
+                        optimal: fmt(r.optimalPts, 1),
+                        percent: fmt(Math.min(999, (r.valuePts / r.optimalPts) * 100), 0),
+                      })}
+                    </div>
+                  )}
+                  {chains.map((chain) => {
+                    const real = chain.causes.filter((c) => c.kind !== "event");
+                    const shown = real.length === 0 ? chain.causes : real;
+                    return (
+                      <div key={chain.failure.id} style={{ marginLeft: 12 }}>
+                        <div style={{ color: "var(--c-status-bad)" }}>🟥 {describeEntry(chain.failure, state.base)}</div>
+                        {shown.map((cause) => (
+                          <div key={cause.id} style={{ color: "var(--c-text-dim)", marginLeft: 12 }}>
+                            ↳ {describeEntry(cause, state.base)}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
-                {mine && r.launched && r.optimalPts > 0 && (
-                  <div style={{ color: C.dim, marginLeft: 16 }}>
-                    {t("ui.campaign.optimal", { optimal: fmt(r.optimalPts, 1), percent: fmt(Math.min(999, (r.valuePts / r.optimalPts) * 100), 0) })}
-                  </div>
-                )}
-                {chains.map((chain) => {
-                  // Події ховаємо як шум, але якщо причина лише подія, показуємо її, щоб відмова не лишилась без пояснення.
-                  const real = chain.causes.filter((c) => c.kind !== "event");
-                  const shown = real.length === 0 ? chain.causes : real;
-                  return (
-                  <div key={chain.failure.id} style={{ marginLeft: 16 }}>
-                    <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, state.base)}</div>
-                    {shown.map((cause) => (
-                      <div key={cause.id} style={{ color: C.dim, marginLeft: 16 }}>↳ {describeEntry(cause, state.base)}</div>
-                    ))}
-                  </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
     </div>
@@ -122,33 +160,52 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
 // Підсумок кампанії: хто зробив найбільший внесок у наукову програму.
 export function CampaignStandings({ state }: { state: ConsortiumState }) {
   if (!state.campaign) return null;
-  // Рейтинг за метрикою режиму перемоги: гроші в комерційному, внесок у решті.
-  const metric = (e: (typeof state.agencies)[number]) => (state.campaign?.config.victory === "commercial" ? e.account?.fundsMUsd ?? 0 : e.account?.programPts ?? 0);
+  const metric = (e: (typeof state.agencies)[number]) =>
+    state.campaign?.config.victory === "commercial" ? e.account?.fundsMUsd ?? 0 : e.account?.programPts ?? 0;
   const winnerId = state.campaign.winner?.agencyId;
-  const ranked = [...state.agencies].sort((a, b) => (b.agency.id === winnerId ? 1 : 0) - (a.agency.id === winnerId ? 1 : 0) || metric(b) - metric(a));
+  const ranked = [...state.agencies].sort(
+    (a, b) => (b.agency.id === winnerId ? 1 : 0) - (a.agency.id === winnerId ? 1 : 0) || metric(b) - metric(a),
+  );
   const top = ranked[0];
   const progress = programProgress(state);
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 8 }} data-testid="campaign-standings">
-      <h2 style={{ margin: 0 }}>{t(progress >= 1 ? "ui.campaign.programDone" : "ui.campaign.programEnded", { percent: fmt(progress * 100, 1) })}</h2>
+    <div className="mc-panel" style={{ display: "grid", gap: 10 }} data-testid="campaign-standings">
+      <h2 style={{ margin: 0, color: "var(--c-cream)" }}>
+        {t(progress >= 1 ? "ui.campaign.programDone" : "ui.campaign.programEnded", { percent: fmt(progress * 100, 1) })}
+      </h2>
       {(() => {
         const w = state.campaign.winner;
         const winner = w ? state.agencies.find((e) => e.agency.id === w.agencyId) : undefined;
         if (winner && w) {
-          const key = w.reason === "commercial" ? "ui.campaign.winnerCommercial" : w.reason === "race" ? "ui.campaign.winnerRace" : "ui.campaign.winnerProgram";
-          return <div style={{ color: C.gold, fontWeight: 700 }}>🏆 {t(key, { agency: t(winner.agency.nameKey), funds: fmt(winner.account?.fundsMUsd ?? 0) })}</div>;
+          const key =
+            w.reason === "commercial"
+              ? "ui.campaign.winnerCommercial"
+              : w.reason === "race"
+                ? "ui.campaign.winnerRace"
+                : "ui.campaign.winnerProgram";
+          return (
+            <div style={{ color: "var(--c-orange)", fontWeight: 700 }}>
+              🏆 {t(key, { agency: t(winner.agency.nameKey), funds: fmt(winner.account?.fundsMUsd ?? 0) })}
+            </div>
+          );
         }
-        return top ? <div style={{ color: C.gold }}>🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}</div> : null;
+        return top ? (
+          <div style={{ color: "var(--c-orange)", fontWeight: 700 }}>
+            🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}
+          </div>
+        ) : null;
       })()}
       {state.campaign.scenarioId === "colony" && (
-        <div style={{ color: progress >= 1 ? C.ok : C.bad, fontWeight: 700 }}>{t(progress >= 1 ? "ui.campaign.colonySaved" : "ui.campaign.colonyLost")}</div>
+        <div style={{ color: progress >= 1 ? "var(--c-status-ok)" : "var(--c-status-bad)", fontWeight: 700 }}>
+          {t(progress >= 1 ? "ui.campaign.colonySaved" : "ui.campaign.colonyLost")}
+        </div>
       )}
       {(() => {
         const key = state.campaign.scenarioId ? SCENARIOS[state.campaign.scenarioId]?.def.analogKey : undefined;
-        return key ? <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.brief.analog", { analog: t(key) })}</div> : null;
+        return key ? <div style={{ color: "var(--c-text-dim)", fontSize: 13 }}>{t("ui.brief.analog", { analog: t(key) })}</div> : null;
       })()}
       {ranked.map((e, i) => (
-        <div key={e.agency.id} style={{ color: C.dim }}>
+        <div key={e.agency.id} className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 14 }}>
           {i + 1}. {t(e.agency.nameKey)} · {fmt(e.account?.programPts ?? 0, 1)} · {fmt(e.account?.fundsMUsd ?? 0)} M$
         </div>
       ))}

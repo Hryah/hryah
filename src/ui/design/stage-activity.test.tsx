@@ -33,4 +33,11 @@ describe('активність сцени проєктування', () => {
       expect(renderToStaticMarkup(screen)).toContain(`data-active="${active}"`);
     }
   });
+
+  it('тримає сцену проєктування змонтованою, але призупиненою (active=false), коли відкрита інша вкладка консолі', () => {
+    const consortium = newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, market as Market, [agencies.borealis as AgencyProfile]);
+    const html = renderToStaticMarkup(<Turn state={consortium} active={true} initialTab="factory" dispatch={() => {}} />);
+    expect(html).toContain('id="mc-panel-design"');
+    expect(html).toContain('data-active="false"');
+  });
 });

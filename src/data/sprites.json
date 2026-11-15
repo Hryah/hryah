@@ -16,19 +16,5 @@
   "ant-l": { "file": "modules/ant-l.png", "widthUnits": 1.1, "anchor": [0.5, 0.0] },
   "cam-s": { "file": "modules/cam-s.png", "widthUnits": 0.8, "anchor": [0.0, 0.5] },
   "cam-m": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
-  "cam-l": { "file": "modules/cam-l.png", "widthUnits": 1.2, "anchor": [0.0, 0.5] },
-  "eng-mono": { "file": "modules/eng-cold.png", "widthUnits": 0.8, "anchor": [0.5, 1.0] },
-  "eng-hall": { "file": "modules/eng-ion.png", "widthUnits": 0.8, "anchor": [0.5, 1.0] },
-  "sol-gaas": { "file": "modules/sol-m.png", "widthUnits": 1.6, "anchor": [1.0, 0.5] },
-  "sol-roll": { "file": "modules/sol-l.png", "widthUnits": 2.0, "anchor": [1.0, 0.5] },
-  "bat-nih2": { "file": "modules/bat-m.png", "widthUnits": 0.6, "anchor": [0.5, 0.5] },
-  "bat-ss": { "file": "modules/bat-s.png", "widthUnits": 0.5, "anchor": [0.5, 0.5] },
-  "ant-ka": { "file": "modules/ant-m.png", "widthUnits": 0.9, "anchor": [0.5, 0.0] },
-  "ant-laser": { "file": "modules/ant-s.png", "widthUnits": 0.7, "anchor": [0.5, 0.0] },
-  "cam-ms": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
-  "cam-swir": { "file": "modules/cam-m.png", "widthUnits": 1.0, "anchor": [0.0, 0.5] },
-  "cargo-water": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
-  "cargo-food": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
-  "cargo-parts": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] },
-  "cargo-experiment": { "file": "modules/bat-m.png", "widthUnits": 0.7, "anchor": [0.0, 0.5] }
+  "cam-l": { "file": "modules/cam-l.png", "widthUnits": 1.2, "anchor": [0.0, 0.5] }
 }
