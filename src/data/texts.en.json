@@ -591,5 +591,21 @@
   "ui.menu.online": "Online",
   "ui.card.incoming": "Incoming message",
   "ui.card.director": "Mission Director",
-  "ui.card.directorRole": "{agency} · mission control"
+  "ui.card.directorRole": "{agency} · mission control",
+  "ui.console.subsystems": "Subsystem configuration",
+  "ui.console.modulesTitle": "Modules by category",
+  "ui.console.launchWindow": "Launch window",
+  "ui.console.nOfTotal": "{n} of {total}",
+  "ui.console.turnsLeft": "({n} turns left)",
+  "ui.console.turnLabel": "Turn",
+  "ui.console.programme": "Science programme",
+  "ui.console.programmeValue": "{percent}% complete",
+  "ui.console.tipReady": "Every margin is green: launch now, or wait for better modules.",
+  "ui.console.spacecraft": "Spacecraft",
+  "ui.console.platform": "Orbital platform",
+  "ui.console.marginsLabel": "Current / limit margins",
+  "ui.console.deck": "Industrial & science deck",
+  "ui.console.telemetry": "Window telemetry",
+  "ui.console.lastResults": "Results of the previous window",
+  "ui.campaign.noResultsYet": "No window has closed yet: results appear after the first launch window."
 }

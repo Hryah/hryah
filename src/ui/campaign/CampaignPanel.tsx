@@ -7,12 +7,15 @@ import { fmt, t } from "../text";
 // Стан кампанії над ходом: вікно, рахунок агенцій, прогрес наукової програми й підсумок минулого вікна.
 // Лише показує стан ядра.
 
+// part: «standings» — вікно, програма й таблиця агенцій; «results» — підсумок минулого вікна; «all» — усе разом.
 export function CampaignPanel({
   state,
   myAgencyIds,
+  part = "all",
 }: {
   state: ConsortiumState;
   myAgencyIds: string[];
+  part?: "all" | "standings" | "results";
 }) {
   const campaign = state.campaign;
   const [open, setOpen] = useState(true);
@@ -24,9 +27,12 @@ export function CampaignPanel({
     return a ? t(a.agency.nameKey) : id;
   };
   const windowLeft = state.deadlineTurn - state.turn + 1;
+  const showStandings = part !== "results";
+  const showResults = part !== "standings";
 
   return (
-    <div className="mc-panel" style={{ display: "grid", gap: 12 }} data-testid="campaign-panel">
+    <div className="mc-panel" style={{ display: "grid", gap: 12, alignContent: "start" }} data-testid={part === "results" ? "campaign-results" : "campaign-panel"}>
+      {showStandings && (<>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
         <strong style={{ fontSize: 16, color: "var(--c-cream)" }}>
           {t("ui.campaign.window", { n: campaign.round + 1, total: campaign.config.rounds })}
@@ -75,9 +81,19 @@ export function CampaignPanel({
           })}
         </tbody>
       </table>
+      </>)}
 
-      {last && (
-        <div style={{ borderTop: "1px solid var(--c-border-soft)", paddingTop: 10, display: "grid", gap: 8 }}>
+      {part === "results" && (
+        <div style={{ display: "grid", gap: 2 }}>
+          <span className="mc-label">{t("ui.console.telemetry")}</span>
+          <strong className="mc-card-title">{t("ui.console.lastResults")}</strong>
+        </div>
+      )}
+      {showResults && !last && (
+        <div style={{ color: "var(--c-text-dim)", fontSize: 13 }}>{t("ui.campaign.noResultsYet")}</div>
+      )}
+      {showResults && last && (
+        <div style={{ borderTop: showStandings ? "1px solid var(--c-border-soft)" : "none", paddingTop: showStandings ? 10 : 0, display: "grid", gap: 8 }}>
           <button
             type="button"
             style={{

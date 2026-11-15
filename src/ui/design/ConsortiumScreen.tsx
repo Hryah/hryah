@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import {
@@ -10,6 +10,7 @@ import {
   flownSpec,
   newRoom,
   pendingReports,
+  programProgress,
   seedsFor,
   stepRoom,
   type ConsortiumAction,
@@ -39,13 +40,14 @@ import {
   type DevOrder,
   type DevProject,
 } from "../../core/consortium/develop";
-import { launchBlockers } from "../../core/design";
+import { designPhase, launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
 import { resolveAssetUrl } from "../graphics/registry";
 import { fmt, t } from "../text";
 import { causeChains } from "../../core/debrief";
 import { describeEntry } from "./cause";
-import { DesignCheckPanel, DesignScreen, type Upcoming } from "./DesignScreen";
+import { DesignCheckPanel, DesignSteppers, designControls, MissionHeader, ModulePicker, type Upcoming } from "./DesignScreen";
+import { DesignPreview } from "./DesignPreview";
 import "./planning-console.css";
 
 // Консорціум: кілька агенцій по черзі за одним екраном. Екран лише показує сесію й шле дії.
@@ -70,8 +72,9 @@ const newSoloRoom = (): RoomState => {
 type Mode = { kind: "menu" } | { kind: "local"; solo: boolean } | { kind: "online"; session: Session };
 export type WorkspaceTab = "design" | "factory" | "ground" | "trl" | "research";
 
-const WORKSPACE_TABS: readonly { id: WorkspaceTab; labelKey: string }[] = [
-  { id: "design", labelKey: "ui.console.tab.design" },
+// Вкладки «палуби» поруч із модулями. Проєктування не вкладка: апарат, перевірка й модулі видно завжди.
+type DeckTab = Exclude<WorkspaceTab, "design">;
+const WORKSPACE_TABS: readonly { id: DeckTab; labelKey: string }[] = [
   { id: "factory", labelKey: "ui.console.tab.factory" },
   { id: "ground", labelKey: "ui.console.tab.ground" },
   { id: "trl", labelKey: "ui.console.tab.trl" },
@@ -513,16 +516,26 @@ export function Turn({
   isMyTurn = true,
   initialTab = "design",
 }: TurnProps) {
-  const [tab, setTab] = useState<WorkspaceTab>(initialTab);
+  // «design» лишився для сумісності: відкриває першу вкладку палуби.
+  const firstTab: DeckTab = initialTab === "design" ? "factory" : initialTab;
+  const [tab, setTab] = useState<DeckTab>(firstTab);
   const entry = activeAgency(state);
   const currentAgencyId = entry?.agency.id;
   const [prevAgencyId, setPrevAgencyId] = useState(currentAgencyId);
   if (currentAgencyId !== prevAgencyId) {
     setPrevAgencyId(currentAgencyId);
-    setTab(initialTab);
+    setTab(firstTab);
   }
-  const shellRef = useRef<HTMLDivElement | null>(null);
-  const headerRef = useRef<HTMLElement | null>(null);
+  // Нижня панель із запасами й запуском з'являється, коли картка перевірки виходить з екрана (вибір модулів нижче).
+  const checkRef = useRef<HTMLDivElement | null>(null);
+  const [checkVisible, setCheckVisible] = useState(true);
+  useEffect(() => {
+    const el = checkRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setCheckVisible(e?.isIntersecting ?? true), { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [currentAgencyId]);
   const { base, market, turn } = state;
   // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
   const catalogNow = entry?.design.input.catalog;
@@ -547,46 +560,27 @@ export function Turn({
       }));
   }, [base, market, turn, catalogNow, blocked, lead]);
 
-  useEffect(() => {
-    const headerEl = headerRef.current;
-    const shellEl = shellRef.current;
-    if (!headerEl || !shellEl) return;
-    const updateOffset = () => {
-      const h = Math.ceil(headerEl.getBoundingClientRect().height);
-      shellEl.style.setProperty("--mc-sticky-offset", `${h + 20}px`);
-    };
-    updateOffset();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateOffset) : null;
-    ro?.observe(headerEl);
-    window.addEventListener("resize", updateOffset);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", updateOffset);
-    };
-  }, [currentAgencyId, state.turn, isMyTurn, state.agencies.length]);
-
   if (!entry) return null;
-  const canLaunch = launchBlockers(entry.design).length === 0;
+  const blockers = launchBlockers(entry.design);
+  const canLaunch = blockers.length === 0;
   const resolvedMyAgencyIds = myAgencyIds ?? [entry.agency.id];
   const account = entry.account;
   const campaign = state.campaign;
   const campaignTabsEnabled = isMyTurn && Boolean(account);
+  const controls = designControls(
+    (control) => isMyTurn && (entry.actionsLeft > 0 || entry.touched.includes(control)),
+    (action) => dispatch({ type: "design", action }),
+  );
+  const turnsLeft = Math.max(0, state.deadlineTurn - state.turn + 1);
 
   const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
-    const enabledTabs = WORKSPACE_TABS.filter((item) => item.id === "design" || campaignTabsEnabled);
-    if (enabledTabs.length === 0) return;
-    const currentItem = WORKSPACE_TABS[currentIndex];
-    const currentEnabledIdx = currentItem ? enabledTabs.findIndex((item) => item.id === currentItem.id) : 0;
-    const safeIdx = currentEnabledIdx >= 0 ? currentEnabledIdx : 0;
+    if (!campaignTabsEnabled) return;
+    const n = WORKSPACE_TABS.length;
     const nextIndex =
-      e.key === "Home"
-        ? 0
-        : e.key === "End"
-          ? enabledTabs.length - 1
-          : (safeIdx + (e.key === "ArrowRight" ? 1 : -1) + enabledTabs.length) % enabledTabs.length;
-    const target = enabledTabs[nextIndex];
+      e.key === "Home" ? 0 : e.key === "End" ? n - 1 : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + n) % n;
+    const target = WORKSPACE_TABS[nextIndex];
     if (target) {
       setTab(target.id);
       document.getElementById(`mc-tab-${target.id}`)?.focus();
@@ -595,21 +589,19 @@ export function Turn({
 
   const launchControls = (
     <div style={{ display: "grid", gap: 8 }} aria-label={t("ui.console.actionsLabel")}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div className="mc-launch-row">
         <button
           type="button"
-          className="mc-btn mc-btn-primary"
-          style={{ flex: "1 1 130px" }}
+          className="mc-btn mc-btn-primary mc-btn-launch"
           disabled={!isMyTurn || !canLaunch}
           onClick={() => dispatch({ type: "launch" })}
         >
-          <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={15} height={15} />
+          <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={18} height={18} />
           {t("ui.launch")}
         </button>
         <button
           type="button"
-          className="mc-btn"
-          style={{ flex: "1 1 120px" }}
+          className="mc-btn mc-btn-launch-alt"
           disabled={!isMyTurn}
           onClick={() => dispatch({ type: "wait" })}
         >
@@ -617,7 +609,7 @@ export function Turn({
           {t("ui.wait")}
         </button>
       </div>
-      <div style={{ color: "var(--c-text-dim)", fontSize: 12, lineHeight: 1.4 }}>{t("ui.waitHint")}</div>
+      <div style={{ color: "var(--c-text-dim)", fontSize: 12, lineHeight: 1.4, textAlign: "center" }}>{t("ui.waitHint")}</div>
     </div>
   );
 
@@ -627,16 +619,26 @@ export function Turn({
     </div>
   );
 
+  const stat = (label: string, value: ReactNode, tone?: "ok" | "accent") => (
+    <div className="mc-hero-stat">
+      <span className="mc-label">{label}</span>
+      <strong className={`mc-tabular ${tone ? `is-${tone}` : ""}`}>{value}</strong>
+    </div>
+  );
+
   return (
-    <div ref={shellRef} className="mc-shell" data-testid="mission-control-console">
-      <header ref={headerRef} className="mc-sticky-bar">
-        <div className="mc-header-top">
+    <div className="mc-shell mc-board" data-testid="mission-control-console">
+      <header className="mc-hero">
+        <div className="mc-hero-top">
           <div className="mc-active-agency">
-            <img src={resolveAssetUrl(`assets/icons/agencies/${entry.agency.id}.svg`)} alt="" width={26} height={26} />
-            <div style={{ display: "grid", gap: 2 }}>
-              <strong style={{ fontSize: 17, color: "var(--c-cream)" }}>
+            <span className="mc-hero-emblem">
+              <img src={resolveAssetUrl(`assets/icons/agencies/${entry.agency.id}.svg`)} alt="" width={30} height={30} />
+            </span>
+            <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
+              <strong style={{ fontSize: 20, color: "var(--c-cream)" }}>
                 {t("ui.activeAgency", { agency: t(entry.agency.nameKey) })}
               </strong>
+              <span style={{ fontSize: 13, color: "var(--c-text-muted)" }}>{t(entry.design.input.mission.titleKey)}</span>
               {playerTurnText && (
                 <span style={{ fontSize: 12, color: isMyTurn ? "var(--c-orange)" : "var(--c-text-muted)", fontWeight: 600 }}>
                   {playerTurnText}
@@ -645,174 +647,185 @@ export function Turn({
             </div>
           </div>
 
-          <div className="mc-hud-stats">
-            <span className="mc-stat-pill">
-              <span className="mc-label">{t("ui.campaign.funds")}</span>
-              <strong>{fmt(account ? account.fundsMUsd : entry.design.input.mission.budgetMUsd)} M$</strong>
-            </span>
-            {account && (
-              <>
-                <span className="mc-stat-pill">
-                  <span className="mc-label">{t("ui.campaign.research")}</span>
-                  <strong>{account.researchPts}</strong>
+          <div className="mc-hero-stats">
+            {stat(t("ui.campaign.funds"), `${fmt(account ? account.fundsMUsd : entry.design.input.mission.budgetMUsd)} M$`)}
+            {account && stat(t("ui.campaign.research"), account.researchPts)}
+            {account && stat(t("ui.console.reputation"), (account.reputation ?? 0) > 0 ? `+${account.reputation}` : account.reputation ?? 0, (account.reputation ?? 0) > 0 ? "ok" : undefined)}
+            {campaign &&
+              stat(
+                t("ui.console.launchWindow"),
+                <>
+                  {t("ui.console.nOfTotal", { n: campaign.round + 1, total: campaign.config.rounds })}{" "}
+                  <small className="mc-hero-sub">{t("ui.console.turnsLeft", { n: turnsLeft })}</small>
+                </>,
+              )}
+            {stat(t("ui.console.turnLabel"), t("ui.console.nOfTotal", { n: state.turn, total: state.deadlineTurn }))}
+            {campaign && stat(t("ui.console.programme"), t("ui.console.programmeValue", { percent: fmt(programProgress(state) * 100, 1) }), "accent")}
+          </div>
+        </div>
+
+        <div className="mc-hero-bottom">
+          <div className="mc-agency-strip">
+            {state.agencies.map((e, i) => {
+              const isCurrent = i === state.active;
+              const launched = !!e.launch;
+              return (
+                <span
+                  key={e.agency.id}
+                  className={`mc-agency-chip ${isCurrent ? "is-active" : ""} ${launched ? "is-launched" : ""}`}
+                  title={e.launch ? t("ui.status.launched", { turn: e.launch.turn }) : t("ui.status.planning")}
+                >
+                  <span className="mc-agency-dot" aria-hidden="true" />
+                  <img src={resolveAssetUrl(`assets/icons/agencies/${e.agency.id}.svg`)} alt="" width={14} height={14} />
+                  <span>{t(e.agency.nameKey)}</span>
+                  {e.account ? (
+                    <span className="mc-tabular" style={{ opacity: 0.85 }}>{fmt(e.account.fundsMUsd)} M$</span>
+                  ) : (
+                    <span style={{ opacity: 0.75 }}>
+                      · {e.launch ? t("ui.status.launched", { turn: e.launch.turn }) : t("ui.status.planning")}
+                    </span>
+                  )}
                 </span>
-                <span className="mc-stat-pill">
-                  <span className="mc-label">{t("ui.console.reputation")}</span>
-                  <strong>{account.reputation ?? 0}</strong>
-                </span>
-              </>
-            )}
-            {campaign && (
-              <span className="mc-stat-pill">
-                {t("ui.console.windowBadge", { n: campaign.round + 1, total: campaign.config.rounds })}
-              </span>
-            )}
-            <span className="mc-stat-pill is-accent">
-              {t("ui.turn", { turn: state.turn, deadline: state.deadlineTurn })}
-            </span>
-            <span className={`mc-stat-pill ${entry.actionsLeft > 0 ? "" : "is-warn"}`}>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span className={`mc-stat-pill ${entry.actionsLeft > 0 ? "is-accent" : "is-warn"}`}>
               {t("ui.console.controlsLeftShort", { n: entry.actionsLeft })}
             </span>
             {campaign && <CardsToggle className="mc-btn mc-btn-sm" />}
           </div>
         </div>
-
-        <div className="mc-agency-strip">
-          {state.agencies.map((e, i) => {
-            const isCurrent = i === state.active;
-            const launched = !!e.launch;
-            return (
-              <span
-                key={e.agency.id}
-                className={`mc-agency-chip ${isCurrent ? "is-active" : ""} ${launched ? "is-launched" : ""}`}
-              >
-                <img src={resolveAssetUrl(`assets/icons/agencies/${e.agency.id}.svg`)} alt="" width={14} height={14} />
-                <span>{t(e.agency.nameKey)}</span>
-                <span style={{ opacity: 0.75 }}>·</span>
-                <span>{e.launch ? t("ui.status.launched", { turn: e.launch.turn }) : t("ui.status.planning")}</span>
-              </span>
-            );
-          })}
+        <div className={`mc-hero-tip ${canLaunch ? "is-ok" : "is-bad"}`} role="status">
+          {canLaunch
+            ? t("ui.console.tipReady")
+            : t("ui.blocked", { margins: blockers.map((id) => t(`ui.margin.${id}`)).join(", ") })}
         </div>
       </header>
 
-      <div className={`mc-grid ${tab === "design" ? "" : "is-wide"}`}>
-        <aside className="mc-col-left" aria-label={t("ui.console.missionControl")}>
-          <div className="mc-label" style={{ paddingLeft: 4 }}>
-            {t("ui.console.missionControl")}
-          </div>
-          {isMyTurn && campaign && <BriefingPanel state={state} agencyId={entry.agency.id} />}
-          {campaign ? (
-            <>
-              <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} />
-            </>
-          ) : (
-            <div className="mc-panel" style={{ display: "grid", gap: 8 }}>
-              <strong>{t(entry.agency.nameKey)}</strong>
-              <p style={{ margin: 0, color: "var(--c-text-muted)", fontSize: 13 }}>{t(entry.agency.descriptionKey)}</p>
+      <div className="mc-row">
+        <section className="mc-panel mc-card" id="mc-panel-design" aria-label={t("ui.console.spacecraft")}>
+          <div className="mc-card-head">
+            <div style={{ display: "grid", gap: 2 }}>
+              <span className="mc-label">{t("ui.console.platform")}</span>
+              <strong className="mc-card-title">{t("ui.console.spacecraft")}</strong>
             </div>
-          )}
-        </aside>
-
-        <section className="mc-col-center" aria-label={t("ui.console.tabsLabel")}>
-          <div className="mc-tablist" role="tablist" aria-label={t("ui.console.tabsLabel")}>
-            {WORKSPACE_TABS.map((item, idx) => {
-              const selected = tab === item.id;
-              const disabled = item.id !== "design" && !campaignTabsEnabled;
-              return (
-                <button
-                  key={item.id}
-                  id={`mc-tab-${item.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls={`mc-panel-${item.id}`}
-                  tabIndex={selected ? 0 : -1}
-                  disabled={disabled}
-                  className="mc-tab"
-                  onClick={() => setTab(item.id)}
-                  onKeyDown={(e) => onTabKeyDown(e, idx)}
-                >
-                  {t(item.labelKey)}
-                </button>
-              );
-            })}
           </div>
-
-          <div
-            role="tabpanel"
-            id="mc-panel-design"
-            aria-labelledby="mc-tab-design"
-            className="mc-tabpanel"
-            hidden={tab !== "design"}
-            style={{ display: tab === "design" ? "block" : "none" }}
-          >
-            <DesignScreen
-              layoutMode="console"
-              resetKey={entry.agency.id}
-              active={active && tab === "design"}
-              state={entry.design}
-              editable={(control) => isMyTurn && (entry.actionsLeft > 0 || entry.touched.includes(control))}
-              actionsLeft={entry.actionsLeft}
-              upcoming={upcoming}
-              customSlotFooter={
-                entry.design.input.mission.kind !== "cargo" ? (
-                  <DevelopPanel key={entry.agency.id} state={state} dispatch={dispatch} canInteract={isMyTurn} />
-                ) : undefined
-              }
-              dispatch={(action) => dispatch({ type: "design", action })}
-            />
-          </div>
-
-          <div
-            role="tabpanel"
-            id="mc-panel-factory"
-            aria-labelledby="mc-tab-factory"
-            className="mc-tabpanel"
-            hidden={tab !== "factory"}
-          >
-            {isMyTurn && account ? (
-              <FactoryPanel key={entry.agency.id} entry={entry} turn={state.turn} dispatch={dispatch} />
-            ) : (
-              inactiveTabMessage
-            )}
-          </div>
-
-          <div
-            role="tabpanel"
-            id="mc-panel-ground"
-            aria-labelledby="mc-tab-ground"
-            className="mc-tabpanel"
-            hidden={tab !== "ground"}
-          >
-            {isMyTurn && account ? <GroundPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
-          </div>
-
-          <div
-            role="tabpanel"
-            id="mc-panel-trl"
-            aria-labelledby="mc-tab-trl"
-            className="mc-tabpanel"
-            hidden={tab !== "trl"}
-          >
-            {isMyTurn && account ? <TrlPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
-          </div>
-
-          <div
-            role="tabpanel"
-            id="mc-panel-research"
-            aria-labelledby="mc-tab-research"
-            className="mc-tabpanel"
-            hidden={tab !== "research"}
-          >
-            {isMyTurn && account ? <ResearchPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
-          </div>
+          <MissionHeader state={entry.design} compact />
+          <DesignPreview state={entry.design} active={active} />
+          <DesignSteppers state={entry.design} controls={controls} />
         </section>
 
-        <aside className="mc-col-right" aria-label={t("ui.console.designCheck")}>
-          <DesignCheckPanel state={entry.design} actionsFooter={launchControls} />
-        </aside>
+        <div ref={checkRef}>
+          <DesignCheckPanel state={entry.design} actionsFooter={launchControls} twoColumns />
+        </div>
       </div>
+
+      <div className="mc-row">
+        <ModulePicker
+          state={entry.design}
+          controls={controls}
+          upcoming={upcoming}
+          resetKey={entry.agency.id}
+          customSlotFooter={
+            entry.design.input.mission.kind !== "cargo" ? (
+              <DevelopPanel key={entry.agency.id} state={state} dispatch={dispatch} canInteract={isMyTurn} />
+            ) : undefined
+          }
+        />
+
+        <section className="mc-panel mc-card" aria-label={t("ui.console.tabsLabel")}>
+          <div className="mc-card-head">
+            <div style={{ display: "grid", gap: 2 }}>
+              <span className="mc-label">{t("ui.console.deck")}</span>
+              <strong className="mc-card-title">{t(WORKSPACE_TABS.find((x) => x.id === tab)?.labelKey ?? "ui.console.tab.factory")}</strong>
+            </div>
+            <div className="mc-tablist" role="tablist" aria-label={t("ui.console.tabsLabel")}>
+              {WORKSPACE_TABS.map((item, idx) => {
+                const selected = tab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    id={`mc-tab-${item.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls={`mc-panel-${item.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    disabled={!campaignTabsEnabled}
+                    className="mc-tab"
+                    onClick={() => setTab(item.id)}
+                    onKeyDown={(e) => onTabKeyDown(e, idx)}
+                  >
+                    {t(item.labelKey)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {WORKSPACE_TABS.map((item) => (
+            <div
+              key={item.id}
+              role="tabpanel"
+              id={`mc-panel-${item.id}`}
+              aria-labelledby={`mc-tab-${item.id}`}
+              className="mc-tabpanel"
+              hidden={tab !== item.id}
+            >
+              {tab !== item.id ? null : !(isMyTurn && account) ? (
+                inactiveTabMessage
+              ) : item.id === "factory" ? (
+                <FactoryPanel key={entry.agency.id} entry={entry} turn={state.turn} dispatch={dispatch} />
+              ) : item.id === "ground" ? (
+                <GroundPanel entry={entry} dispatch={dispatch} />
+              ) : item.id === "trl" ? (
+                <TrlPanel entry={entry} dispatch={dispatch} />
+              ) : (
+                <ResearchPanel entry={entry} dispatch={dispatch} />
+              )}
+            </div>
+          ))}
+        </section>
+      </div>
+
+      {isMyTurn && campaign && <BriefingPanel state={state} agencyId={entry.agency.id} />}
+
+      {!checkVisible && active && (
+        <div className="mc-dock" role="region" aria-label={t("ui.margins")} data-testid="margins-dock">
+          <div className="mc-dock-margins">
+            {designPhase
+              .finish(entry.design)
+              .result.margins.filter((m) => !(m.id === "science" && entry.design.input.mission.kind === "cargo"))
+              .map((m) => (
+                <span key={m.id} className={`mc-dock-chip ${m.ok ? "is-ok" : "is-bad"}`} title={`${fmt(m.have)} / ${fmt(m.need)} ${m.unit}`}>
+                  {m.ok ? "✓" : "✗"} {t(`ui.margin.${m.id}`)}
+                </span>
+              ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" className="mc-btn mc-btn-primary" disabled={!isMyTurn || !canLaunch} onClick={() => dispatch({ type: "launch" })}>
+              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={15} height={15} />
+              {t("ui.launch")}
+            </button>
+            <button type="button" className="mc-btn" disabled={!isMyTurn} onClick={() => dispatch({ type: "wait" })}>
+              {t("ui.wait")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {campaign ? (
+        <div className="mc-row">
+          <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} part="standings" />
+          <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} part="results" />
+        </div>
+      ) : (
+        <div className="mc-panel" style={{ display: "grid", gap: 8 }}>
+          <strong>{t(entry.agency.nameKey)}</strong>
+          <p style={{ margin: 0, color: "var(--c-text-muted)", fontSize: 13 }}>{t(entry.agency.descriptionKey)}</p>
+        </div>
+      )}
     </div>
   );
 }
