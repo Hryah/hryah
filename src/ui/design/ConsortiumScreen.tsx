@@ -30,6 +30,7 @@ import { WindowCard } from "../campaign/WindowCard";
 import { CardsToggle } from "../campaign/PhaseCard";
 import { GroundPanel } from "../campaign/GroundPanel";
 import { Lobby } from "./Lobby";
+import { normalizeRoomCode } from "./room-code";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import {
   defectChance,
@@ -177,10 +178,12 @@ function Menu({
           <form
             style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
             onSubmit={(e) => {
-              e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
+              e.preventDefault();
+              // Enter: повний код — вхід; порожнє поле коду — нова кімната. Неповний код нічого не створює:
+              // інакше гравець, що набирав код, опинявся в новій кімнаті з іншим кодом.
               if (busy) return;
               if (code.length === 4) run(() => joinRoom(code, playerName));
-              else run(() => createRoom(playerName));
+              else if (code.length === 0) run(() => createRoom(playerName));
             }}
           >
             <input
@@ -191,7 +194,9 @@ function Menu({
               aria-label={t("ui.menu.name")}
               onChange={(e) => setName(e.target.value)}
             />
-            <button type="button" className="mc-btn mc-btn-sm" disabled={busy} onClick={() => run(() => createRoom(playerName))}>
+            {/* Нова кімната завжди отримує код від сервера. Поки в полі коду щось набрано, гравець явно хоче увійти,
+                тож «Create room» вимкнена: інакше він опинявся в новій кімнаті з іншим кодом. */}
+            <button type="button" className="mc-btn mc-btn-sm" disabled={busy || code.length > 0} onClick={() => run(() => createRoom(playerName))}>
               {t("ui.menu.create")}
             </button>
             <input
@@ -201,8 +206,8 @@ function Menu({
               size={12}
               placeholder={t("ui.menu.code")}
               aria-label={t("ui.menu.code")}
-              // Код кімнати — 4 латинські літери: цифри й інші символи відкидаємо одразу.
-              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
+              // Код кімнати — 4 латинські літери; кирилиця з української розкладки перекладається за клавішами.
+              onChange={(e) => setCode(normalizeRoomCode(e.target.value))}
             />
             <button
               type="button"
@@ -215,6 +220,9 @@ function Menu({
           </form>
           {code.length > 0 && code.length < 4 && (
             <div role="status" style={{ color: "var(--c-orange)", fontSize: 12 }}>{t("ui.menu.codeHint")}</div>
+          )}
+          {code.length === 4 && (
+            <div role="status" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>{t("ui.menu.joinHint", { code })}</div>
           )}
         </div>
       </div>

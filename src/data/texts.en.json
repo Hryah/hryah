@@ -77,7 +77,7 @@
   "ui.menu.title": "Consortium",
   "ui.menu.local": "Play at one screen",
   "ui.menu.localHint": "Everyone takes turns on this device.",
-  "ui.menu.onlineHint": "Or play online: create a room and share its code, or join a friend's room.",
+  "ui.menu.onlineHint": "Play online: one player creates a room and shares its 4-letter code; the others type that code and press Join.",
   "ui.menu.name": "Your name (optional)",
   "ui.menu.code": "Code (4 letters)",
   "ui.menu.create": "Create room",
@@ -610,5 +610,6 @@
   "ui.campaign.noResultsYet": "No window has closed yet: results appear after the first launch window.",
   "ui.menu.defaultName": "Commander",
   "ui.menu.codeHint": "A room code is 4 letters, like ZJSF. Ask the host to read it from the top of their room.",
-  "ui.menu.noSuchRoom": "no room with this code here. Check that you both opened the same site (the main game or /experimental/ each have their own rooms), and that the room was created after the last site update."
+  "ui.menu.noSuchRoom": "no room with this code here. Check that you both opened the same site (the main game or /experimental/ each have their own rooms), and that the room was created after the last site update.",
+  "ui.menu.joinHint": "Press Join to enter room {code}. Create room always makes a new room with its own code; clear the code field to create one."
 }
