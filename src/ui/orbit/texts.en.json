@@ -378,7 +378,7 @@
   "orbit.telemetry.title": "Status data transmitted",
   "orbit.cargo.unknown": "unknown payload",
   "clarity.risk.overflowCargo": "The telemetry package will expire before the next ground pass and be lost.",
-  "clarity.risk.coldCargo": "The cargo bay will be cold-locked after this turn: the container cannot be handed over.",
+  "clarity.risk.coldCargo": "Status monitoring will be cold-locked after this turn: the cargo still arrives, but you lose the telemetry bonus.",
   "ui.successDescriptionCargo": "Your spacecraft completed {turns} orbits and handed its cargo over to the station.",
   "orbit.cargo.delivered.water": "The water container was delivered after {orbits} approach orbits.",
   "orbit.cargo.delivered.food": "The food container was delivered after {orbits} approach orbits.",
