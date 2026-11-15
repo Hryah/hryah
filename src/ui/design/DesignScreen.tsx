@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
+import type { MarginId, ModuleDef, SlotId, SpacecraftSpec } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import spritesManifest from "../../data/sprites.json";
 import { resolveAssetUrl } from "../graphics";
@@ -196,13 +196,16 @@ export function DesignCheckPanel({
   state,
   actionsFooter,
   twoColumns = false,
+  spec: specProp,
 }: {
   readonly state: DesignState;
   readonly actionsFooter?: ReactNode;
   // Пульт консорціуму: широка картка з заголовком і запасами у дві колонки.
   readonly twoColumns?: boolean;
+  // Уже порахована специфікація (пульт рахує її один раз і для нижньої панелі); без неї рахуємо тут.
+  readonly spec?: SpacecraftSpec;
 }) {
-  const spec = designPhase.finish(state).result;
+  const spec = specProp ?? designPhase.finish(state).result;
   const { mission } = state.input;
   const blockers = launchBlockers(state);
 

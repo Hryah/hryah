@@ -562,10 +562,9 @@ export function Turn({
 
   if (!entry) return null;
   const blockers = launchBlockers(entry.design);
-  // Запаси для нижньої панелі (картка перевірки рахує їх сама з того ж стану).
-  const margins = designPhase
-    .finish(entry.design)
-    .result.margins.filter((m) => !(m.id === "science" && entry.design.input.mission.kind === "cargo"));
+  // Специфікація апарата рахується один раз: її беруть і картка перевірки, і нижня панель запасів.
+  const spec = designPhase.finish(entry.design).result;
+  const margins = spec.margins.filter((m) => !(m.id === "science" && entry.design.input.mission.kind === "cargo"));
   const canLaunch = blockers.length === 0;
   const resolvedMyAgencyIds = myAgencyIds ?? [entry.agency.id];
   const account = entry.account;
@@ -721,7 +720,7 @@ export function Turn({
         </section>
 
         <div ref={checkRef}>
-          <DesignCheckPanel state={entry.design} actionsFooter={launchControls} twoColumns />
+          <DesignCheckPanel state={entry.design} spec={spec} actionsFooter={launchControls} twoColumns />
         </div>
       </div>
 
@@ -800,10 +799,10 @@ export function Turn({
         <div className="mc-dock" role="region" aria-label={t("ui.margins")} data-testid="margins-dock">
           <div className="mc-dock-margins">
             {margins.map((m) => (
-                <span key={m.id} className={`mc-dock-chip ${m.ok ? "is-ok" : "is-bad"}`} title={`${fmt(m.have)} / ${fmt(m.need)} ${m.unit}`}>
-                  {m.ok ? "✓" : "✗"} {t(`ui.margin.${m.id}`)}
-                </span>
-              ))}
+              <span key={m.id} className={`mc-dock-chip ${m.ok ? "is-ok" : "is-bad"}`} title={`${fmt(m.have)} / ${fmt(m.need)} ${m.unit}`}>
+                {m.ok ? "✓" : "✗"} {t(`ui.margin.${m.id}`)}
+              </span>
+            ))}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="button" className="mc-btn mc-btn-primary" disabled={!isMyTurn || !canLaunch} onClick={() => dispatch({ type: "launch" })}>
