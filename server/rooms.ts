@@ -12,7 +12,7 @@ export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 export const MAX_ROOMS = 200;
 // Клієнт опитує без пауз (раз на ≤25 с). Якщо гравця нема довше за це й він не тримає опитування, він зник без «Вийти».
 export const PLAYER_IDLE_MS = 90_000;
-const MAX_BODY = 8 * 1024;
+const MAX_BODY = 32 * 1024; // звіт про місію з діями орбіти (до 400 дій) займає до ~16 КБ
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // без I та O, щоб не плутати з 1 і 0
 
 interface Room {
@@ -72,8 +72,8 @@ export class Rooms {
       this.commit(room, next);
       room.tokens.delete(player);
       if (this.abandoned(room.state)) this.close(room);
-    } else if (room.state.phase === "lobby" && room.state.players.length === 1) {
-      // Останній гравець виходить із лобі: кімнату закриваємо одразу, а не чекаємо TTL.
+    } else if (room.state.phase === "lobby" && room.state.players.filter((p) => !p.bot).length === 1) {
+      // Остання людина виходить із лобі (боти не рахуються): кімнату закриваємо одразу, а не чекаємо TTL.
       this.close(room);
     } else if (room.state.phase === "play") {
       room.tokens.delete(player); // уже вийшов раніше
@@ -172,7 +172,7 @@ export class Rooms {
 
   // Усі гравці гри вийшли (зокрема після її завершення, кнопка «Ще раз»): кімнату більше ніхто не тримає.
   private abandoned(state: RoomState): boolean {
-    return state.phase === "play" && state.assignments.every((a) => state.left.includes(a.playerId));
+    return state.phase === "play" && state.assignments.every((a) => state.left.includes(a.playerId) || (state.bots ?? []).includes(a.playerId));
   }
 
   private commit(room: Room, state: RoomState): void {

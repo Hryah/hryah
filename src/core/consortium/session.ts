@@ -1,18 +1,26 @@
 // Сесія консорціуму: кілька агенцій по черзі за одним екраном працюють над однією місією.
 // Хід агенції: до ACTIONS_PER_TURN змін проєкту, потім «запуск» (апарат зафіксовано) або «чекати»
 // (ціни дешевшають, але дедлайн ближчий і цінність даних падає). Коли всі запустились або
-// дедлайн минув, рахується нагорода. Польот і орбіта поки заглушки з stubs.ts.
+// дедлайн минув, рахується нагорода.
+//
+// Кампанія (campaign у стані): те саме, але вікон запуску кілька. Після вікна рахується виплата й грант,
+// агенції отримують гроші й очки досліджень, і починається нове вікно з тим самим календарем ходів.
+// Гравці-люди після запуску самі грають політ і орбіту й надсилають звіт (applyReport); вікно не закривається,
+// доки звіти не надійшли. Без звіту (бот, вийшов) політ і орбіта рахуються заглушками.
 //
 // Стан: звичайні JSON-дані, step чиста. Рандому тут нема.
 
-import type { CauseEntry, DesignInput, SpacecraftSpec } from '../contracts';
+import type { CauseEntry, DesignInput, Mission, SpacecraftSpec } from '../contracts';
 import { applyAgency, type AgencyProfile } from '../design/agency';
 import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
+import {
+  checkCampaign, hiddenMission, missionSeeds, pickReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport,
+} from './campaign';
 import { applyDamage } from './damage';
 import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder, type DevProject } from './develop';
 import { applyMarket, checkMarket, type Market } from './market';
-import { settleRewards, type AgencyRun, type Settlement } from './reward';
+import { runValueMUsd, settleRewards, type AgencyRun, type Settlement } from './reward';
 
 // Скільки різних елементів керування (слот, пальне, висота, носій) агенція може чіпати за хід.
 // Повторні зміни вже зачепленого за цей хід елемента безкоштовні: пальне чи орбіту не доведеться тицяти по одному кроку.
@@ -25,6 +33,15 @@ export interface Launch {
   log: CauseEntry[];
 }
 
+// Рахунок агенції в кампанії.
+export interface Account {
+  fundsMUsd: number;
+  researchPts: number;
+  programPts: number;        // внесок у наукову програму за всі вікна
+  knowsConditions: boolean;  // після першого запуску агенція знає справжні умови місії
+  missedInRow: number;       // скільки вікон поспіль без запуску
+}
+
 export interface AgencyEntry {
   agency: AgencyProfile;
   design: DesignState;
@@ -32,17 +49,46 @@ export interface AgencyEntry {
   touched: string[];       // елементи керування, зачеплені за цей хід
   projects: DevProject[];  // замовлена власна розробка: гроші списані одразу, модуль з'являється, коли готовий
   launch: Launch | null;
+  account?: Account;       // лише в кампанії
+  report?: MissionReport;  // звіт гравця про політ і орбіту цього вікна
+}
+
+export interface AgencyRoundResult {
+  agencyId: string;
+  launched: boolean;
+  valuePts: number;
+  payoutMUsd: number;
+  grantMUsd: number;
+  researchPts: number;
+}
+
+export interface RoundSummary {
+  round: number;
+  runs: AgencyRun[];
+  settlement: Settlement;
+  agencies: AgencyRoundResult[];
+}
+
+export interface CampaignState {
+  config: CampaignConfig;
+  round: number;           // поточне вікно, з 0
+  windowStartTurn: number;
+  trueMission: Mission;    // справжні умови; агенція бачить їх у проєктуванні лише після першого запуску
+  rounds: RoundSummary[];  // підсумки закритих вікон
 }
 
 export interface ConsortiumState {
   base: DesignInput;       // місія й каталог без агенцій і ринку
   market: Market;
-  deadlineTurn: number;
+  deadlineTurn: number;    // останній хід поточного вікна
   seed: number;            // сід кидків браку: розробка однієї агенції не залежить від дій інших
-  turn: number;            // поточний хід, з 0
+  turn: number;            // поточний хід, з 0 (у кампанії наскрізний)
   active: number;          // індекс агенції, що ходить
   agencies: AgencyEntry[];
   result: null | { runs: AgencyRun[]; settlement: Settlement };
+  campaign?: CampaignState;
+  reportsFrom?: string[];  // агенції, від яких чекаємо звіт про політ і орбіту (люди)
+  awaiting?: boolean;      // вікно скінчилось, але ще не всі звіти надійшли
 }
 
 export type ConsortiumAction =
@@ -50,6 +96,13 @@ export type ConsortiumAction =
   | { type: 'develop'; order: DevOrder }
   | { type: 'launch' }
   | { type: 'wait' };
+
+export interface ConsortiumOptions {
+  campaign?: CampaignConfig;
+  reportsFrom?: string[];
+}
+
+const money = (x: number) => Math.round(x * 100) / 100 + 0;
 
 // Вхід частини 1 для агенції на конкретному ході: ринок часу + стартові умови країни.
 // Власні розробки списують бюджет одразу, а готовий до цього ходу модуль додається в каталог (санкції його не стосуються).
@@ -66,20 +119,58 @@ export function inputFor(
   };
 }
 
+// Яку місію бачить агенція: номінальну, поки не запускалась, або справжню.
+export function knownMission(state: Pick<ConsortiumState, 'base' | 'campaign'>, entry: Pick<AgencyEntry, 'account'>): Mission {
+  return state.campaign && entry.account?.knowsConditions ? state.campaign.trueMission : state.base.mission;
+}
+
+// Вхід частини 1 з урахуванням кампанії: бюджет — це рахунок агенції (розробки вже списані з нього).
+function entryInput(
+  state: Pick<ConsortiumState, 'base' | 'market' | 'campaign'>, agency: AgencyProfile, turn: number,
+  projects: DevProject[], account: Account | undefined,
+): DesignInput {
+  if (!state.campaign || !account) return inputFor(state.base, state.market, agency, turn, projects);
+  const mission = knownMission(state, { account });
+  const input = applyAgency(applyMarket({ mission, catalog: state.base.catalog }, state.market, turn), agency);
+  const ready = projects.filter((p) => isReady(p, turn)).map((p) => p.module);
+  return {
+    mission: { ...input.mission, budgetMUsd: money(account.fundsMUsd) },
+    catalog: { modules: [...input.catalog.modules, ...ready] },
+  };
+}
+
 export function newConsortium(
   base: DesignInput, market: Market, agencies: AgencyProfile[], deadlineTurn = DEFAULT_DEADLINE_TURN, seed = 1,
+  options: ConsortiumOptions = {},
 ): ConsortiumState {
   if (agencies.length === 0) throw new Error('Потрібна хоча б одна агенція');
   checkMarket(market);
-  const entries: AgencyEntry[] = agencies.map((agency) => ({
-    agency,
-    design: designPhase.init(inputFor(base, market, agency, 0), 0),
-    actionsLeft: ACTIONS_PER_TURN,
-    touched: [],
-    projects: [],
-    launch: null,
-  }));
-  return { base, market, deadlineTurn, seed, turn: 0, active: 0, agencies: entries, result: null };
+  const config = options.campaign;
+  if (config) checkCampaign(config);
+  const campaign: CampaignState | undefined = config
+    ? { config, round: 0, windowStartTurn: 0, trueMission: hiddenMission(base.mission, seed), rounds: [] }
+    : undefined;
+  const head = { base, market, ...(campaign ? { campaign } : {}) };
+  const entries: AgencyEntry[] = agencies.map((agency) => {
+    const account: Account | undefined = campaign
+      ? { fundsMUsd: money(base.mission.budgetMUsd * agency.budgetFactor), researchPts: 0, programPts: 0, knowsConditions: false, missedInRow: 0 }
+      : undefined;
+    return {
+      agency,
+      design: designPhase.init(entryInput(head, agency, 0, [], account), 0),
+      actionsLeft: ACTIONS_PER_TURN,
+      touched: [],
+      projects: [],
+      launch: null,
+      ...(account ? { account } : {}),
+    };
+  });
+  return {
+    ...head,
+    deadlineTurn: campaign ? config!.windowTurns - 1 : deadlineTurn,
+    seed, turn: 0, active: 0, agencies: entries, result: null,
+    ...(options.reportsFrom && options.reportsFrom.length > 0 ? { reportsFrom: [...options.reportsFrom] } : {}),
+  };
 }
 
 export function activeAgency(state: ConsortiumState): AgencyEntry | undefined {
@@ -102,29 +193,138 @@ function startTurn(state: ConsortiumState, turn: number): ConsortiumState {
     agencies: state.agencies.map((e) =>
       e.launch
         ? e
-        : { ...e, actionsLeft: ACTIONS_PER_TURN, touched: [], design: { ...e.design, input: inputFor(state.base, state.market, e.agency, turn, e.projects) } },
+        : { ...e, actionsLeft: ACTIONS_PER_TURN, touched: [], design: { ...e.design, input: entryInput(state, e.agency, turn, e.projects, e.account) } },
     ),
   };
 }
 
-function settle(state: ConsortiumState): ConsortiumState {
-  const mission = state.base.mission;
-  const runs: AgencyRun[] = [];
-  for (const e of state.agencies) {
-    if (!e.launch) continue; // не встигла до дедлайну: внеску нема
-    // Брак власного модуля проявляється лише тут, після запуску: це пошкодження, яке читають усі частини.
-    const used = e.projects.find((p) => p.module.id === e.design.design.modules.instrument);
-    const damage = used ? defectDamage(used) : [];
-    const spec = applyDamage(e.launch.spec, damage);
-    const launchLog = [...e.launch.log, ...(used ? developmentLog(used) : [])];
-    const flight = stubFlight({ mission, spec, log: launchLog });
-    const orbit = stubOrbit({ mission, spec, flight: flight.result, log: [...launchLog, ...flight.log] });
-    runs.push({
-      agencyId: e.agency.id, launchTurn: e.launch.turn, spec, outcome: orbit.result,
-      log: [...launchLog, ...flight.log, ...orbit.log],
-    });
+// Апарат, який реально полетів: брак власного модуля проявляється після запуску як пошкодження.
+export function flownSpec(entry: AgencyEntry): SpacecraftSpec | null {
+  if (!entry.launch) return null;
+  const used = entry.projects.find((p) => p.module.id === entry.design.design.modules.instrument);
+  return applyDamage(entry.launch.spec, used ? defectDamage(used) : []);
+}
+
+function launchLog(entry: AgencyEntry): CauseEntry[] {
+  if (!entry.launch) return [];
+  const used = entry.projects.find((p) => p.module.id === entry.design.design.modules.instrument);
+  return [...entry.launch.log, ...(used ? developmentLog(used) : [])];
+}
+
+// Місія, яку агенція реально виконує (у кампанії — справжні умови).
+export function flownMission(state: ConsortiumState): Mission {
+  return state.campaign ? state.campaign.trueMission : state.base.mission;
+}
+
+// Сіди польоту й орбіти, з якими гравець має грати свій запуск у цьому вікні.
+export function seedsFor(state: ConsortiumState, agencyId: string): { flight: number; orbit: number } {
+  return missionSeeds(state.seed, agencyId, state.campaign?.round ?? 0);
+}
+
+function runOf(state: ConsortiumState, e: AgencyEntry): AgencyRun | null {
+  const spec = flownSpec(e);
+  if (!e.launch || !spec) return null;
+  const mission = flownMission(state);
+  const log = launchLog(e);
+  const windowStart = state.campaign?.windowStartTurn ?? 0;
+  let flightLog: CauseEntry[] = [];
+  let orbitOut;
+  if (e.report) {
+    const flight = sanitizeFlight(mission, spec, e.report.flight);
+    orbitOut = replayOrbit(mission, spec, flight, log, e.report.orbitActions, seedsFor(state, e.agency.id).orbit);
+  } else {
+    const flight = stubFlight({ mission, spec, log });
+    flightLog = flight.log;
+    orbitOut = stubOrbit({ mission, spec, flight: flight.result, log: [...log, ...flight.log] });
   }
-  return { ...state, result: { runs, settlement: settleRewards(mission, runs) } };
+  return {
+    agencyId: e.agency.id, launchTurn: e.launch.turn - windowStart, spec, outcome: orbitOut.result,
+    log: [...log, ...flightLog, ...orbitOut.log],
+  };
+}
+
+// Хто запустився у цьому вікні, але ще не надіслав звіт.
+export function pendingReports(state: ConsortiumState): string[] {
+  const from = state.reportsFrom ?? [];
+  return state.agencies.filter((e) => e.launch && !e.report && from.includes(e.agency.id)).map((e) => e.agency.id);
+}
+
+function settle(state: ConsortiumState): ConsortiumState {
+  if (pendingReports(state).length > 0) return { ...state, awaiting: true };
+  const ready = state.awaiting ? { ...state, awaiting: false } : state;
+  if (ready.campaign) return closeRound(ready);
+  const runs = ready.agencies.map((e) => runOf(ready, e)).filter((r): r is AgencyRun => r !== null);
+  const { awaiting: _a, ...rest } = ready;
+  return { ...rest, result: { runs, settlement: settleRewards(ready.base.mission, runs) } };
+}
+
+// Кінець вікна в кампанії: виплати, гранти, дослідження, потім нове вікно або підсумок кампанії.
+function closeRound(state: ConsortiumState): ConsortiumState {
+  const campaign = state.campaign!;
+  const { config } = campaign;
+  const mission = campaign.trueMission;
+  const runs = state.agencies.map((e) => runOf(state, e)).filter((r): r is AgencyRun => r !== null);
+  const settlement = settleRewards(mission, runs);
+
+  const results: AgencyRoundResult[] = [];
+  const agencies = state.agencies.map((e) => {
+    const run = runs.find((r) => r.agencyId === e.agency.id);
+    const account = e.account!;
+    const launched = run !== undefined;
+    const valuePts = run ? runValueMUsd(mission, run) : 0;
+    const payoutMUsd = settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0;
+    const missedInRow = launched ? 0 : account.missedInRow + 1;
+    const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
+    const grantMUsd = money(config.grantMUsd * grantFactor);
+    const researchPts = (run ? Math.floor(run.outcome.deliveredMb / config.mbPerResearchPt) : 0) + (launched ? 0 : config.missedResearchPts);
+    results.push({ agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts });
+    const next: Account = {
+      fundsMUsd: money(account.fundsMUsd + payoutMUsd + grantMUsd),
+      researchPts: account.researchPts + researchPts,
+      programPts: money(account.programPts + valuePts),
+      knowsConditions: account.knowsConditions || launched,
+      missedInRow,
+    };
+    return { ...e, account: next };
+  });
+
+  const summary: RoundSummary = { round: campaign.round, runs, settlement, agencies: results };
+  const total = agencies.reduce((sum, e) => sum + (e.account?.programPts ?? 0), 0);
+  const nextCampaign: CampaignState = { ...campaign, rounds: [...campaign.rounds, summary] };
+  const done = campaign.round + 1 >= config.rounds || total >= config.programGoal;
+  if (done) {
+    // Сирі звіти (до 400 дій орбіти на гравця) після підсумку не потрібні: не тягнемо їх у фінальний стан.
+    const clean = agencies.map((e) => { const { report: _r, ...rest } = e; return rest; });
+    return { ...state, agencies: clean, campaign: nextCampaign, result: { runs, settlement } };
+  }
+
+  // Нове вікно: календар іде далі, проєкт агенції лишається (друге коло коротше), звіти скидаються.
+  const turn = state.turn + 1;
+  const opened: CampaignState = { ...nextCampaign, round: campaign.round + 1, windowStartTurn: turn };
+  const head = { ...state, campaign: opened };
+  return {
+    ...head,
+    turn,
+    deadlineTurn: turn + config.windowTurns - 1,
+    active: 0,
+    agencies: agencies.map((e) => {
+      const { report: _r, ...rest } = e;
+      return {
+        ...rest,
+        launch: null,
+        actionsLeft: ACTIONS_PER_TURN,
+        touched: [],
+        design: { ...e.design, confirmed: false, input: entryInput(head, e.agency, turn, e.projects, e.account) },
+      };
+    }),
+  };
+}
+
+// Прогрес наукової програми, 0..1.
+export function programProgress(state: ConsortiumState): number {
+  if (!state.campaign) return 0;
+  const total = state.agencies.reduce((sum, e) => sum + (e.account?.programPts ?? 0), 0);
+  return Math.min(1, total / state.campaign.config.programGoal);
 }
 
 // Передати хід наступній агенції, що ще не запустилась. Коли коло завершене, настає новий ход.
@@ -146,8 +346,28 @@ function endAgencyTurn(state: ConsortiumState): ConsortiumState {
   return settle(next);
 }
 
+// Звіт гравця про політ і орбіту свого запуску в поточному вікні. Приймається незалежно від черги ходу.
+export function applyReport(state: ConsortiumState, agencyId: string, report: MissionReport): ConsortiumState {
+  if (state.result || !(state.reportsFrom ?? []).includes(agencyId)) return state;
+  const index = state.agencies.findIndex((e) => e.agency.id === agencyId);
+  const entry = state.agencies[index];
+  if (!entry || !entry.launch || entry.report) return state;
+  const next = replaceAt(state, index, {
+    ...entry,
+    report: pickReport(report),
+  });
+  return next.awaiting ? settle(next) : next;
+}
+
+// Від агенції більше не чекаємо звіту (гравець вийшов): її запуск рахується заглушками.
+export function forfeitReport(state: ConsortiumState, agencyId: string): ConsortiumState {
+  if (!(state.reportsFrom ?? []).includes(agencyId)) return state;
+  const next = { ...state, reportsFrom: (state.reportsFrom ?? []).filter((id) => id !== agencyId) };
+  return next.awaiting && !next.result ? settle(next) : next;
+}
+
 export function stepConsortium(state: ConsortiumState, action: ConsortiumAction): ConsortiumState {
-  if (state.result) return state;
+  if (state.result || state.awaiting) return state;
   const entry = activeAgency(state);
   if (!entry || entry.launch) return state;
 
@@ -175,21 +395,29 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       } catch {
         return state;
       }
-      const input = inputFor(state.base, state.market, entry.agency, state.turn, [...entry.projects, project]);
+      const account = entry.account
+        ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - project.developmentCostMUsd) }
+        : undefined;
+      const projects = [...entry.projects, project];
+      const input = entryInput(state, entry.agency, state.turn, projects, account);
       if (input.mission.budgetMUsd <= 0) return state;
       return replaceAt(state, state.active, {
         ...entry,
-        projects: [...entry.projects, project],
+        projects,
         design: { ...entry.design, input },
         actionsLeft: entry.actionsLeft - 1,
         touched: [...entry.touched, control],
+        ...(account ? { account } : {}),
       });
     }
     case 'launch': {
       if (launchBlockers(entry.design).length > 0) return state;
       const frozen = designPhase.step(entry.design, { type: 'confirm' });
       const { result, log } = designPhase.finish(frozen);
-      const launched: AgencyEntry = { ...entry, design: frozen, launch: { turn: state.turn, spec: result, log } };
+      const account = entry.account
+        ? { ...entry.account, fundsMUsd: money(entry.account.fundsMUsd - result.costMUsd) }
+        : undefined;
+      const launched: AgencyEntry = { ...entry, design: frozen, launch: { turn: state.turn, spec: result, log }, ...(account ? { account } : {}) };
       return endAgencyTurn(replaceAt(state, state.active, launched));
     }
     case 'wait':

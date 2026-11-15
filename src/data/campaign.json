@@ -1,0 +1,10 @@
+{
+  "rounds": 5,
+  "windowTurns": 4,
+  "programGoal": 600,
+  "grantMUsd": 30,
+  "missedGrantFactor": 0.5,
+  "missedTwiceGrantFactor": 0.25,
+  "missedResearchPts": 3,
+  "mbPerResearchPt": 2000
+}
