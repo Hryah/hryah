@@ -87,14 +87,19 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
                       })
                     : t("ui.campaign.roundMissed", { grant: fmt(r.grantMUsd), research: r.researchPts })}
                 </div>
-                {chains.map((chain) => (
+                {chains.map((chain) => {
+                  // Події ховаємо як шум, але якщо причина лише подія, показуємо її, щоб відмова не лишилась без пояснення.
+                  const real = chain.causes.filter((c) => c.kind !== "event");
+                  const shown = real.length === 0 ? chain.causes : real;
+                  return (
                   <div key={chain.failure.id} style={{ marginLeft: 16 }}>
                     <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, state.base)}</div>
-                    {chain.causes.filter((c) => c.kind !== "event").map((cause) => (
+                    {shown.map((cause) => (
                       <div key={cause.id} style={{ color: C.dim, marginLeft: 16 }}>↳ {describeEntry(cause, state.base)}</div>
                     ))}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}

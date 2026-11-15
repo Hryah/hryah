@@ -407,5 +407,6 @@
   "fab.cargo.water": "Water container (own production)",
   "fab.cargo.food": "Food container (needs cooling power) (own production)",
   "fab.cargo.parts": "Spare parts container (own production)",
-  "fab.cargo.experiment": "Live experiment (needs heating power) (own production)"
+  "fab.cargo.experiment": "Live experiment (needs heating power) (own production)",
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
 }
