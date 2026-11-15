@@ -37,6 +37,13 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
   const [stage, setStage] = useState<Stage>({ kind: "flight" });
   const [flight, setFlight] = useState(() => flightPhase.init({ mission, spec, log: [] }, seeds.flight));
   const [orbitActions, setOrbitActions] = useState<OrbitAction[]>([]);
+  // Звіт надіслано й чекаємо, поки кімната його прийме (тоді цей екран зникне). Якщо мережа підвела, кнопка знову активна.
+  const [sending, setSending] = useState(false);
+  useEffect(() => {
+    if (!sending) return;
+    const timer = setTimeout(() => setSending(false), 8000);
+    return () => clearTimeout(timer);
+  }, [sending]);
   const flightResult = stage.kind === "orbit" ? stage.flight : null;
   const orbit = useMemo(() => {
     if (!flightResult) return null;
@@ -51,8 +58,8 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
   useEffect(() => {
     if (stage.kind !== "flight" || !flightPhase.isDone(flight)) return;
     const result = sanitizeFlight(mission, spec, flightPhase.finish(flight).result);
-    if (result.deploymentStatus === "lost") reportRef.current({ flight: result, orbitActions: [] });
-    else setStage({ kind: "orbit", flight: result });
+    // Втрата апарата: звіт іде кнопкою (можна повторити, якщо мережа підвела), а не автоматично.
+    if (result.deploymentStatus !== "lost") setStage({ kind: "orbit", flight: result });
   }, [flight, stage.kind, mission, spec]);
 
   if (stage.kind === "flight") {
@@ -71,7 +78,11 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
           <div>
             <button
               style={button}
-              onClick={() => setFlight((s) => flightPhase.step(s, { type: "complete_phase" }))}
+              onClick={() => {
+                if (lost && flightPhase.isDone(flight)) {
+                  reportRef.current({ flight: sanitizeFlight(mission, spec, flightPhase.finish(flight).result), orbitActions: [] });
+                } else setFlight((s) => flightPhase.step(s, { type: "complete_phase" }));
+              }}
             >
               {t(lost ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
             </button>
@@ -92,11 +103,15 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button
           style={{ ...button, borderColor: done ? C.ok : C.line }}
-          onClick={() => onReport({ flight: flightResult, orbitActions })}
+          disabled={sending}
+          onClick={() => { setSending(true); onReport({ flight: flightResult, orbitActions }); }}
         >
           📡 {t(done ? "ui.campaign.sendReport" : "ui.campaign.sendEarly")}
         </button>
         {!done && <span style={{ color: C.dim, fontSize: 13 }}>{t("ui.campaign.sendEarlyHint")}</span>}
+        {!done && orbitActions.length >= MAX_ORBIT_ACTIONS && (
+          <span role="status" style={{ color: C.bad, fontSize: 13 }}>{t("ui.campaign.actionsFull", { n: MAX_ORBIT_ACTIONS })}</span>
+        )}
       </div>
     </div>
   );

@@ -395,5 +395,6 @@
   "ui.factory.quality": "quality {q}%",
   "ui.factory.left": "left in: {flaws}",
   "ui.factory.inTurns": "ready in {n} turn(s)",
-  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit.",
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
 }
