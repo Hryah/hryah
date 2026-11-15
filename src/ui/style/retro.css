@@ -11,7 +11,7 @@
   padding: 4px 10px;
   border-radius: 8px;
   border: 1px solid #2a2f4a;
-  background: transparent;
+  background: rgba(11, 13, 23, 0.85);
   color: #8a90a8;
   cursor: pointer;
   font-size: 13px;

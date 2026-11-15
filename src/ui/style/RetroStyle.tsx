@@ -6,15 +6,17 @@ import "./retro.css";
 
 // Ретро-стиль на всю гру. WebGL-сцени беруть шейдери з render/style.ts, а canvas і SVG інших частин
 // (політ, каюта, орбіта, превʼю апарата) — SVG-фільтр #hryah-retro з тим самим виглядом.
-// Текст інтерфейсу фільтр не чіпає, щоб лишався читабельним. Вибір зберігається (src/storage.ts).
+// HTML-текст інтерфейсу фільтр не чіпає; те, що частина сама малює на своєму canvas (HUD польоту), стилізується разом зі сценою. Вибір зберігається (src/storage.ts).
 
 const KEY = "retroStyle";
 const RetroContext = createContext<{ on: boolean; toggle: () => void }>({ on: true, toggle: () => {} });
 
 export const useRetro = () => useContext(RetroContext);
 
-// Розмір «пікселя» SVG-фільтра в CSS-пікселях: на екранах із DPR 2 це відповідає 4 пікселям буфера WebGL.
-const CELL = 2;
+// Розмір «пікселя» SVG-фільтра в CSS-пікселях. Беремо центральну точку клітинки й розширюємо на радіус 1:
+// feMorphology дає квадрат (2r + 1) = 3, тобто рівно клітинку без перекриття сусідів.
+const CELL = 3;
+const RADIUS = (CELL - 1) / 2;
 // Сходинки відтінків: discrete-таблиця з RETRO_LEVELS + 1 значень, як floor(x·n + 0,5) / n у шейдері.
 const TABLE = Array.from({ length: RETRO_LEVELS + 1 }, (_, i) => (i / RETRO_LEVELS).toFixed(3)).join(" ");
 
@@ -23,17 +25,19 @@ export function RetroProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("retro", on);
     save(KEY, on);
+    return () => document.documentElement.classList.remove("retro");
   }, [on]);
   return (
     <RetroContext.Provider value={{ on, toggle: () => setOn((v) => !v) }}>
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
         <filter id="hryah-retro" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
           {/* Піксельна сітка: беремо одну точку з кожної клітинки й розтягуємо її на всю клітинку. */}
-          <feFlood x={CELL / 2} y={CELL / 2} width="1" height="1" floodColor="#000" />
-          <feComposite width={CELL} height={CELL} />
-          <feTile result="grid" />
-          <feComposite in="SourceGraphic" in2="grid" operator="in" />
-          <feMorphology operator="dilate" radius={CELL / 2} result="pixels" />
+          {/* in2 задано явно: без нього Firefox і Safari відкидають примітив і сцена зникає. */}
+          <feFlood x={RADIUS} y={RADIUS} width="1" height="1" floodColor="#000" result="dot" />
+          <feComposite in="dot" in2="dot" operator="over" x="0" y="0" width={CELL} height={CELL} result="cell" />
+          <feTile in="cell" result="grid" />
+          <feComposite in="SourceGraphic" in2="grid" operator="in" result="samples" />
+          <feMorphology in="samples" operator="dilate" radius={RADIUS} result="pixels" />
           {/* Обмежені відтінки на канал. */}
           <feComponentTransfer in="pixels">
             <feFuncR type="discrete" tableValues={TABLE} />
