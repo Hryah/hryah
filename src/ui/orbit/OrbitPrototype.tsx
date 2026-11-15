@@ -2,22 +2,24 @@ import { useEffect, useState } from 'react';
 import { createDemoOrbit, orbitPhase, orbitClarity, orbitDebrief, type OrbitState, type ToggleId } from '../../core/orbit';
 import { resolveAssetUrl } from '../graphics/registry';
 import { OrbitScene } from './OrbitScene';
-import messages from './texts.en.json';
-import sharedMessages from '../../data/texts.en.json';
+import { t as translate } from '../text';
 import { SAMPLE_CATALOG } from '../../core/stubs';
 import type { CauseEntry } from '../../core/contracts';
 import { describeEntry } from '../design/cause';
 import './orbit.css';
 
-const copy: Record<string, string> = { ...sharedMessages, ...messages };
-const t = (key: string, params: Record<string, string | number> = {}) =>
-  (copy[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => {
-    const value = params[name];
-    if (name === 'toggle' && typeof value === 'string') return copy[`ui.control.${value}`] ?? value;
-    if (name === 'enabled') return copy[value ? 'ui.enabled' : 'ui.off'] ?? String(value);
-    if (typeof value === 'number') return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
-    return value ?? `{${name}}`;
-  });
+const t = (key: string, params: Record<string, string | number> = {}) => {
+  const formatted: Record<string, string | number> = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (name === 'toggle' && typeof value === 'string') {
+      const labelKey = `ui.control.${value}`;
+      const label = translate(labelKey);
+      formatted[name] = label === labelKey ? value : label;
+    } else if (name === 'enabled') formatted[name] = translate(value ? 'ui.enabled' : 'ui.off');
+    else formatted[name] = typeof value === 'number' ? number(value, 1) : value;
+  }
+  return translate(key, formatted);
+};
 const number = (n: number, digits = 0) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(n);
 type Preset = 'balanced' | 'comms' | 'power';
 type IconName = 'orbit' | 'check' | 'camera' | 'radio' | 'heat' | 'shield' | 'arrow' | 'reset' | 'activity' | 'code' | 'chevron' | 'close' | 'help' | 'sun';
@@ -51,9 +53,9 @@ export function OrbitPrototype({ initialState }: { initialState?: OrbitState } =
   const [setupOpen, setSetupOpen] = useState(false);
   const state = history[history.length - 1]!;
   const { view, systems, risks } = orbitClarity(state);
-  const debrief = orbitDebrief(state);
   const forecast = view.forecast;
   const done = state.status !== 'active';
+  const debrief = done ? orbitDebrief(state) : [];
   const outcome = orbitPhase.finish(state).result;
   const totals = state.input.mission.durationOrbits;
   const currentTurn = Math.min(state.completedOrbits + 1, totals);

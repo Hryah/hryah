@@ -1,12 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createDemoOrbit, orbitPhase, type OrbitState } from '../../core/orbit';
+import * as orbit from '../../core/orbit';
+import * as text from '../text';
 import type { OrbitInput } from '../../core/contracts';
 import sharedMessages from '../../data/texts.en.json';
 import messages from './texts.en.json';
 import { OrbitPrototype } from './OrbitPrototype';
 
-const copy: Record<string, string> = { ...sharedMessages, ...messages };
+const copy: Record<string, string> = { ...messages, ...sharedMessages };
 
 function finishMission(initial: OrbitState): OrbitState {
   let state = initial;
@@ -17,6 +19,35 @@ function finishMission(initial: OrbitState): OrbitState {
 }
 
 describe('orbit prototype presentation', () => {
+  it('waits until the mission ends before calculating the debrief', () => {
+    const debrief = vi.spyOn(orbit, 'orbitDebrief');
+    try {
+      renderToStaticMarkup(<OrbitPrototype />);
+      expect(debrief).not.toHaveBeenCalled();
+
+      const end = finishMission(createDemoOrbit('comms'));
+      const html = renderToStaticMarkup(<OrbitPrototype initialState={end} />);
+      expect(debrief).toHaveBeenCalledExactlyOnceWith(end);
+      expect(html).toContain('Problems and player decisions');
+    } finally {
+      debrief.mockRestore();
+    }
+  });
+
+  it('uses the shared translator for both controls and causal command labels', () => {
+    const translate = text.t;
+    const sharedText = vi.spyOn(text, 't').mockImplementation((key, params) =>
+      key === 'ui.control.heater' ? 'Cabin heater' : translate(key, params));
+    try {
+      const initial = orbitPhase.step(createDemoOrbit('comms'), { type: 'toggle', id: 'heater' });
+      const html = renderToStaticMarkup(<OrbitPrototype initialState={finishMission(initial)} />);
+      expect(html).toContain('aria-label="Cabin heater"');
+      expect(html).toContain('Cabin heater command changed to Off');
+    } finally {
+      sharedText.mockRestore();
+    }
+  });
+
   it('uses readable module names in causal paths and immediate cause summaries', () => {
     const state = finishMission(createDemoOrbit('comms'));
     const html = renderToStaticMarkup(<OrbitPrototype initialState={state} />);
