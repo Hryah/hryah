@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import {
-  activeAgency, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  activeAgency, agencyAfterEvents, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
   type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
@@ -318,7 +318,8 @@ export function Turn({ state, dispatch, active = true }: { state: ConsortiumStat
   const { base, market, turn } = state;
   // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
   const catalogNow = entry?.design.input.catalog;
-  const blocked = entry?.agency.blockedModules;
+  // Санкції з урахуванням подій (зняття санкцій діє назавжди).
+  const blocked = entry ? agencyAfterEvents(entry.agency, state.campaign?.events ?? []).blockedModules : undefined;
   const lead = entry?.agency.marketLeadTurns ?? 0; // дослідження «ранній доступ»: новинки на кілька ходів раніше
   const upcoming: Upcoming[] = useMemo(
     () => {

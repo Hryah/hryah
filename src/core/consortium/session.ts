@@ -12,7 +12,7 @@
 
 import type { CauseEntry, Damage, Design, DesignInput, Mission, SpacecraftSpec } from '../contracts';
 import { applyAgency, type AgencyProfile } from '../design/agency';
-import { controlOf, designPhase, launchBlockers, type DesignAction, type DesignState } from '../design';
+import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
 import {
   checkCampaign, hiddenMission, missionSeeds, pickReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport,
@@ -209,6 +209,20 @@ export function newConsortium(
   };
 }
 
+// Проєкт, перенесений у нове вікно, може посилатися на модуль, якого вже немає (зрив постачальника, скінчився прорив):
+// такий слот повертаємо до середнього модуля каталогу, як у стартовому проєкті.
+function fitCatalog(design: DesignState): DesignState {
+  const modules = design.input.catalog.modules;
+  let next = design.design.modules;
+  for (const slot of SLOTS) {
+    if (modules.some((m) => m.slot === slot && m.id === next[slot])) continue;
+    const options = modules.filter((m) => m.slot === slot);
+    const middle = options[Math.floor(options.length / 2)];
+    if (middle) next = { ...next, [slot]: middle.id };
+  }
+  return next === design.design.modules ? design : { ...design, design: { ...design.design, modules: next } };
+}
+
 // Стартовий проєкт кампанії одразу на носії, що витягує його масу: інакше перший запуск новачка блокується масою
 // без пояснення. Одиночна місія лишається як була (там вибір носія — частина навчання).
 function fitLauncher(design: DesignState, enabled: boolean): DesignState {
@@ -326,14 +340,14 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   const settlement = settleRewards(mission, runs, undefined, state.base.catalog);
 
   const results: AgencyRoundResult[] = [];
+  // Комерційний режим: що більше даних уже продано (заповнення програми), то менше платять за нові.
+  const filled = Math.min(1, state.agencies.reduce((sum, x) => sum + (x.account?.programPts ?? 0), 0) / config.programGoal);
   let agencies = state.agencies.map((e) => {
     const run = runs.find((r) => r.agencyId === e.agency.id);
     const account = e.account!;
     const launched = run !== undefined;
     // Внесок у програму — та сама цінність, що й у виплаті (для вантажу з урахуванням повторів).
     const valuePts = run ? settlement.payouts.find((p) => p.agencyId === e.agency.id)?.valueMUsd ?? 0 : 0;
-    // Комерційний режим: що більше даних уже продано (заповнення програми), то менше платять за нові.
-    const filled = Math.min(1, state.agencies.reduce((sum, x) => sum + (x.account?.programPts ?? 0), 0) / config.programGoal);
     const saturationFactor = config.victory === 'commercial' ? 1 - (config.saturation ?? 0) * filled : 1;
     const payoutMUsd = money((settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0) * saturationFactor);
     const missedInRow = launched ? 0 : account.missedInRow + 1;
@@ -343,7 +357,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
     const reputationFactor = Math.min(1.5, Math.max(0.5, 1 + REPUTATION_STEP * reputation));
     const grantMUsd = money(config.grantMUsd * grantFactor * reputationFactor);
     const researchPts = (run ? Math.floor(run.outcome.deliveredMb / config.mbPerResearchPt) : 0) + (launched ? 0 : config.missedResearchPts);
-    const optimal = optimalValue(e.design.input, mission);
+    const optimal = optimalValue(e.design.input, flownMission(state, e)); // з наземними станціями агенції
     results.push({
       agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts,
       optimalPts: optimal.value, ...(optimal.design ? { optimalDesign: optimal.design } : {}),
@@ -399,7 +413,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
         launch: null,
         actionsLeft: ACTIONS_PER_TURN,
         touched: [],
-        design: { ...e.design, confirmed: false, input: entryInput(head, e.agency, turn, e.projects, e.account, e.factory) },
+        design: fitCatalog({ ...e.design, confirmed: false, input: entryInput(head, e.agency, turn, e.projects, e.account, e.factory) }),
       };
     }),
   };

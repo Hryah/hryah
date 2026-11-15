@@ -77,9 +77,11 @@ export function MissionRunner({ agencyName, mission, spec, seeds, active, onRepo
           <div style={{ color: C.dim, fontSize: 13 }}>{t(lost ? "ui.play.lostFlightHint" : "ui.play.flightHint")}</div>
           <div>
             <button
+              disabled={sending}
               style={button}
               onClick={() => {
                 if (lost && flightPhase.isDone(flight)) {
+                  setSending(true);
                   reportRef.current({ flight: sanitizeFlight(mission, spec, flightPhase.finish(flight).result), orbitActions: [] });
                 } else setFlight((s) => flightPhase.step(s, { type: "complete_phase" }));
               }}

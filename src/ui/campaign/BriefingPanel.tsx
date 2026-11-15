@@ -1,4 +1,4 @@
-import { failureChance, SCENARIOS, trlOf, type ConsortiumState } from "../../core/consortium";
+import { agencyAfterEvents, failureChance, SCENARIOS, trlOf, type ConsortiumState } from "../../core/consortium";
 import { designPhase, SLOTS } from "../../core/design";
 import { fmt, t } from "../text";
 
@@ -47,7 +47,9 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   if (account.missedInRow >= 1) lines.push({ text: t("ui.brief.missed"), color: C.bad });
 
   const available = new Set(entry.design.input.catalog.modules.map((m) => m.id));
-  const soon = state.base.catalog.modules.filter((m) => !available.has(m.id) && (state.market[m.id]?.fromTurn ?? 0) > state.turn && !(entry.agency.blockedModules ?? []).includes(m.id)).length;
+  const blocked = agencyAfterEvents(entry.agency, campaign.events ?? []).blockedModules ?? [];
+  const lead = entry.agency.marketLeadTurns ?? 0;
+  const soon = state.base.catalog.modules.filter((m) => !available.has(m.id) && (state.market[m.id]?.fromTurn ?? 0) - lead > state.turn && !blocked.includes(m.id)).length;
   if (soon > 0) lines.push({ text: t("ui.brief.upcoming", { n: soon }) });
 
   const ids = entry.design.input.catalog.modules.map((m) => m.id);

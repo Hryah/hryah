@@ -35,3 +35,27 @@ describe("події між вікнами", () => {
     expect(agencyAfterEvents(kestrel, [{ round: 1, id: "s", kind: "sanctionsLifted", agencyId: "borealis" }]).blockedModules).toEqual(kestrel.blockedModules);
   });
 });
+
+describe("події: проєкт у новому вікні", () => {
+  it("модуль, що зник через зрив постачальника, замінюється в проєкті, і кампанія не падає", async () => {
+    const { newConsortium, stepConsortium } = await import("./session");
+    const { botAction } = await import("./bot");
+    const { launchBlockers } = await import("../design");
+    const { SCENARIOS } = await import("./scenarios");
+    const sc = SCENARIOS["living-planet"]!;
+    // Перебираємо сіди, доки не трапиться зрив на модулі, який стоїть у чийсь проєкті.
+    for (let seed = 0; seed < 40; seed++) {
+      let s = newConsortium({ mission: sc.mission, catalog: CAMPAIGN_CATALOG }, market, agencies, 12, seed, { campaign: sc.campaign });
+      for (let g = 0; g < 3000 && !s.result; g++) {
+        const n = stepConsortium(s, botAction(s));
+        s = n === s ? stepConsortium(s, { type: "wait" }) : n;
+        for (const e of s.agencies) {
+          const ids = new Set(e.design.input.catalog.modules.map((m) => m.id));
+          if (!e.launch) for (const id of Object.values(e.design.design.modules)) expect(ids.has(id), `${seed}: ${id}`).toBe(true);
+          expect(() => launchBlockers(e.design)).not.toThrow();
+        }
+      }
+      expect(s.result).not.toBeNull();
+    }
+  }, 60000);
+});
