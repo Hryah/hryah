@@ -8,6 +8,7 @@ import { resolveAssetUrl } from "./ui/graphics/registry";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
 import { Gallery } from "./scenes/gallery";
+import "./ui/design/planning-console.css";
 import { t } from "./ui/text";
 
 const RoomScreen = lazy(() =>
@@ -56,23 +57,25 @@ export function App() {
   return (
     <>
       <div hidden={view !== "orbit"}><OrbitPrototype /></div>
-      <div hidden={view === "orbit"} lang="uk" style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b0d17", color: "#e8eaf3" }}>
-        <div style={{ background: color, color: "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
+      <div hidden={view === "orbit"} lang="uk" className="mc-app-backdrop" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ background: color, color: "#001524", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
           {label} · збірка {commit}
         </div>
-        <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
-          <h1 style={{ margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}>
-            <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={26} height={26} />
-            hryah
-          </h1>
-          <nav style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-            <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>Гра</a>
-            <a href="#room" style={{ color: view === "room" ? color : "#8a90a8" }}>{t("room.nav")}</a>
-            <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
-            <a href="#mission" style={{ color: view === "mission" ? color : "#8a90a8" }}>{t("ui.nav.mission")}</a>
-            <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
-            <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
-          </nav>
+        <main style={{ padding: "18px 20px 28px", maxWidth: 1760, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 14 }}>
+            <h1 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, color: "var(--c-cream, #ffecd1)", fontSize: 22 }}>
+              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={24} height={24} />
+              hryah
+            </h1>
+            <nav style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 14 }}>
+              <a href="#play" style={{ color: view === "play" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Гра</a>
+              <a href="#room" style={{ color: view === "room" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>{t("room.nav")}</a>
+              <a href="#orbit" style={{ color: "var(--c-text-muted, #ffecd1)" }}>{orbitText["ui.orbitOperations"]}</a>
+              <a href="#mission" style={{ color: view === "mission" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>{t("ui.nav.mission")}</a>
+              <a href="#debug" style={{ color: view === "debug" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Дебаг</a>
+              <a href="#gallery" style={{ color: view === "gallery" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Галерея</a>
+            </nav>
+          </div>
           <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
           <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>

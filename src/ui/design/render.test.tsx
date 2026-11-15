@@ -2,9 +2,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { designPhase } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
-import { newConsortium, newRoom, stepConsortium, stepRoom, type ConsortiumAction, type Market, type RoomState } from "../../core/consortium";
+import {
+  campaignRoomSetup,
+  newConsortium,
+  newRoom,
+  stepConsortium,
+  stepRoom,
+  type ConsortiumAction,
+  type Market,
+  type RoomState,
+} from "../../core/consortium";
 import agenciesData from "../../data/agencies.json";
 import cargoCatalogData from "../../data/catalog-cargo.json";
+import extraCatalogData from "../../data/catalog-extra.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
 import type { Catalog, ModuleDef } from "../../core/contracts";
@@ -182,5 +192,57 @@ describe("перегляд апарата на екрані проєктуван
     );
     expect(html).toContain("Spacecraft on the test stand");
     expect(html).toContain('aria-pressed="true"');
+  });
+});
+
+describe("пульт керування місією та спрайти модулів", () => {
+  it("рендерить PNG-спрайти 15 базових модулів, SVG-плейсхолдери для додаткових модулів без власного спрайта і векторні носії", () => {
+    const extendedCatalog: Catalog = {
+      ...SAMPLE_CATALOG,
+      modules: [...SAMPLE_CATALOG.modules, ...(extraCatalogData.modules as ModuleDef[])],
+    };
+    const extendedState = designPhase.init({ mission: SAMPLE_MISSION, catalog: extendedCatalog }, 1);
+    const html = renderToStaticMarkup(<DesignScreen state={extendedState} dispatch={() => undefined} editable />);
+
+    for (const id of ["eng-chem", "sol-m", "bat-m", "ant-m", "cam-m"]) {
+      expect(html).toContain(`assets/sprites/modules/${id}.png`);
+    }
+    for (const extraId of ["eng-mono", "sol-gaas", "ant-laser", "cam-swir"]) {
+      expect(html).not.toContain(`assets/sprites/modules/${extraId}.png`);
+    }
+    expect((html.match(/data-placeholder="module"/g) ?? []).length).toBe((extraCatalogData.modules as ModuleDef[]).length);
+    expect((html.match(/data-placeholder="launcher"/g) ?? []).length).toBe(SAMPLE_MISSION.launchers.length);
+    expect(html).not.toContain("ui.");
+  });
+
+  it("показує пульт керування місією з 5 вкладками, конвеєром виробництва, брифінгом і панеллю перевірки проєкту", () => {
+    const setup = campaignRoomSetup(marketData as unknown as Market, profiles);
+    const ids = profiles.map((a) => a.id);
+    let room: RoomState = newRoom("p1", "Commander", ids, 7);
+    room = stepRoom(room, "p1", { type: "ready", ready: true }, setup);
+    room = stepRoom(room, "p1", { type: "start" }, setup);
+    if (room.phase !== "play") throw new Error("Очікувався стан активної кампанії");
+
+    const designHtml = renderToStaticMarkup(<Turn state={room.consortium} dispatch={() => undefined} />);
+    expect(designHtml).toContain('data-testid="mission-control-console"');
+    expect(designHtml).toContain('role="tablist"');
+    expect(designHtml).toContain('data-testid="design-check-panel"');
+    expect(designHtml).toContain('data-testid="briefing"');
+    for (const label of ["Design", "Factory", "Ground segment", "Technology", "Research", "Launch", "Wait a turn"]) {
+      expect(designHtml).toContain(label);
+    }
+    expect(designHtml).not.toContain("ui.");
+
+    const factoryHtml = renderToStaticMarkup(<Turn state={room.consortium} dispatch={() => undefined} initialTab="factory" />);
+    expect(factoryHtml).toContain("Raw material");
+    expect(factoryHtml).toContain("Refining");
+    expect(factoryHtml).toContain("Finishing");
+    expect(factoryHtml).toContain("Module");
+    expect(factoryHtml).not.toContain("ui.");
+
+    for (const tab of ["ground", "trl", "research"] as const) {
+      const tabHtml = renderToStaticMarkup(<Turn state={room.consortium} dispatch={() => undefined} initialTab={tab} />);
+      expect(tabHtml).not.toContain("ui.");
+    }
   });
 });

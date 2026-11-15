@@ -5,11 +5,6 @@ import { t } from "../text";
 
 // Лобі: місця, бажані країни, підказка про монету. Один компонент для обох режимів.
 // local: усі гравці за одним екраном, екран керує кожним із них. Онлайн: керувати можна лише собою (meId).
-const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", accent: "#5ca8ff", gold: "#ffd166" };
-const button = {
-  padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent",
-  color: "inherit", cursor: "pointer", fontSize: 15,
-} as const;
 
 export interface LobbyProps {
   room: LobbyState;
@@ -22,8 +17,14 @@ export interface LobbyProps {
 }
 
 export function Lobby({ room, agencies, send, onStart, local = false, meId, scenarios }: LobbyProps) {
-  const nameOf = (id: string) => { const a = agencies.find((x) => x.id === id); return a ? t(a.nameKey) : id; };
-  const blockers = startBlockers(local ? { ...room, players: room.players.map((p) => ({ ...p, ready: true })) } : room, agencies.map((a) => a.id));
+  const nameOf = (id: string) => {
+    const a = agencies.find((x) => x.id === id);
+    return a ? t(a.nameKey) : id;
+  };
+  const blockers = startBlockers(
+    local ? { ...room, players: room.players.map((p) => ({ ...p, ready: true })) } : room,
+    agencies.map((a) => a.id),
+  );
   const wishCount = (agencyId: string) => room.players.filter((p) => p.wish === agencyId).length;
   const preview = assignAgencies(room);
   const canStart = blockers.length === 0 && (local || meId === room.hostId);
@@ -34,72 +35,145 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId, scen
   const isHost = local || meId === room.hostId;
 
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="lobby">
-      <h2 style={{ margin: 0 }}>{t("ui.lobby.title")}</h2>
-      <p style={{ color: C.dim, margin: 0 }}>{t(local ? "ui.lobby.hintLocal" : "ui.lobby.hintOnline")}</p>
-      {scenarios && (() => {
-        const current = scenarios[room.scenarioId ?? DEFAULT_SCENARIO];
-        return (
-          <div style={{ display: "grid", gap: 4 }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <strong>{t("ui.lobby.scenario")}</strong>
-              <select value={room.scenarioId ?? DEFAULT_SCENARIO} disabled={!isHost} aria-label={t("ui.lobby.scenario")}
-                onChange={(e) => send(room.hostId, { type: "scenario", scenarioId: e.target.value })}>
-                {Object.values(scenarios).map((s) => <option key={s.def.id} value={s.def.id}>{t(s.def.titleKey)}</option>)}
+    <div className="mc-panel" style={{ display: "grid", gap: 14, maxWidth: 820 }} data-testid="lobby">
+      <h2 style={{ margin: 0, color: "var(--c-cream)" }}>{t("ui.lobby.title")}</h2>
+      <p style={{ color: "var(--c-text-muted)", margin: 0, fontSize: 14 }}>
+        {t(local ? "ui.lobby.hintLocal" : "ui.lobby.hintOnline")}
+      </p>
+      {scenarios &&
+        (() => {
+          const current = scenarios[room.scenarioId ?? DEFAULT_SCENARIO];
+          return (
+            <div style={{ display: "grid", gap: 6 }}>
+              <label style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <strong className="mc-label">{t("ui.lobby.scenario")}</strong>
+                <select
+                  className="mc-select"
+                  value={room.scenarioId ?? DEFAULT_SCENARIO}
+                  disabled={!isHost}
+                  aria-label={t("ui.lobby.scenario")}
+                  onChange={(e) => send(room.hostId, { type: "scenario", scenarioId: e.target.value })}
+                >
+                  {Object.values(scenarios).map((s) => (
+                    <option key={s.def.id} value={s.def.id}>
+                      {t(s.def.titleKey)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {current && (
+                <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>
+                  {t(current.def.briefKey)} · {t(current.mission.titleKey)}
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
+      <div style={{ display: "grid", gap: 8 }}>
+        {room.players.map((p) => {
+          const mine = local || p.id === meId;
+          const got = preview.find((a) => a.playerId === p.id);
+          // Результат монети лишається таємницею до старту: інакше його можна обійти перевибором країни.
+          const contested = p.wish !== null && wishCount(p.wish) > 1;
+          return (
+            <div
+              key={p.id}
+              className="mc-stepper-box"
+              style={{ justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}
+            >
+              <strong style={{ minWidth: 110, color: "var(--c-cream)" }}>
+                {p.bot ? "🤖 " : ""}
+                {p.name}
+                {p.id === room.hostId ? " ★" : ""}
+              </strong>
+              <select
+                className="mc-select"
+                value={p.wish ?? ""}
+                disabled={!mine || p.bot}
+                aria-label={t("ui.lobby.wishFor", { player: p.name })}
+                onChange={(e) => send(p.id, { type: "wish", agencyId: e.target.value || null })}
+              >
+                <option value="">{t("ui.lobby.anyAgency")}</option>
+                {agencies
+                  .filter((a) => room.agencyIds.includes(a.id))
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {t(a.nameKey)}
+                    </option>
+                  ))}
               </select>
-            </label>
-            {current && <span style={{ color: C.dim, fontSize: 13 }}>{t(current.def.briefKey)} · {t(current.mission.titleKey)}</span>}
-          </div>
-        );
-      })()}
-      {room.players.map((p) => {
-        const mine = local || p.id === meId;
-        const got = preview.find((a) => a.playerId === p.id);
-        // Результат монети лишається таємницею до старту: інакше його можна обійти перевибором країни.
-        const contested = p.wish !== null && wishCount(p.wish) > 1;
-        return (
-          <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <strong style={{ minWidth: 110 }}>{p.bot ? "🤖 " : ""}{p.name}{p.id === room.hostId ? " ★" : ""}</strong>
-            <select value={p.wish ?? ""} disabled={!mine || p.bot} aria-label={t("ui.lobby.wishFor", { player: p.name })}
-              onChange={(e) => send(p.id, { type: "wish", agencyId: e.target.value || null })}>
-              <option value="">{t("ui.lobby.anyAgency")}</option>
-              {agencies.filter((a) => room.agencyIds.includes(a.id)).map((a) => <option key={a.id} value={a.id}>{t(a.nameKey)}</option>)}
-            </select>
-            {contested && (
-              <span style={{ color: C.gold, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <img src={resolveAssetUrl("assets/icons/ui/coins.svg")} alt="" width={14} height={14} />
-                {t("ui.lobby.coinPending")}
-              </span>
-            )}
-            {got && got.how === "free" && <span style={{ color: C.dim, fontSize: 13 }}>→ {nameOf(got.agencyId)}</span>}
-            {!local && !p.bot && <label><input type="checkbox" checked={p.ready} disabled={!mine} onChange={(e) => send(p.id, { type: "ready", ready: e.target.checked })} /> {t("ui.lobby.ready")}</label>}
-            {p.bot
-              ? isHost && <button style={button} onClick={() => send(room.hostId, { type: "removeBot", playerId: p.id })}>✕</button>
-              : mine && room.players.some((o) => o.id !== p.id && !o.bot) && <button style={button} onClick={() => send(p.id, { type: "leave" })}>✕</button>}
-          </div>
-        );
-      })}
+              {contested && (
+                <span style={{ color: "var(--c-orange)", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <img src={resolveAssetUrl("assets/icons/ui/coins.svg")} alt="" width={14} height={14} />
+                  {t("ui.lobby.coinPending")}
+                </span>
+              )}
+              {got && got.how === "free" && (
+                <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>→ {nameOf(got.agencyId)}</span>
+              )}
+              {!local && !p.bot && (
+                <label style={{ fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={p.ready}
+                    disabled={!mine}
+                    onChange={(e) => send(p.id, { type: "ready", ready: e.target.checked })}
+                  />{" "}
+                  {t("ui.lobby.ready")}
+                </label>
+              )}
+              {p.bot
+                ? isHost && (
+                    <button
+                      type="button"
+                      className="mc-btn mc-btn-sm"
+                      onClick={() => send(room.hostId, { type: "removeBot", playerId: p.id })}
+                    >
+                      ✕
+                    </button>
+                  )
+                : mine &&
+                  room.players.some((o) => o.id !== p.id && !o.bot) && (
+                    <button type="button" className="mc-btn mc-btn-sm" onClick={() => send(p.id, { type: "leave" })}>
+                      ✕
+                    </button>
+                  )}
+            </div>
+          );
+        })}
+      </div>
+
       {room.agencyIds.some((id) => wishCount(id) > 1) && (
-        <div style={{ color: C.gold, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ color: "var(--c-orange)", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
           <img src={resolveAssetUrl("assets/icons/ui/coins.svg")} alt="" width={14} height={14} />
           {t("ui.lobby.coinHint")}
         </div>
       )}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {local && (
-          <button style={button} disabled={full} onClick={() => send(nextId, { type: "join", name: `Player ${nextN}` })}>
+          <button
+            type="button"
+            className="mc-btn"
+            disabled={full}
+            onClick={() => send(nextId, { type: "join", name: `Player ${nextN}` })}
+          >
             + {t("ui.lobby.addPlayer")}
           </button>
         )}
         {isHost && (
-          <button style={button} disabled={full} onClick={() => send(room.hostId, { type: "addBot" })}>
+          <button type="button" className="mc-btn" disabled={full} onClick={() => send(room.hostId, { type: "addBot" })}>
             + 🤖 {t("ui.lobby.addBot")}
           </button>
         )}
       </div>
-      {blockers.map((b) => <div key={b} style={{ color: C.dim, fontSize: 13 }}>{t(`ui.${b}`)}</div>)}
+      {blockers.map((b) => (
+        <div key={b} style={{ color: "var(--c-text-dim)", fontSize: 13 }}>
+          {t(`ui.${b}`)}
+        </div>
+      ))}
       <div>
-        <button style={{ ...button, borderColor: C.accent, opacity: canStart ? 1 : 0.5 }} disabled={!canStart} onClick={onStart}>
+        <button type="button" className="mc-btn mc-btn-primary" disabled={!canStart} onClick={onStart}>
           {t("ui.setup.start")}
         </button>
       </div>

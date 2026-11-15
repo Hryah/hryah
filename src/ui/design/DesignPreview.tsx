@@ -4,8 +4,6 @@ import { CompositeSpacecraftSvg, templateRegistry } from "../graphics";
 import { t } from "../text";
 import { DesignStage } from "./DesignStage";
 
-const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", accent: "#5ca8ff", activeBg: "#1b2644" };
-
 export type BuiltinDesignPreviewMode = "stage" | "svg" | "blueprint";
 export type DesignPreviewMode = BuiltinDesignPreviewMode | (string & {});
 
@@ -102,9 +100,9 @@ export function DesignPreview({
   }, [isStageActive, stageMounted]);
 
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 12 }}>
+    <div className="mc-panel" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ color: C.dim, fontSize: 12 }}>{t("ui.designPreview.title")}</span>
+        <span className="mc-label">{t("ui.designPreview.title")}</span>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {views.map((view) => {
             const selected = view.id === activeView.id;
@@ -114,16 +112,7 @@ export function DesignPreview({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => selectMode(view.id)}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                  border: `1px solid ${selected ? C.accent : C.line}`,
-                  background: selected ? C.activeBg : "transparent",
-                  color: selected ? C.accent : C.dim,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: selected ? 700 : 400,
-                }}
+                className={`mc-btn mc-btn-sm ${selected ? "mc-btn-selected" : ""}`}
               >
                 {view.label}
               </button>

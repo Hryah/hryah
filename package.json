@@ -10,7 +10,7 @@
     "test": "vitest run",
     "rooms": "vite build -c vite.server.config.ts --outDir dist/server && node dist/server/rooms.mjs --channel=dev",
     "assets:prepare": "node scripts/astronaut/prepare.mjs && node scripts/room-assets.mjs",
-    "assets:check": "node art/astronaut/validate-sources.mjs && node scripts/astronaut/prepare.mjs --check && node scripts/room-assets.mjs --check && node --test scripts/astronaut/prepare.test.mjs",
+    "assets:check": "node art/astronaut/validate-sources.mjs && node scripts/astronaut/prepare.mjs --check && node scripts/room-assets.mjs --check && node scripts/module-sprites-check.mjs && node --test scripts/astronaut/prepare.test.mjs",
     "pretest": "npm run assets:check"
   },
   "dependencies": {
