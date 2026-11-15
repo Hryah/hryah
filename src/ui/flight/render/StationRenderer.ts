@@ -49,9 +49,90 @@ const TERMINAL_BADGE_LABELS: Record<string, string> = {
   DOCKING_1: "⚓ ШЛЮЗ ПІВНІЧ",
   DOCKING_2: "⚓ ШЛЮЗ СХІД",
   DOCKING_3: "⚓ ШЛЮЗ ПІВДЕНЬ",
-  OXYGEN: "🫧 РЕГЕНЕРАЦІЯ O₂",
+  OXYGEN: "🫧 КИСЕНЬ O₂",
   THERMAL: "🌡 ТЕРМОКОНТУР",
 };
+
+export function getTerminalBadgeAnchor(term: TerminalNode): {
+  cx: number;
+  cy: number;
+  maxWidth: number;
+} {
+  const cw = term.visualPreset.chassisWidth;
+  const ch = term.visualPreset.chassisHeight;
+
+  if (term.id === "DOCKING_1") {
+    // Нижче шасі DOCKING_1 по центру проходу, без перекриття екрану й H_HUB_NORTH
+    return {
+      cx: term.pos.x,
+      cy: term.pos.y + ch * 0.5 + 20,
+      maxWidth: 160,
+    };
+  }
+  if (term.id === "SOLAR") {
+    // Під поручнем H_SOLAR_TERM з чистим відступом від консолі, космонавта й перешкод
+    return {
+      cx: term.pos.x,
+      cy: term.pos.y + ch * 0.5 + 60,
+      maxWidth: 164,
+    };
+  }
+  if (term.id === "DOCKING_2") {
+    // Над вертикальною консоллю без накладання на поручень H_HUB_EAST і центральний ілюмінатор
+    return {
+      cx: term.pos.x,
+      cy: term.pos.y - cw * 0.5 - 22,
+      maxWidth: 152,
+    };
+  }
+  if (term.id === "OXYGEN") {
+    // Над консоллю життєзабезпечення зсунуто вліво від H_OXYGEN_TERM та ілюмінатора
+    return {
+      cx: term.pos.x - 20,
+      cy: term.pos.y - cw * 0.5 - 22,
+      maxWidth: 152,
+    };
+  }
+  if (term.id === "THERMAL") {
+    // Під термоконсоллю у вільному нижньому куті відсіку
+    return {
+      cx: term.pos.x - 10,
+      cy: term.pos.y + cw * 0.5 + 24,
+      maxWidth: 152,
+    };
+  }
+  if (term.id === "DOCKING_3") {
+    return {
+      cx: term.pos.x - 40,
+      cy: term.pos.y - 68,
+      maxWidth: 152,
+    };
+  }
+  return {
+    cx: term.pos.x,
+    cy: term.pos.y - ch * 0.5 - 22,
+    maxWidth: 152,
+  };
+}
+
+function getModuleWatermarkPos(mod: ModuleBlueprint): { x: number; y: number } {
+  const cx = mod.worldPos.x + mod.size.width * 0.5;
+  const wy = mod.worldPos.y;
+  switch (mod.id) {
+    case "MOD_HABITAT":
+      return { x: cx, y: wy + 148 };
+    case "MOD_INTERSECTION":
+      return { x: cx, y: wy + 228 };
+    case "MOD_VERTICAL_LAB":
+      return { x: cx, y: wy + 496 };
+    case "MOD_THERMAL_BAY":
+      return { x: cx, y: wy + 422 };
+    case "MOD_COMMAND":
+      return { x: cx, y: wy + 398 };
+    default:
+      return { x: cx, y: wy + mod.size.height * 0.5 };
+  }
+}
 
 export class StationRenderer {
   public render(
@@ -64,46 +145,8 @@ export class StationRenderer {
   ): void {
     ctx.save();
 
-    // 1. Фон глибокого космосу з орбітальним світінням Землі знизу
-    const spaceGrad = ctx.createLinearGradient(0, 0, 0, viewportH);
-    spaceGrad.addColorStop(0, "#02040a");
-    spaceGrad.addColorStop(0.65, "#050a17");
-    spaceGrad.addColorStop(1, "#091933");
-    ctx.fillStyle = spaceGrad;
-    ctx.fillRect(0, 0, viewportW, viewportH);
-
-    // Тонке атмосферне сяйво лімба Землі внизу екрана
-    const limbGrad = ctx.createRadialGradient(
-      viewportW * 0.5,
-      viewportH * 1.45,
-      viewportH * 0.3,
-      viewportW * 0.5,
-      viewportH * 1.45,
-      viewportH * 1.15,
-    );
-    limbGrad.addColorStop(0, "rgba(56, 189, 248, 0.22)");
-    limbGrad.addColorStop(0.45, "rgba(14, 116, 144, 0.08)");
-    limbGrad.addColorStop(1, "rgba(2, 4, 10, 0)");
-    ctx.fillStyle = limbGrad;
-    ctx.fillRect(0, 0, viewportW, viewportH);
-
-    // 2. Багатошарове зоряне небо на паралаксі
-    for (let i = 0; i < STARFIELD.length; i++) {
-      const star = STARFIELD[i]!;
-      const parallax = 0.06 * star.layer;
-      const sx =
-        (((star.x - camera.x * parallax) % viewportW) + viewportW) % viewportW;
-      const sy =
-        (((star.y - camera.y * parallax) % viewportH) + viewportH) % viewportH;
-      const twinkle =
-        0.75 + 0.25 * Math.sin(state.timeElapsedS * 2.2 + i * 1.7);
-      ctx.fillStyle = star.tint;
-      ctx.globalAlpha = star.alpha * twinkle;
-      ctx.beginPath();
-      ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
+    // 1–2. Єдиний космічний фон із паралаксом зірок та єдиною планетою Земля
+    this.renderCosmicSpaceLayer(ctx, state, camera, viewportW, viewportH);
 
     // 3. World Space через RoomCameraController
     ctx.save();
@@ -151,7 +194,14 @@ export class StationRenderer {
       ctx.save();
       ctx.globalAlpha = isFocus ? 1.0 : 0.28;
 
-      this.renderModuleOctagonHull(ctx, mod, state);
+      this.renderModuleOctagonHull(
+        ctx,
+        mod,
+        state,
+        camera,
+        viewportW,
+        viewportH,
+      );
 
       const walls = buildOctagonWallsFromChamfer(mod, completedDockings);
       this.renderModuleWallsAndDoors(ctx, mod, walls, state.timeElapsedS);
@@ -224,10 +274,164 @@ export class StationRenderer {
     ctx.restore();
   }
 
+  private renderCosmicSpaceLayer(
+    ctx: CanvasRenderingContext2D,
+    state: FlightState,
+    camera: Camera2D,
+    viewportW: number,
+    viewportH: number,
+  ): void {
+    ctx.save();
+
+    // 1. Фон глибокого космосу
+    const spaceGrad = ctx.createLinearGradient(0, 0, 0, viewportH);
+    spaceGrad.addColorStop(0, "#02040a");
+    spaceGrad.addColorStop(0.65, "#050a17");
+    spaceGrad.addColorStop(1, "#091933");
+    ctx.fillStyle = spaceGrad;
+    ctx.fillRect(0, 0, viewportW, viewportH);
+
+    // 2. Багатошарове зоряне небо на паралаксі
+    const baseAlpha = ctx.globalAlpha;
+    for (let i = 0; i < STARFIELD.length; i++) {
+      const star = STARFIELD[i]!;
+      const parallax = 0.06 * star.layer;
+      const sx =
+        (((star.x - camera.x * parallax) % viewportW) + viewportW) % viewportW;
+      const sy =
+        (((star.y - camera.y * parallax) % viewportH) + viewportH) % viewportH;
+      const twinkle =
+        0.75 + 0.25 * Math.sin(state.timeElapsedS * 2.2 + i * 1.7);
+      ctx.fillStyle = star.tint;
+      ctx.globalAlpha = baseAlpha * star.alpha * twinkle;
+      ctx.beginPath();
+      ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = baseAlpha;
+
+    // 3. Єдина планета Земля у фоновому космічному шарі з паралаксом
+    const earthR = Math.max(200, Math.min(viewportW, viewportH) * 0.4);
+    const earthCx = viewportW * 0.44 - (camera.x - 460) * 0.1;
+    const earthCy = viewportH * 0.7 - (camera.y - 240) * 0.1;
+
+    // Зовнішнє атмосферне сяйво лімба Землі
+    const atmoGrad = ctx.createRadialGradient(
+      earthCx,
+      earthCy,
+      earthR * 0.88,
+      earthCx,
+      earthCy,
+      earthR * 1.24,
+    );
+    atmoGrad.addColorStop(0, "rgba(56, 189, 248, 0.34)");
+    atmoGrad.addColorStop(0.55, "rgba(14, 116, 144, 0.12)");
+    atmoGrad.addColorStop(1, "rgba(2, 4, 10, 0)");
+    ctx.fillStyle = atmoGrad;
+    ctx.beginPath();
+    ctx.arc(earthCx, earthCy, earthR * 1.24, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Диск єдиної Землі
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(earthCx, earthCy, earthR, 0, Math.PI * 2);
+    ctx.clip();
+
+    const oceanGrad = ctx.createRadialGradient(
+      earthCx - earthR * 0.28,
+      earthCy - earthR * 0.32,
+      earthR * 0.12,
+      earthCx,
+      earthCy,
+      earthR,
+    );
+    oceanGrad.addColorStop(0, "#0284c7");
+    oceanGrad.addColorStop(0.68, "#0369a1");
+    oceanGrad.addColorStop(1, "#082f49");
+    ctx.fillStyle = oceanGrad;
+    ctx.fillRect(
+      earthCx - earthR,
+      earthCy - earthR,
+      earthR * 2,
+      earthR * 2,
+    );
+
+    const earthImg = flightAssetCache.getImage("assets/bodies/earth-globe.svg");
+    if (earthImg) {
+      ctx.save();
+      ctx.globalAlpha = 0.94;
+      const globeSize = earthR * 2.14;
+      ctx.drawImage(
+        earthImg,
+        earthCx - globeSize * 0.5,
+        earthCy - globeSize * 0.5,
+        globeSize,
+        globeSize,
+      );
+      ctx.restore();
+    }
+
+    // М'які орбітальні хмари
+    const cloudDrift = (state.timeElapsedS * 6) % (earthR * 1.6);
+    ctx.fillStyle = "rgba(241, 245, 249, 0.26)";
+    ctx.beginPath();
+    ctx.ellipse(
+      earthCx - earthR * 0.25 + cloudDrift * 0.25,
+      earthCy - earthR * 0.22,
+      earthR * 0.46,
+      earthR * 0.11,
+      -0.14,
+      0,
+      Math.PI * 2,
+    );
+    ctx.ellipse(
+      earthCx + earthR * 0.22 - cloudDrift * 0.2,
+      earthCy + earthR * 0.14,
+      earthR * 0.38,
+      earthR * 0.09,
+      0.1,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+
+    // Нічний термінатор знизу-праворуч для об'єму планети
+    const termGrad = ctx.createLinearGradient(
+      earthCx - earthR * 0.55,
+      earthCy - earthR * 0.55,
+      earthCx + earthR * 0.85,
+      earthCy + earthR * 0.85,
+    );
+    termGrad.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+    termGrad.addColorStop(0.55, "rgba(2, 6, 23, 0)");
+    termGrad.addColorStop(1, "rgba(2, 6, 23, 0.72)");
+    ctx.fillStyle = termGrad;
+    ctx.fillRect(
+      earthCx - earthR,
+      earthCy - earthR,
+      earthR * 2,
+      earthR * 2,
+    );
+    ctx.restore();
+
+    // Тонкий блакитний обідок атмосфери
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.52)";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(earthCx, earthCy, earthR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   private renderModuleOctagonHull(
     ctx: CanvasRenderingContext2D,
     mod: ModuleBlueprint,
     state: FlightState,
+    camera: Camera2D,
+    viewportW: number,
+    viewportH: number,
   ): void {
     const poly = getModuleOctagonPolygon(mod);
     const wx = mod.worldPos.x;
@@ -348,12 +552,29 @@ export class StationRenderer {
     ctx.closePath();
     ctx.stroke();
 
-    // Ілюмінатори з видом на орбіту Землі та хмари, що рухаються
+    // Ілюмінатори як чисті маски (ctx.clip()) у єдиний космічний фон із зірками та паралаксом Землі
     for (const port of mod.theme.portholes) {
       const px = wx + port.x;
       const py = wy + port.y;
-      this.renderOrbitalPorthole(ctx, px, py, port.r, state.timeElapsedS);
+      this.renderOrbitalPorthole(
+        ctx,
+        px,
+        py,
+        port.r,
+        state,
+        camera,
+        viewportW,
+        viewportH,
+      );
     }
+
+    // Фоновий водяний знак модуля у чистій центральній зоні підлоги (alpha: 0.16, без накладання на ручки)
+    const wmPos = getModuleWatermarkPos(mod);
+    const cleanWatermarkTitle = mod.title.replace(/\s*\([^)]*\)\s*$/, "");
+    ctx.fillStyle = "rgba(148, 163, 184, 0.16)";
+    ctx.font = "700 12px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(cleanWatermarkTitle, wmPos.x, wmPos.y, Math.max(180, w - 130));
 
     // Лампи денного світла на стелі відсіку (м'які світлові плями)
     const lightBoost = Math.max(0.25, state.energyPct / 100);
@@ -527,12 +748,6 @@ export class StationRenderer {
       }
     }
 
-    // Технічне трафаретне маркування назви відсіку на обшивці
-    ctx.fillStyle = "rgba(148, 163, 184, 0.26)";
-    ctx.font = "700 13px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(mod.title, wx + w * 0.5, wy + 30);
-
     // Підсвітка порогів відкритих шлюзів (DoorTransitionZone) + напрямні шеврони
     for (const door of mod.doors) {
       if (door.unlockedAtDockingWave <= state.openedSeals.length) {
@@ -576,7 +791,10 @@ export class StationRenderer {
     px: number,
     py: number,
     r: number,
-    timeElapsedS: number,
+    state: FlightState,
+    camera: Camera2D,
+    viewportW: number,
+    viewportH: number,
   ): void {
     ctx.save();
 
@@ -603,66 +821,30 @@ export class StationRenderer {
       ctx.fill();
     }
 
-    // Скло ілюмінатора
+    // Кругла маска вікна у єдиний космічний фон із зірками та паралаксом Землі
     ctx.beginPath();
     ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.clip();
 
-    const skyGrad = ctx.createLinearGradient(px, py - r, px, py + r);
-    skyGrad.addColorStop(0, "#020617");
-    skyGrad.addColorStop(0.55, "#082f49");
-    skyGrad.addColorStop(1, "#0284c7");
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(px - r, py - r, r * 2, r * 2);
-
-    // Кривий горизонт Землі з векторною мапою (earth-map.svg) та дрейфуючими хмарами
-    const cloudShift = (timeElapsedS * 6) % (r * 2);
-    const earthImg = flightAssetCache.getImage("assets/bodies/earth-map.svg");
-
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(px - r * 0.2, py + r * 1.25, r * 1.15, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.fillStyle = "#0369a1";
-    ctx.fillRect(px - r * 1.5, py, r * 3, r * 2.5);
-
-    if (earthImg) {
-      const shiftX = (timeElapsedS * 4) % (r * 2.4);
-      ctx.drawImage(
-        earthImg,
-        px - r * 1.6 - shiftX,
-        py + r * 0.08,
-        r * 4.8,
-        r * 2.4,
-      );
-    }
-
-    // Напівпрозорі векторні хмари поверх лімба
-    const cShiftX = (timeElapsedS * 7) % (r * 2.2);
-    ctx.fillStyle = "rgba(241, 245, 249, 0.35)";
-    ctx.beginPath();
-    ctx.ellipse(px - cShiftX * 0.4, py + r * 0.35, r * 0.55, r * 0.14, 0.12, 0, Math.PI * 2);
-    ctx.ellipse(px + r * 0.6 - cShiftX * 0.5, py + r * 0.55, r * 0.45, r * 0.11, -0.1, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(camera.x, camera.y);
+    ctx.scale(1 / camera.zoom, 1 / camera.zoom);
+    ctx.translate(
+      -(viewportW * 0.5 + camera.shakeOffsetX),
+      -(viewportH * 0.5 + camera.shakeOffsetY),
+    );
+    this.renderCosmicSpaceLayer(ctx, state, camera, viewportW, viewportH);
     ctx.restore();
 
-    // Атмосферне свічення лімба Землі
-    ctx.strokeStyle = "rgba(125, 211, 252, 0.65)";
+    // Внутрішня фаска та відблиск бронескла
+    ctx.strokeStyle = "rgba(15, 23, 42, 0.72)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(
-      px - r * 0.2 + cloudShift * 0.05,
-      py + r * 1.22,
-      r * 1.13,
-      -Math.PI * 0.78,
-      -Math.PI * 0.22,
-    );
+    ctx.arc(px, py, r - 1, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Відблиск скла
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.32)";
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.arc(px, py, r * 0.82, -Math.PI * 0.78, -Math.PI * 0.28);
     ctx.stroke();
@@ -827,9 +1009,9 @@ export class StationRenderer {
       ctx.stroke();
     }
 
-    // М'яке світлове гало + обертовий промінь проблискового маячка під час тривоги
+    // Компактне світлове гало + стриманий промінь маячка під час тривоги без перекриття сусідніх об'єктів
     if (isAlarm) {
-      const haloR = cw * 1.3;
+      const haloR = cw * 0.85;
       const grad = ctx.createRadialGradient(
         term.pos.x,
         term.pos.y,
@@ -839,10 +1021,10 @@ export class StationRenderer {
         haloR,
       );
       if (term.state === "CRITICAL") {
-        grad.addColorStop(0, `rgba(239, 68, 68, ${0.32 + pulse * 0.28})`);
+        grad.addColorStop(0, `rgba(239, 68, 68, ${0.22 + pulse * 0.18})`);
         grad.addColorStop(1, "rgba(239, 68, 68, 0)");
       } else {
-        grad.addColorStop(0, `rgba(245, 158, 11, ${0.24 + pulse * 0.22})`);
+        grad.addColorStop(0, `rgba(245, 158, 11, ${0.17 + pulse * 0.14})`);
         grad.addColorStop(1, "rgba(245, 158, 11, 0)");
       }
       ctx.fillStyle = grad;
@@ -857,36 +1039,32 @@ export class StationRenderer {
       ctx.rotate(beaconAngle);
       ctx.fillStyle =
         term.state === "CRITICAL"
-          ? "rgba(239, 68, 68, 0.16)"
-          : "rgba(245, 158, 11, 0.13)";
+          ? "rgba(239, 68, 68, 0.1)"
+          : "rgba(245, 158, 11, 0.08)";
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.arc(0, 0, haloR * 1.05, -0.35, 0.35);
+      ctx.arc(0, 0, haloR * 1.02, -0.32, 0.32);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.arc(0, 0, haloR * 1.05, Math.PI - 0.35, Math.PI + 0.35);
+      ctx.arc(0, 0, haloR * 1.02, Math.PI - 0.32, Math.PI + 0.32);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
     }
 
-    // Корпус комп'ютерної стійки з урахуванням mountAngle + трапецієподібна ніша в обшивці (як на скетчі)
+    // Корпус комп'ютерної стійки з урахуванням mountAngle + акуратна пристінна рамка
     ctx.save();
     ctx.translate(term.pos.x, term.pos.y);
     ctx.rotate((term.mountAngle * Math.PI) / 180);
 
-    // Трапецієподібна технічна ніша в стіні модуля (Alcove зі скетчу)
+    // Компактна пристінна монтажна рамка без виступів за контур консолі
     ctx.fillStyle = "rgba(7, 12, 24, 0.88)";
     ctx.strokeStyle = isAnchoredAtThisConsole ? "#38bdf8" : "#475569";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-cw * 0.68, ch * 0.56);
-    ctx.lineTo(-cw * 0.54, -ch * 0.64);
-    ctx.lineTo(cw * 0.54, -ch * 0.64);
-    ctx.lineTo(cw * 0.68, ch * 0.56);
-    ctx.closePath();
+    ctx.roundRect(-cw * 0.54, -ch * 0.54, cw * 1.08, ch * 1.08, 9);
     ctx.fill();
     ctx.stroke();
 
@@ -926,28 +1104,6 @@ export class StationRenderer {
       ctx.fill();
     }
 
-    // Візуальна тарілка радара для Docking комп'ютера (hasRadarDish)
-    if (preset.hasRadarDish) {
-      const dishImg = flightAssetCache.getImage(
-        "assets/icons/station/radar-dish.svg",
-      );
-      if (dishImg) {
-        ctx.drawImage(dishImg, -cw * 0.48, -ch * 0.5 - 22, 24, 24);
-      } else {
-        ctx.strokeStyle = "#cbd5e1";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(
-          -cw * 0.3,
-          -ch * 0.5 - 10,
-          12,
-          Math.PI * 0.15,
-          Math.PI * 0.85,
-        );
-        ctx.stroke();
-      }
-    }
-
     // Тінь під шафою консолі
     ctx.fillStyle = "rgba(2, 6, 16, 0.7)";
     ctx.beginPath();
@@ -962,6 +1118,12 @@ export class StationRenderer {
     ctx.roundRect(-cw * 0.5, -ch * 0.5, cw, ch, 7);
     ctx.fill();
     ctx.stroke();
+
+    // Обрізаємо внутрішні прилади та радар строго по внутрішніх межах шасі консолі
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(-cw * 0.5 + 2, -ch * 0.5 + 2, cw - 4, ch - 4, 5);
+    ctx.clip();
 
     // 2D SVG темплейт термінала в корпусі
     const compSprite = flightAssetCache.getImage(
@@ -1000,12 +1162,15 @@ export class StationRenderer {
       const unitImg = linkedTemplate.sprite2d?.url
         ? flightAssetCache.getImage(linkedTemplate.sprite2d.url)
         : null;
+      ctx.save();
+      ctx.translate(-cw * 0.27, -ch * 0.11);
+      ctx.rotate((-term.mountAngle * Math.PI) / 180);
       if (unitImg) {
-        const iconSize = mh * 0.76;
+        const iconSize = mh * 0.64;
         ctx.drawImage(
           unitImg,
-          -cw * 0.28 - iconSize * 0.5,
-          -ch * 0.11 - iconSize * 0.5,
+          -iconSize * 0.5,
+          -iconSize * 0.5,
           iconSize,
           iconSize,
         );
@@ -1013,12 +1178,13 @@ export class StationRenderer {
         flightAssetCache.drawBlueprintShapeOnCanvas(
           ctx,
           linkedTemplate.blueprint,
-          -cw * 0.28,
-          -ch * 0.11,
-          mh * 0.68,
+          0,
+          0,
+          mh * 0.58,
           isAlarm,
         );
       }
+      ctx.restore();
     }
 
     // Жива телеметрія на екрані монітора
@@ -1034,69 +1200,159 @@ export class StationRenderer {
     }
     ctx.stroke();
 
-    // Світлодіоди стану праворуч від монітора
+    // Приладовий відсік праворуч: радар стикування строго всередині шасі + світлодіоди стану
     const leds = [
       isAlarm ? "#ef4444" : "#10b981",
       term.state === "WARNING" ? "#f59e0b" : "#38bdf8",
       "#94a3b8",
     ];
-    for (let i = 0; i < leds.length; i++) {
-      ctx.fillStyle = leds[i]!;
+    if (preset.hasRadarDish) {
+      const rcx = cw * 0.34;
+      const rcy = -ch * 0.17;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(cw * 0.32, -ch * 0.26 + i * 10, 3, 0, Math.PI * 2);
+      ctx.roundRect(rcx - 10, rcy - 10, 20, 20, 4);
       ctx.fill();
+      ctx.stroke();
+
+      const dishImg = flightAssetCache.getImage(
+        "assets/icons/station/radar-dish.svg",
+      );
+      ctx.save();
+      ctx.translate(rcx, rcy);
+      ctx.rotate(-(term.mountAngle * Math.PI) / 180);
+      if (dishImg) {
+        ctx.drawImage(dishImg, -8, -8, 16, 16);
+      } else {
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(0, 2, 6, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      for (let i = 0; i < leds.length; i++) {
+        ctx.fillStyle = leds[i]!;
+        ctx.beginPath();
+        ctx.arc(cw * 0.27 + i * 7, ch * 0.09, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      for (let i = 0; i < leds.length; i++) {
+        ctx.fillStyle = leds[i]!;
+        ctx.beginPath();
+        ctx.arc(cw * 0.32, -ch * 0.26 + i * 10, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
-    // Клавіатурна дека з підсвіткою клавіш внизу стійки + код підсистеми з templateRegistry
+    // Клавіатурна дека внизу стійки
     ctx.fillStyle = "#0f172a";
     ctx.beginPath();
     ctx.roundRect(-cw * 0.42, ch * 0.22, cw * 0.84, ch * 0.18, 3);
     ctx.fill();
-    if (linkedTemplate) {
+
+    // Код підсистеми (SOL-M, ENG-CHEM тощо) для горизонтальних стійок з компенсацією повороту 180°
+    const mountRad = (term.mountAngle * Math.PI) / 180;
+    const isHorizontalMount = Math.abs(Math.sin(mountRad)) < 0.2;
+    if (linkedTemplate && isHorizontalMount) {
+      ctx.save();
+      ctx.translate(0, ch * 0.31);
+      ctx.rotate(-mountRad);
       ctx.fillStyle = "#7dd3fc";
-      ctx.font = "700 7px monospace";
+      ctx.font = "700 7.5px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(linkedTemplate.blueprint.label, 0, ch * 0.34);
+      ctx.textBaseline = "middle";
+      ctx.fillText(linkedTemplate.blueprint.label, 0, 0.5);
+      ctx.restore();
     }
 
     ctx.restore();
+    ctx.restore();
 
-    // Голографічний бейдж над консоллю (завжди горизонтальний для читабельності)
+    // Для вертикальних і кутових консолей — горизонтальний шильдик підсистеми акуратно на верхній кромці шасі
+    if (linkedTemplate && !isHorizontalMount) {
+      const worldHalfH =
+        Math.abs(Math.cos(mountRad)) * ch * 0.5 +
+        Math.abs(Math.sin(mountRad)) * cw * 0.5;
+      const tagW = 44;
+      const tagH = 11;
+      const tagX = term.pos.x - tagW * 0.5;
+      const tagY = term.pos.y - worldHalfH + 3;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
+      ctx.strokeStyle = "rgba(125, 211, 252, 0.45)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(tagX, tagY, tagW, tagH, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#7dd3fc";
+      ctx.font = "700 7.5px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        linkedTemplate.blueprint.label,
+        term.pos.x,
+        tagY + tagH * 0.5 + 0.5,
+        tagW - 4,
+      );
+      ctx.textBaseline = "alphabetic";
+    }
+
+    // Єдиний компактний голографічний бейдж (макс. висота 24px, без накладання на ручку/екран)
     const labelTitle = TERMINAL_BADGE_LABELS[term.id] ?? term.id;
-    const badgeText = isAlarm
-      ? `[${labelTitle}: ${Math.ceil(term.urgencyTimer)}с]`
+    const baseText = isAlarm
+      ? `${labelTitle} · ${Math.ceil(term.urgencyTimer)}с`
       : term.state === "COMPLETED"
-        ? `[✓ ${labelTitle}]`
-        : `[${labelTitle}]`;
+        ? `✓ ${labelTitle}`
+        : labelTitle;
+    const badgeText = isAnchoredAtThisConsole
+      ? `[E/КЛІК] · ${baseText}`
+      : baseText;
 
-    ctx.font = "700 11px monospace";
+    const anchor = getTerminalBadgeAnchor(term);
+    ctx.font = "700 9.5px monospace";
     const textW = ctx.measureText(badgeText).width;
-    const bw = textW + 18;
-    const bh = 22;
-    const bx = term.pos.x - bw * 0.5;
-    const by = term.pos.y - ch * 0.5 - 34;
+    const bw = Math.min(anchor.maxWidth, Math.max(76, textW + 14));
+    const bh = 24;
+    const bx = anchor.cx - bw * 0.5;
+    const by = anchor.cy - bh * 0.5;
 
     ctx.fillStyle = isAlarm
       ? term.state === "CRITICAL"
-        ? "rgba(127, 29, 29, 0.94)"
-        : "rgba(120, 53, 15, 0.94)"
-      : "rgba(15, 23, 42, 0.88)";
-    ctx.strokeStyle = isAlarm
-      ? term.state === "CRITICAL"
-        ? "#ef4444"
-        : "#f59e0b"
+        ? isAnchoredAtThisConsole
+          ? "rgba(185, 28, 28, 0.96)"
+          : "rgba(127, 29, 29, 0.94)"
+        : isAnchoredAtThisConsole
+          ? "rgba(217, 72, 15, 0.96)"
+          : "rgba(120, 53, 15, 0.94)"
       : isAnchoredAtThisConsole
+        ? "rgba(3, 105, 161, 0.95)"
+        : "rgba(15, 23, 42, 0.88)";
+    ctx.strokeStyle = isAnchoredAtThisConsole
+      ? term.state === "COMPLETED"
         ? "#3ddc84"
+        : "#ffffff"
+      : isAlarm
+        ? term.state === "CRITICAL"
+          ? "#ef4444"
+          : "#f59e0b"
         : "rgba(56, 189, 248, 0.45)";
-    ctx.lineWidth = isAnchoredAtThisConsole ? 2 : 1.5;
+    ctx.lineWidth = isAnchoredAtThisConsole ? 1.8 : 1.3;
     ctx.beginPath();
     ctx.roundRect(bx, by, bw, bh, 5);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = isAlarm ? "#ffffff" : "#bae6fd";
+    ctx.fillStyle = isAlarm || isAnchoredAtThisConsole ? "#ffffff" : "#bae6fd";
     ctx.textAlign = "center";
-    ctx.fillText(badgeText, term.pos.x, by + 15);
+    ctx.textBaseline = "middle";
+    ctx.fillText(badgeText, anchor.cx, by + bh * 0.5 + 0.5, bw - 10);
+    ctx.textBaseline = "alphabetic";
 
     ctx.restore();
   }
@@ -1452,132 +1708,226 @@ export class StationRenderer {
         ? Math.sin(state.timeElapsedS * 3.2) * 1.8
         : 0;
 
+    const anchoredHandle =
+      astro.state === "ANCHORED" && astro.anchoredHandleId
+        ? (ALL_GRAB_HANDLES.find((h) => h.id === astro.anchoredHandleId) ?? null)
+        : null;
+    const isFrontView = astro.state === "FLYING" || astro.state === "STUNNED";
+
     ctx.save();
-    ctx.rotate(astro.angle);
-    ctx.translate(idleFloat - crouchRatio * 5, 0);
 
-    // Тінь під космонавтом
-    ctx.fillStyle = "rgba(2, 6, 16, 0.45)";
-    ctx.beginPath();
-    ctx.ellipse(0, 4, 18, 13, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (isFrontView) {
+      // Вид спереду (Front View) у вільному польоті та при запамороченні, з нахилом від вектора (vx, vy)
+      const vxRatio = Math.max(-1, Math.min(1, astro.vel.vx / 380));
+      const vyRatio = Math.max(-1, Math.min(1, astro.vel.vy / 480));
+      const stunnedWobble =
+        astro.state === "STUNNED" ? Math.sin(state.timeElapsedS * 11) * 0.16 : 0;
+      const bodyTilt =
+        vxRatio * 0.24 +
+        vyRatio * (astro.vel.vx >= 0 ? 0.05 : -0.05) +
+        stunnedWobble;
+      ctx.rotate(bodyTilt);
 
-    const astroSpritePath =
-      astro.state === "STUNNED"
-        ? "assets/templates/flight/astro-stun.svg"
-        : astro.state === "ANCHORED" && astro.slingshot.isDragging
-          ? "assets/templates/flight/astro-pull.svg"
-          : astro.state === "FLYING"
-            ? "assets/templates/flight/astro-fly.svg"
-            : "assets/templates/flight/astro-idle.svg";
-    const astroImg = flightAssetCache.getImage(astroSpritePath);
+      // Тінь під космонавтом
+      ctx.fillStyle = "rgba(2, 6, 16, 0.42)";
+      ctx.beginPath();
+      ctx.ellipse(0, 6, 16, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    if (astroImg) {
-      ctx.save();
-      if (Math.cos(astro.angle) < 0) {
-        ctx.scale(1, -1);
+      const frontImg = flightAssetCache.getImage("assets/astronaut/front.svg");
+      if (frontImg) {
+        ctx.drawImage(frontImg, -28, -28, 56, 56);
+      } else {
+        // Фолбек виду спереду у невагомості (руки та ноги трохи розведені, візор до гравця)
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-6, 8);
+        ctx.lineTo(-12, 20);
+        ctx.moveTo(6, 8);
+        ctx.lineTo(12, 20);
+        ctx.moveTo(-9, -4);
+        ctx.lineTo(-20, -10);
+        ctx.moveTo(9, -4);
+        ctx.lineTo(20, -10);
+        ctx.stroke();
+
+        ctx.fillStyle = "#f4f0ef";
+        ctx.strokeStyle = "#121e37";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-10, -7, 20, 18, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#fc8219";
+        ctx.fillRect(-7, -3, 14, 7);
+
+        ctx.fillStyle = "#f4f0ef";
+        ctx.beginPath();
+        ctx.arc(0, -13, 10.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = astro.state === "STUNNED" ? "#fb7185" : "#aad8f0";
+        ctx.beginPath();
+        ctx.ellipse(0, -13, 7.2, 5.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
       }
-      ctx.drawImage(astroImg, -27, -27, 54, 54);
-      ctx.restore();
     } else {
-      // Ранець життєзабезпечення PLSS із соплами мікро-двигунів (фолбек)
-    ctx.fillStyle = "#cbd5e1";
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(-19, -12, 13, 24, 3);
-    ctx.fill();
-    ctx.stroke();
+      // Вид збоку (Side View) у стані ANCHORED: корпус завжди вертикальний, віддзеркалення в бік націлювання/відсіку
+      const anchoredMod = anchoredHandle
+        ? STATION_LEVEL_CONFIG.find((m) => m.id === anchoredHandle.moduleId)
+        : undefined;
+      let flipX = Math.cos(astro.angle) < 0 ? -1 : 1;
+      let anchorOffsetY = 0;
+      let anchorTilt = 0;
 
-    // Індикатор заряду PLSS на ранці
-    ctx.fillStyle =
-      astro.state === "STUNNED"
-        ? "#ff4766"
-        : astro.state === "ANCHORED"
-          ? "#3ddc84"
-          : "#38bdf8";
-    ctx.beginPath();
-    ctx.arc(-14, -5, 2.6, 0, Math.PI * 2);
-    ctx.fill();
+      if (anchoredHandle && anchoredMod) {
+        const hdx = anchoredHandle.bx - anchoredHandle.ax;
+        const hdy = anchoredHandle.by - anchoredHandle.ay;
+        const midX = (anchoredHandle.ax + anchoredHandle.bx) * 0.5;
+        const midY = (anchoredHandle.ay + anchoredHandle.by) * 0.5;
+        const modCx = anchoredMod.worldPos.x + anchoredMod.size.width * 0.5;
+        const modCy = anchoredMod.worldPos.y + anchoredMod.size.height * 0.5;
+        const isHorizontal = Math.abs(hdx) > Math.abs(hdy) * 1.4;
+        const isVertical = Math.abs(hdy) > Math.abs(hdx) * 1.4;
 
-    // Ноги (згинаються в колінах, коли гравець натягує рогатку!)
-    const legExtend = 19 - crouchRatio * 7;
-    const kneeSpread = 8 + crouchRatio * 5;
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 5.5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(-6, -5);
-    ctx.lineTo(-12, -kneeSpread);
-    ctx.lineTo(-legExtend, -10);
-    ctx.moveTo(-6, 5);
-    ctx.lineTo(-12, kneeSpread);
-    ctx.lineTo(-legExtend, 10);
-    ctx.stroke();
+        if (isHorizontal) {
+          if (midY < modCy - anchoredMod.size.height * 0.18) {
+            anchorOffsetY = 7;
+          } else if (midY > modCy + anchoredMod.size.height * 0.18) {
+            anchorOffsetY = -5;
+          }
+          if (!astro.slingshot.isDragging && Math.abs(Math.cos(astro.angle)) <= 0.15) {
+            flipX = midX <= modCx ? 1 : -1;
+          }
+        } else if (isVertical) {
+          if (!astro.slingshot.isDragging && Math.abs(Math.cos(astro.angle)) <= 0.25) {
+            flipX = midX <= modCx ? 1 : -1;
+          }
+        } else {
+          anchorOffsetY = midY < modCy ? 6 : -5;
+          if (!astro.slingshot.isDragging) {
+            flipX = midX <= modCx ? 1 : -1;
+          }
+          anchorTilt = (midX <= modCx ? -1 : 1) * 0.14;
+        }
+      }
 
-    // Черевики скафандра
-    ctx.fillStyle = "#475569";
-    ctx.beginPath();
-    ctx.arc(-legExtend - 1, -10, 3.2, 0, Math.PI * 2);
-    ctx.arc(-legExtend - 1, 10, 3.2, 0, Math.PI * 2);
-    ctx.fill();
+      if (astro.slingshot.isDragging) {
+        anchorTilt += crouchRatio * 0.14 * flipX;
+      }
 
-    // Торс скафандра з нагрудним модулем керування
-    ctx.fillStyle = "#f8fafc";
-    ctx.strokeStyle = "#64748b";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(-8, -11, 18, 22, 6);
-    ctx.fill();
-    ctx.stroke();
+      ctx.rotate(anchorTilt);
+      ctx.translate((idleFloat - crouchRatio * 5) * flipX, anchorOffsetY);
 
-    // Сині/червоні нашивки NASA/ISS на плечах
-    ctx.fillStyle = "#0284c7";
-    ctx.fillRect(-2, -10, 6, 3);
-    ctx.fillStyle = "#e11d48";
-    ctx.fillRect(-2, 7, 6, 3);
+      // Тінь під космонавтом
+      ctx.fillStyle = "rgba(2, 6, 16, 0.45)";
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 18, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Руки (тягнуться вперед при польоті або тримають поручень)
-    const armReach = astro.activeGrabHeld ? 22 : 19 - crouchRatio * 3;
-    ctx.strokeStyle = "#f1f5f9";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(4, -9);
-    ctx.lineTo(12, -10);
-    ctx.lineTo(armReach, -6);
-    ctx.moveTo(4, 9);
-    ctx.lineTo(12, 10);
-    ctx.lineTo(armReach, 6);
-    ctx.stroke();
+      const sideSpritePath = astro.slingshot.isDragging
+        ? "assets/templates/flight/astro-pull.svg"
+        : "assets/templates/flight/astro-idle.svg";
+      const astroImg = flightAssetCache.getImage(sideSpritePath);
 
-    // Рукавички
-    ctx.fillStyle = astro.activeGrabHeld ? "#3ddc84" : "#e63946";
-    ctx.beginPath();
-    ctx.arc(armReach + 1, -6, 3.3, 0, Math.PI * 2);
-    ctx.arc(armReach + 1, 6, 3.3, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.save();
+      ctx.scale(flipX, 1);
 
-    // Шолом і дзеркальний золотисто-блакитний візор
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(3, 0, 10.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+      if (astroImg) {
+        ctx.drawImage(astroImg, -27, -27, 54, 54);
+      } else {
+        // Ранець життєзабезпечення PLSS (вид збоку)
+        ctx.fillStyle = "#cbd5e1";
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-19, -12, 13, 24, 3);
+        ctx.fill();
+        ctx.stroke();
 
-    ctx.fillStyle = astro.state === "STUNNED" ? "#fb7185" : "#0284c7";
-    ctx.beginPath();
-    ctx.ellipse(6.5, 0, 5.4, 7.0, 0, -Math.PI * 0.58, Math.PI * 0.58);
-    ctx.fill();
+        ctx.fillStyle = "#3ddc84";
+        ctx.beginPath();
+        ctx.arc(-14, -5, 2.6, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Відблиск на візорі шолома
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(5.5, -2, 3.8, -Math.PI * 0.4, Math.PI * 0.15);
-    ctx.stroke();
+        const legExtend = 19 - crouchRatio * 7;
+        const kneeSpread = 8 + crouchRatio * 5;
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 5.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(-6, -5);
+        ctx.lineTo(-12, -kneeSpread);
+        ctx.lineTo(-legExtend, -10);
+        ctx.moveTo(-6, 5);
+        ctx.lineTo(-12, kneeSpread);
+        ctx.lineTo(-legExtend, 10);
+        ctx.stroke();
+
+        ctx.fillStyle = "#475569";
+        ctx.beginPath();
+        ctx.arc(-legExtend - 1, -10, 3.2, 0, Math.PI * 2);
+        ctx.arc(-legExtend - 1, 10, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-8, -11, 18, 22, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#0284c7";
+        ctx.fillRect(-2, -10, 6, 3);
+        ctx.fillStyle = "#e11d48";
+        ctx.fillRect(-2, 7, 6, 3);
+
+        const armReach = astro.activeGrabHeld ? 22 : 19 - crouchRatio * 3;
+        ctx.strokeStyle = "#f1f5f9";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(4, -9);
+        ctx.lineTo(12, -10);
+        ctx.lineTo(armReach, -6);
+        ctx.moveTo(4, 9);
+        ctx.lineTo(12, 10);
+        ctx.lineTo(armReach, 6);
+        ctx.stroke();
+
+        ctx.fillStyle = astro.activeGrabHeld ? "#3ddc84" : "#e63946";
+        ctx.beginPath();
+        ctx.arc(armReach + 1, -6, 3.3, 0, Math.PI * 2);
+        ctx.arc(armReach + 1, 6, 3.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(3, 0, 10.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#0284c7";
+        ctx.beginPath();
+        ctx.ellipse(6.5, 0, 5.4, 7.0, 0, -Math.PI * 0.58, Math.PI * 0.58);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(5.5, -2, 3.8, -Math.PI * 0.4, Math.PI * 0.15);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1596,36 +1946,6 @@ export class StationRenderer {
       ctx.font = "700 11px monospace";
       ctx.textAlign = "center";
       ctx.fillText("ЗАПАМОРОЧЕННЯ!", 0, -34);
-    }
-
-    // Дієгетична кнопка взаємодії [E / КЛІК], коли тримається за ручку біля комп'ютера
-    if (
-      state.gameMode === "STATION_ROAM" &&
-      astro.state === "ANCHORED" &&
-      astro.anchoredHandleId
-    ) {
-      const handle = ALL_GRAB_HANDLES.find(
-        (h) => h.id === astro.anchoredHandleId,
-      );
-      if (handle && handle.terminalId) {
-        const term = state.terminals.find((t) => t.id === handle.terminalId);
-        const isUrgent =
-          term && (term.state === "WARNING" || term.state === "CRITICAL");
-        ctx.fillStyle = isUrgent
-          ? "rgba(234, 88, 12, 0.95)"
-          : "rgba(3, 105, 161, 0.94)";
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.roundRect(-94, -50, 188, 24, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "700 11px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(`[E / КЛІК] ПУЛЬТ: ${handle.terminalId}`, 0, -34);
-      }
     }
 
     ctx.restore();
