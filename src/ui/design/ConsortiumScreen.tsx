@@ -134,7 +134,13 @@ function Menu({
       .then(onOnline)
       // Сервер каже «no such room», коли кімнати немає саме на цьому сайті: main і /experimental/ мають окремі сервери,
       // а кімнати живуть у пам'яті й зникають після оновлення сайту. Пояснюємо це гравцю замість сирого повідомлення.
-      .catch((e: Error) => setError(e.message === "no such room" ? t("ui.menu.noSuchRoom") : e.message))
+      .catch((e: Error) =>
+        setError(
+          e.message === "no such room" ? t("ui.menu.noSuchRoom")
+            // Після оновлення сайту сервер кімнат до хвилини не приймає нових кімнат, поки перезапускається.
+            : e.message === "server restarting" ? t("ui.menu.serverRestarting")
+              : e.message,
+        ))
       .finally(() => setBusy(false));
   };
   // Ім'я необов'язкове: без нього гравець — «Commander». Раніше порожнє ім'я мовчки блокувало «Create room» і «Join».

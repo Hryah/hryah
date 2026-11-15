@@ -614,5 +614,6 @@
   "ui.menu.joinHint": "Press Join to enter room {code}.",
   "ui.menu.hostLabel": "Host a game",
   "ui.menu.hostHint": "The room gets its own 4-letter code. Send it to your friends from the top of the room.",
-  "ui.menu.joinLabel": "Join a friend"
+  "ui.menu.joinLabel": "Join a friend",
+  "ui.menu.serverRestarting": "the site has just been updated and the room server is restarting. Try again in a minute."
 }
