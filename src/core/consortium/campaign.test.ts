@@ -6,6 +6,7 @@ import { flightPhase } from "../flight";
 import { orbitPhase, type OrbitAction } from "../orbit";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../stubs";
 import { botTarget } from "./bot";
+import { depositsOf } from "../factory";
 import { checkCampaign, hiddenMission, isMissionReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport } from "./campaign";
 import { checkMarket, type Market } from "./market";
 import { isRoomAction, newRoom, stepRoom, type PlayState, type RoomAction, type RoomSetup, type RoomState } from "./room";
@@ -267,9 +268,12 @@ describe("фабрика в кімнаті", () => {
     expect(me(next).actionsLeft).toBe(me(s).actionsLeft - 1);
     expect(me(next).design.input.catalog.modules.some((m) => m.id === batch.id)).toBe(false);
     expect(isRoomAction({ type: "play", action: { type: "factory", order: { ...order, steps: ["quick"] } } })).toBe(false);
-    const analyzed = send(next, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } });
-    expect(me(analyzed).factory!.analyzed).toContain("glass:import");
-    expect(send(analyzed, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } })).toBe(analyzed);
+    // Імпорт чистий: аналізувати нічого; аналіз власного родовища відкриває приховану ваду.
+    expect(send(next, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } })).toBe(next);
+    const own = depositsOf("borealis", "glass").find((d) => d !== "import")!;
+    const analyzed = send(next, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: own } });
+    expect(me(analyzed).factory!.analyzed).toContain(`glass:${own}`);
+    expect(send(analyzed, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: own } })).toBe(analyzed);
   });
 });
 

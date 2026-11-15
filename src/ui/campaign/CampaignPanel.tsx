@@ -122,7 +122,10 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
 // Підсумок кампанії: хто зробив найбільший внесок у наукову програму.
 export function CampaignStandings({ state }: { state: ConsortiumState }) {
   if (!state.campaign) return null;
-  const ranked = [...state.agencies].sort((a, b) => (b.account?.programPts ?? 0) - (a.account?.programPts ?? 0));
+  // Рейтинг за метрикою режиму перемоги: гроші в комерційному, внесок у решті.
+  const metric = (e: (typeof state.agencies)[number]) => (state.campaign?.config.victory === "commercial" ? e.account?.fundsMUsd ?? 0 : e.account?.programPts ?? 0);
+  const winnerId = state.campaign.winner?.agencyId;
+  const ranked = [...state.agencies].sort((a, b) => (b.agency.id === winnerId ? 1 : 0) - (a.agency.id === winnerId ? 1 : 0) || metric(b) - metric(a));
   const top = ranked[0];
   const progress = programProgress(state);
   return (

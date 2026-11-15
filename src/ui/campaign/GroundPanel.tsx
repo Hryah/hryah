@@ -10,7 +10,7 @@ export function GroundPanel({ entry, dispatch }: { entry: AgencyEntry; dispatch:
   const account = entry.account;
   if (!account) return null;
   const n = account.groundStations ?? 0;
-  const can = n < GROUND_STATION.max && entry.actionsLeft > 0 && !entry.touched.includes("ground") && account.fundsMUsd > GROUND_STATION.costMUsd && !entry.launch;
+  const can = n < GROUND_STATION.max && entry.actionsLeft > 0 && !entry.touched.includes("ground") && account.fundsMUsd >= GROUND_STATION.costMUsd && !entry.launch;
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 6 }} data-testid="ground-panel">
       <strong>📡 {t("ui.ground.title", { n, max: GROUND_STATION.max })}</strong>

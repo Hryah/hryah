@@ -25,7 +25,7 @@ import { qualifyCostMUsd, rollTrlFailures, trlOf } from './trl';
 import { optimalValue } from './planner';
 import { agencyAfterEvents, catalogAfterEvents, rollEvent, type CampaignEvent } from './events';
 import {
-  depositsOf, emptyFactory, glassDefectFactor, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
+  depositsOf, emptyFactory, glassDefectFactor, IMPORT_DEPOSIT, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
 } from '../factory';
 import { runValueMUsd, settleRewards, type AgencyRun, type Settlement } from './reward';
 
@@ -41,6 +41,7 @@ export interface Launch {
   spec: SpacecraftSpec;
   log: CauseEntry[];
   damage?: Damage[];       // відмови незрілих технологій (TRL), що проявились після запуску
+  batteryLoss?: number;    // частка втраченої ємності батареї через відмову TRL, 0..1
 }
 
 // Рахунок агенції в кампанії.
@@ -271,7 +272,9 @@ function startTurn(state: ConsortiumState, turn: number): ConsortiumState {
 export function flownSpec(entry: AgencyEntry): SpacecraftSpec | null {
   if (!entry.launch) return null;
   const used = entry.projects.find((p) => p.module.id === entry.design.design.modules.instrument);
-  return applyDamage(entry.launch.spec, [...(used ? defectDamage(used) : []), ...(entry.launch.damage ?? [])]);
+  const damaged = applyDamage(entry.launch.spec, [...(used ? defectDamage(used) : []), ...(entry.launch.damage ?? [])]);
+  const loss = entry.launch.batteryLoss ?? 0;
+  return loss > 0 ? { ...damaged, batteryWh: Math.round(damaged.batteryWh * (1 - loss) * 100) / 100 } : damaged;
 }
 
 function launchLog(entry: AgencyEntry): CauseEntry[] {
@@ -544,8 +547,11 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       // Незрілі технології можуть відмовити після запуску (лише в кампанії: там є досвід і випробування).
       const trl = account
         ? rollTrlFailures(state.seed, entry.agency.id, state.campaign?.round ?? 0, result.design, account.trlGain ?? {}, state.base.catalog.modules.map((m) => m.id))
-        : { damage: [], log: [] };
-      const launch = { turn: state.turn, spec: result, log: [...log, ...trl.log], ...(trl.damage.length ? { damage: trl.damage } : {}) };
+        : { damage: [], log: [], batteryLoss: 0 };
+      const launch = {
+        turn: state.turn, spec: result, log: [...log, ...trl.log],
+        ...(trl.damage.length ? { damage: trl.damage } : {}), ...(trl.batteryLoss > 0 ? { batteryLoss: trl.batteryLoss } : {}),
+      };
       const launched: AgencyEntry = { ...entry, design: frozen, launch, ...(account ? { account } : {}) };
       return endAgencyTurn(replaceAt(state, state.active, launched));
     }
@@ -605,7 +611,7 @@ function stepFactory(state: ConsortiumState, entry: AgencyEntry, action: Extract
   if (!account || !factory || entry.actionsLeft <= 0) return state;
   if (action.type === 'analyze') {
     const key = `${action.line}:${action.depositId}`;
-    if (factory.analyzed.includes(key) || !depositsOf(entry.agency.id, action.line).includes(action.depositId)) return state;
+    if (factory.analyzed.includes(key) || action.depositId === IMPORT_DEPOSIT || !depositsOf(entry.agency.id, action.line).includes(action.depositId)) return state;
     if (account.fundsMUsd < MATERIALS.analyzeCostMUsd) return state;
     const nextAccount = { ...account, fundsMUsd: money(account.fundsMUsd - MATERIALS.analyzeCostMUsd) };
     return replaceAt(state, state.active, {
@@ -614,6 +620,8 @@ function stepFactory(state: ConsortiumState, entry: AgencyEntry, action: Extract
     });
   }
   // Базою партії може бути лише те, що агенція бачить зараз: без санкційних і ще не відкритих ринком модулів.
+  // У вантажному рейсі слот приладу — контейнер: оптичне скло для нього не потрібне.
+  if (entry.design.input.mission.kind === 'cargo' && MATERIALS.lines[action.order.line]?.slot === 'instrument') return state;
   const plan = planBatch(entry.agency, factory, action.order, state.turn, entry.design.input.catalog.modules);
   if (!plan.batch || account.fundsMUsd < plan.batch.costMUsd) return state;
   const nextAccount = { ...account, fundsMUsd: money(account.fundsMUsd - plan.batch.costMUsd) };

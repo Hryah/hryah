@@ -26,7 +26,7 @@ export function TrlPanel({ entry, dispatch }: { entry: AgencyEntry; dispatch: (a
         const trl = trlOf(id, account.trlGain ?? {}, ids);
         const risk = failureChance(trl);
         const cost = qualifyCostMUsd(module.costMUsd);
-        const can = trl < 9 && entry.actionsLeft > 0 && !entry.touched.includes(`qualify:${id}`) && account.fundsMUsd > cost && !entry.launch;
+        const can = trl < 9 && entry.actionsLeft > 0 && !entry.touched.includes(`qualify:${id}`) && account.fundsMUsd >= cost && !entry.launch;
         return (
           <div key={slot} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 13 }}>
             <span style={{ color: risk === 0 ? C.ok : risk >= 0.2 ? C.bad : C.gold }}>

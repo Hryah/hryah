@@ -46,3 +46,19 @@ describe("TRL", () => {
     expect(qualifyCostMUsd(14)).toBeGreaterThan(qualifyCostMUsd(1));
   });
 });
+
+describe("TRL: батарея", () => {
+  it("відмова батареї зменшує ємність (batteryLoss), а не потужність панелей", () => {
+    const risky = design({ battery: "bat-ss" });
+    for (let seed = 0; seed < 200; seed++) {
+      const r = rollTrlFailures(seed, "a", 0, risky, {}, []);
+      expect(r.damage.every((d) => d.system !== "power")).toBe(true);
+      if (r.batteryLoss > 0) {
+        expect(r.batteryLoss).toBeGreaterThanOrEqual(0.3);
+        expect(r.log.some((e) => e.id === "design:trl-battery")).toBe(true);
+        return;
+      }
+    }
+    throw new Error("за 200 кидків батарея TRL 4 жодного разу не відмовила");
+  });
+});

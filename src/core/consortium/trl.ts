@@ -45,8 +45,9 @@ export function failureChance(trl: number): number {
 // Які модулі відмовили після запуску. Тяжкість 0,3–0,6: апарат живий, але слабший.
 export function rollTrlFailures(
   seed: number, agencyId: string, round: number, design: Design, gain: Record<string, number>, knownIds: string[],
-): { damage: Damage[]; log: CauseEntry[] } {
+): { damage: Damage[]; log: CauseEntry[]; batteryLoss: number } {
   const damage: Damage[] = [];
+  let batteryLoss = 0;
   const log: CauseEntry[] = [];
   for (const slot of SLOTS) {
     const id = design.modules[slot];
@@ -57,14 +58,16 @@ export function rollTrlFailures(
     if (hit >= chance) continue;
     const system = SLOT_SYSTEM[slot];
     const severity = Math.round((0.3 + 0.3 * sev) * 100) / 100;
-    damage.push({ system, severity });
+    // Батарея втрачає ємність, а не потужність панелей: це окреме поле, а не Damage системи 'power'.
+    if (slot === 'battery') batteryLoss = severity;
+    else damage.push({ system, severity });
     log.push({
       id: `design:trl-${slot}`, phase: 'design', tS: 0, kind: 'failure', system, messageKey: `trl.failure.${slot}`,
       params: { module: id, trl, chancePercent: Math.round(chance * 100), lossPercent: Math.round(severity * 100) },
       causedBy: [`design:${slot}`],
     });
   }
-  return { damage, log };
+  return { damage, log, batteryLoss };
 }
 
 export function qualifyCostMUsd(moduleCostMUsd: number): number {

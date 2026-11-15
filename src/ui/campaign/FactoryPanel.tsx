@@ -21,7 +21,8 @@ const card = (selected: boolean) => ({
 const ARROW = <div style={{ alignSelf: "center", color: C.dim, fontSize: 18 }}>→</div>;
 
 export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; turn: number; dispatch: (a: ConsortiumAction) => void }) {
-  const lineIds = Object.keys(MATERIALS.lines);
+  // У вантажному рейсі лінії оптичного скла немає сенсу: слот приладу там — контейнер.
+  const lineIds = Object.keys(MATERIALS.lines).filter((id) => !(entry.design.input.mission.kind === "cargo" && MATERIALS.lines[id]!.slot === "instrument"));
   const [lineId, setLineId] = useState(lineIds[0]!);
   const line = MATERIALS.lines[lineId]!;
   const deposits = depositsOf(entry.agency.id, lineId);
@@ -52,7 +53,7 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
   const analyzedKey = `${lineId}:${safeDeposit}`;
   const canAnalyze = safeDeposit !== IMPORT_DEPOSIT && !factory.analyzed.includes(analyzedKey) && entry.actionsLeft > 0 && !entry.launch
     && entry.account.fundsMUsd >= MATERIALS.analyzeCostMUsd;
-  const affordable = plan.batch !== undefined && entry.account.fundsMUsd > plan.batch.costMUsd;
+  const affordable = plan.batch !== undefined && entry.account.fundsMUsd >= plan.batch.costMUsd;
   const canOrder = plan.ok && affordable && entry.actionsLeft > 0 && !entry.launch;
   const cured = new Set([...(line.stages[0][steps[0]]?.cures ?? []), ...(line.stages[1][steps[1]]?.cures ?? [])]);
 

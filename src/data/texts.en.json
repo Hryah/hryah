@@ -488,5 +488,6 @@
   "ui.campaign.colonyLost": "The colony did not get enough supplies before winter.",
   "ui.campaign.colonySaved": "The colony is supplied for the winter.",
   "ui.brief.reputation": "Reputation: {rep}. Sponsors adjust our grant by {percent}%.",
-  "ui.campaign.reputation": "Reputation"
+  "ui.campaign.reputation": "Reputation",
+  "ui.slot.cargo": "Cargo container"
 }

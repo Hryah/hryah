@@ -113,7 +113,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
         const later = upcoming.filter((u) => u.slot === slot);
         return (
           <div key={slot} style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
-            <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>{t(`ui.slot.${slot}`)}</div>
+            <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>{t(slot === "instrument" && mission.kind === "cargo" ? "ui.slot.cargo" : `ui.slot.${slot}`)}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8 }}>
               {options.map((m) => {
                 const selected = design.modules[slot] === m.id;
