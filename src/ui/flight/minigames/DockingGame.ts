@@ -1,5 +1,6 @@
 import type { DockingMinigameState, FlightAction } from "../../../core/flight";
 import { flightAssetCache } from "../render/TemplateAssetCache";
+import { drawFittedText } from "./textFit";
 
 export class DockingGame {
   private keysHeld = { w: false, a: false, s: false, d: false };
@@ -11,11 +12,40 @@ export class DockingGame {
   }
 
   public getPanelRect(viewportW: number, viewportH: number) {
-    const w = Math.min(760, viewportW - 40);
+    const w = Math.min(820, viewportW - 32);
     const h = Math.min(520, viewportH - 110);
     const x = (viewportW - w) * 0.5;
     const y = (viewportH - h) * 0.5 + 22;
     return { x, y, w, h };
+  }
+
+  private getLayout(viewportW: number, viewportH: number) {
+    const rect = this.getPanelRect(viewportW, viewportH);
+    const escW = 104;
+    const escH = 30;
+    const escX = rect.x + rect.w - escW - 24;
+    const escY = rect.y + 11;
+    const rightX = rect.x + rect.w * 0.59;
+    const rightW = rect.w * 0.382;
+    const sightCx = rect.x + rect.w * 0.33;
+    const sightCy = rect.y + rect.h * 0.54;
+    const sightR = Math.min(182, rect.h * 0.36, rightX - sightCx - 16);
+    const joyCx = rightX + rightW * 0.5;
+    const joyCy = rect.y + rect.h * 0.72;
+    return {
+      rect,
+      escX,
+      escY,
+      escW,
+      escH,
+      sightCx,
+      sightCy,
+      sightR,
+      rightX,
+      rightW,
+      joyCx,
+      joyCy,
+    };
   }
 
   public handleKeyDown(
@@ -53,13 +83,13 @@ export class DockingGame {
     viewportH: number,
     dispatch: (action: FlightAction) => void,
   ): void {
-    const rect = this.getPanelRect(viewportW, viewportH);
+    const layout = this.getLayout(viewportW, viewportH);
     // Перевірка кнопки закриття [ESC]
     if (
-      sx >= rect.x + rect.w - 96 &&
-      sx <= rect.x + rect.w - 14 &&
-      sy >= rect.y + 12 &&
-      sy <= rect.y + 42
+      sx >= layout.escX - 2 &&
+      sx <= layout.escX + layout.escW + 2 &&
+      sy >= layout.escY - 2 &&
+      sy <= layout.escY + layout.escH + 2
     ) {
       this.resetInput();
       dispatch({ type: "close_minigame" });
@@ -94,11 +124,10 @@ export class DockingGame {
     active: boolean,
     dispatch: (action: FlightAction) => void,
   ): void {
-    const rect = this.getPanelRect(viewportW, viewportH);
-    const sightCx = rect.x + rect.w * 0.42;
-    const sightCy = rect.y + rect.h * 0.54;
-    const joyCx = rect.x + rect.w * 0.83;
-    const joyCy = rect.y + rect.h * 0.72;
+    const { sightCx, sightCy, joyCx, joyCy } = this.getLayout(
+      viewportW,
+      viewportH,
+    );
 
     // Керування або через віртуальний джойстик справа, або кліком/перетягуванням прямо на екрані СОІ
     const distJoy = Math.hypot(sx - joyCx, sy - joyCy);
@@ -139,7 +168,8 @@ export class DockingGame {
     viewportW: number,
     viewportH: number,
   ): void {
-    const rect = this.getPanelRect(viewportW, viewportH);
+    const { rect, escX, escY, escW, escH, sightCx, sightCy, sightR } =
+      this.getLayout(viewportW, viewportH);
 
     ctx.save();
     // Напівпрозоре затемнення фону (станція позаду продовжує жити!)
@@ -161,33 +191,33 @@ export class DockingGame {
     ctx.roundRect(rect.x + 3, rect.y + 3, rect.w - 6, 46, [12, 12, 0, 0]);
     ctx.fill();
 
-    ctx.fillStyle = "#3ddc84";
-    ctx.font = "700 15px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(
-      `СОІ · РУЧНЕ ОРБІТАЛЬНЕ СТИКУВАННЯ [${mg.terminalId}]`,
+    drawFittedText(
+      ctx,
+      `СОІ · РУЧНЕ СТИКУВАННЯ [${mg.terminalId}]`,
       rect.x + 18,
       rect.y + 31,
+      escX - (rect.x + 18) - 14,
+      { fontSize: 15, minFontSize: 11, color: "#3ddc84" },
     );
 
-    // Кнопка [ESC]
+    // Кнопка [ESC] з безпечним відступом 24px від правого краю
     ctx.fillStyle = "#1b3329";
     ctx.strokeStyle = "#3ddc84";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(rect.x + rect.w - 94, rect.y + 11, 78, 30, 6);
+    ctx.roundRect(escX, escY, escW, escH, 6);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#d8f3dc";
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("[ESC] Вихід", rect.x + rect.w - 55, rect.y + 30);
+    drawFittedText(
+      ctx,
+      "[ESC] Вихід",
+      escX + escW * 0.5,
+      escY + 19,
+      escW - 12,
+      { fontSize: 12, minFontSize: 10, align: "center", color: "#d8f3dc" },
+    );
 
     // Круглий оптичний візир СОІ
-    const sightCx = rect.x + rect.w * 0.42;
-    const sightCy = rect.y + rect.h * 0.54;
-    const sightR = Math.min(185, rect.h * 0.36);
-
     ctx.fillStyle = "#040d09";
     ctx.strokeStyle = "#1f6f54";
     ctx.lineWidth = 3;
@@ -346,55 +376,89 @@ export class DockingGame {
     }
 
     // Права приладова колонка: Дистанція Z (10м -> 0м), швидкість Vz, похибка R, віртуальний джойстик
-    const rightX = rect.x + rect.w * 0.7;
-    const rightW = rect.w * 0.26;
+    const { rightX, rightW, joyCx, joyCy } = this.getLayout(
+      viewportW,
+      viewportH,
+    );
+    const padX = 18;
+    const padY = 22;
+    const cardY = rect.y + 66;
+    const cardH = 196;
+    const textMaxW = rightW - padX * 2;
 
     ctx.fillStyle = "#0b1d16";
     ctx.strokeStyle = "#1f6f54";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(rightX, rect.y + 66, rightW, 185, 8);
+    ctx.roundRect(rightX, cardY, rightW, cardH, 8);
     ctx.fill();
     ctx.stroke();
 
     const radialErr = Math.hypot(mg.offsetXPx, mg.offsetYPx);
-    ctx.fillStyle = "#80ed99";
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(`ДИСТАНЦІЯ Z: ${mg.distanceZM.toFixed(1)} м`, rightX + 14, rect.y + 92);
-    ctx.fillText(`ШВИДКІСТЬ Vz: ${mg.approachSpeedVzMs.toFixed(2)} м/с`, rightX + 14, rect.y + 114);
-    ctx.fillStyle = mg.inLockZone ? "#3ddc84" : "#ff5c7a";
-    ctx.fillText(
+    const textStartY = cardY + padY + 6;
+    drawFittedText(
+      ctx,
+      `ДИСТАНЦІЯ Z: ${mg.distanceZM.toFixed(1)} м`,
+      rightX + padX,
+      textStartY,
+      textMaxW,
+      { fontSize: 13.5, minFontSize: 10.5, color: "#80ed99" },
+    );
+    drawFittedText(
+      ctx,
+      `ШВИДКІСТЬ Vz: ${mg.approachSpeedVzMs.toFixed(2)} м/с`,
+      rightX + padX,
+      textStartY + 24,
+      textMaxW,
+      { fontSize: 13.5, minFontSize: 10.5, color: "#80ed99" },
+    );
+    drawFittedText(
+      ctx,
       `ВІДХИЛЕННЯ R: ${Math.round(radialErr)} px (<25px)`,
-      rightX + 14,
-      rect.y + 136,
+      rightX + padX,
+      textStartY + 48,
+      textMaxW,
+      {
+        fontSize: 13.5,
+        minFontSize: 10.5,
+        color: mg.inLockZone ? "#3ddc84" : "#ff5c7a",
+      },
     );
 
     // Прогрес-бар зближення Z (10м -> 0м)
     const zProgress = Math.max(0, Math.min(1, (10 - mg.distanceZM) / 10));
     ctx.fillStyle = "rgba(255,255,255,0.1)";
-    ctx.fillRect(rightX + 14, rect.y + 152, rightW - 28, 12);
+    ctx.fillRect(rightX + padX, cardY + 94, textMaxW, 12);
     ctx.fillStyle = mg.inLockZone ? "#3ddc84" : "#ffa23d";
-    ctx.fillRect(rightX + 14, rect.y + 152, (rightW - 28) * zProgress, 12);
+    ctx.fillRect(rightX + padX, cardY + 94, textMaxW * zProgress, 12);
 
-    ctx.fillStyle = mg.inLockZone ? "#3ddc84" : "#ffd166";
-    ctx.font = "700 11px monospace";
-    ctx.fillText(
+    drawFittedText(
+      ctx,
       mg.inLockZone
-        ? "✓ ЗАХВАТ В НОРМІ — ТРИМАЙ ЦЕНТР!"
-        : "⚠ ВИРІВНЯЙ МІШЕНЬ У ЦЕНТР (<25px)!",
-      rightX + 14,
-      rect.y + 188,
+        ? "✓ В НОРМІ — ТРИМАЙ ЦЕНТР"
+        : "⚠ ВИРІВНЯЙ МІШЕНЬ (<25px)",
+      rightX + padX,
+      cardY + 132,
+      textMaxW,
+      {
+        fontSize: 13,
+        minFontSize: 10,
+        color: mg.inLockZone ? "#3ddc84" : "#ffd166",
+      },
     );
 
     if (mg.collisionFlashTimerS > 0) {
-      ctx.fillStyle = "#ff4766";
-      ctx.fillText("✗ УДАР ШЛЮЗОМ! ВІДКАТ +5М, -15% ЕНЕРГІЇ", rightX + 14, rect.y + 212);
+      drawFittedText(
+        ctx,
+        "✗ УДАР! ВІДКАТ +5М · -15%",
+        rightX + padX,
+        cardY + cardH - padY + 4,
+        textMaxW,
+        { fontSize: 12.5, minFontSize: 9.5, color: "#ff4766" },
+      );
     }
 
     // Віртуальний джойстик імпульсних двигунів
-    const joyCx = rect.x + rect.w * 0.83;
-    const joyCy = rect.y + rect.h * 0.72;
     ctx.fillStyle = "#0b1d16";
     ctx.strokeStyle = "#2ec4b6";
     ctx.lineWidth = 2;
@@ -411,10 +475,20 @@ export class DockingGame {
     ctx.arc(knobX, knobY, 16, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#a3e635";
-    ctx.font = "11px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("ДВИГУНИ ОРІЄНТАЦІЇ [WASD / Стрілки / Миша]", joyCx, joyCy + 76);
+    drawFittedText(
+      ctx,
+      "ДВИГУНИ [WASD / Стрілки / Миша]",
+      joyCx,
+      joyCy + 76,
+      rightW,
+      {
+        fontWeight: 600,
+        fontSize: 11,
+        minFontSize: 9,
+        align: "center",
+        color: "#a3e635",
+      },
+    );
 
     ctx.restore();
   }
