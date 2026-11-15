@@ -162,7 +162,7 @@ export class SolarGame {
 
     drawFittedText(
       ctx,
-      "СЕРВОПРИВОДИ СОНЯЧНИХ ПАНЕЛЕЙ · НАВЕДЕННЯ (α, β)",
+      "SOLAR ARRAY SERVOS · TRACKING (α, β)",
       18,
       31,
       ESC_BTN_X - 32,
@@ -179,7 +179,7 @@ export class SolarGame {
     ctx.stroke();
     drawFittedText(
       ctx,
-      "[ESC] Вихід",
+      "[ESC] Exit",
       ESC_BTN_X + ESC_BTN_W * 0.5,
       30,
       ESC_BTN_W - 12,
@@ -192,7 +192,7 @@ export class SolarGame {
       ALPHA_CX,
       DIAL_CY,
       DIAL_R,
-      "КУТ АЛЬФА (α) [A/D або Миша]",
+      "ALPHA ANGLE (α) [A/D or Mouse]",
       mg.sunAlphaDeg,
       mg.panelAlphaDeg,
       mg.jamTimerS > 0,
@@ -202,7 +202,7 @@ export class SolarGame {
       BETA_CX,
       DIAL_CY,
       DIAL_R,
-      "КУТ БЕТА (β) [W/S або Миша]",
+      "BETA ANGLE (β) [W/S or Mouse]",
       mg.sunBetaDeg,
       mg.panelBetaDeg,
       mg.jamTimerS > 0,
@@ -225,7 +225,7 @@ export class SolarGame {
 
     drawFittedText(
       ctx,
-      "ОСЦИЛОГРАФ ПОТОКУ",
+      "POWER OSCILLOSCOPE",
       RIGHT_X + innerPad,
       oscY + 22,
       innerMaxW,
@@ -264,7 +264,7 @@ export class SolarGame {
 
     drawFittedText(
       ctx,
-      `ККД: ${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} кВт)`,
+      `EFF: ${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} kW)`,
       RIGHT_X + innerPad,
       oscY + 130,
       innerMaxW,
@@ -288,7 +288,7 @@ export class SolarGame {
 
     drawFittedText(
       ctx,
-      "ТЕМПЕРАТУРА МОТОРА",
+      "MOTOR TEMPERATURE",
       RIGHT_X + innerPad,
       heatY + 24,
       innerMaxW,
@@ -309,7 +309,7 @@ export class SolarGame {
     if (mg.jamTimerS > 0) {
       drawFittedText(
         ctx,
-        `✗ КЛИН РЕДУКТОРА: ${mg.jamTimerS.toFixed(1)} с!`,
+        `✗ GEARBOX JAM: ${mg.jamTimerS.toFixed(1)} s!`,
         RIGHT_X + innerPad,
         heatY + 86,
         innerMaxW,
@@ -317,7 +317,7 @@ export class SolarGame {
       );
       drawFittedText(
         ctx,
-        "Дочекайся охолодження приводу",
+        "Wait for drive cooldown",
         RIGHT_X + innerPad,
         heatY + 110,
         innerMaxW,
@@ -326,7 +326,7 @@ export class SolarGame {
     } else {
       drawFittedText(
         ctx,
-        `Нагрів: ${Math.round(mg.motorHeatPct)}%`,
+        `Heat: ${Math.round(mg.motorHeatPct)}%`,
         RIGHT_X + innerPad,
         heatY + 86,
         innerMaxW,
@@ -334,7 +334,7 @@ export class SolarGame {
       );
       drawFittedText(
         ctx,
-        "(крути плавно без ривків)",
+        "(rotate smoothly)",
         RIGHT_X + innerPad,
         heatY + 110,
         innerMaxW,
@@ -361,7 +361,7 @@ export class SolarGame {
 
     drawFittedText(
       ctx,
-      `УТРИМАННЯ >95%: ${mg.holdTimerS.toFixed(1)} / ${mg.requiredHoldS.toFixed(1)} с`,
+      `HOLD >95%: ${mg.holdTimerS.toFixed(1)} / ${mg.requiredHoldS.toFixed(1)} s`,
       18 + holdW * 0.5,
       holdY + 32,
       holdW - 28,
@@ -457,7 +457,7 @@ export class SolarGame {
     });
     drawFittedText(
       ctx,
-      `Сонце: ${Math.round(sunDeg)}° · Панель: ${Math.round(panelDeg)}°`,
+      `Sun: ${Math.round(sunDeg)}° · Panel: ${Math.round(panelDeg)}°`,
       cx,
       cy + r + 42,
       212,
