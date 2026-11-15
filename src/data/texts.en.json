@@ -519,5 +519,7 @@
   "ui.console.controlsLeftShort": "{n} controls left",
   "ui.console.actionsLabel": "Launch readiness & turn actions",
   "ui.console.readyToLaunch": "All checks nominal — ready for launch",
-  "ui.console.statusOnline": "Online"
+  "ui.console.statusOnline": "Online",
+  "ui.console.tabWaitingTurn": "Available on your turn.",
+  "ui.console.tabCampaignOnly": "Available in campaign mode only."
 }

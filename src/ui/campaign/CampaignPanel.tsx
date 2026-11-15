@@ -10,11 +10,9 @@ import { fmt, t } from "../text";
 export function CampaignPanel({
   state,
   myAgencyIds,
-  activeAgencyId,
 }: {
   state: ConsortiumState;
   myAgencyIds: string[];
-  activeAgencyId?: string;
 }) {
   const campaign = state.campaign;
   const [open, setOpen] = useState(true);
@@ -62,7 +60,7 @@ export function CampaignPanel({
           {state.agencies.map((e) => {
             const a = e.account;
             if (!a) return null;
-            const highlight = activeAgencyId ? e.agency.id === activeAgencyId : myAgencyIds.includes(e.agency.id);
+            const highlight = myAgencyIds.includes(e.agency.id);
             return (
               <tr key={e.agency.id} className={highlight ? "is-player" : undefined}>
                 <td>

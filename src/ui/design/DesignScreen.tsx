@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
+import spritesManifest from "../../data/sprites.json";
 import { resolveAssetUrl } from "../graphics";
 import { fmt, t } from "../text";
 import { DesignPreview, type DesignPreviewMode, type DesignPreviewView } from "./DesignPreview";
@@ -27,27 +28,14 @@ export interface DesignScreenProps {
   customSlotFooter?: ReactNode;
   actionsFooter?: ReactNode;
   layoutMode?: "standalone" | "console";
+  resetKey?: string;
   defaultPreviewMode?: DesignPreviewMode;
   extraPreviewViews?: readonly DesignPreviewView[];
 }
 
-export const DEDICATED_MODULE_SPRITES = [
-  "eng-cold",
-  "eng-chem",
-  "eng-ion",
-  "sol-s",
-  "sol-m",
-  "sol-l",
-  "bat-s",
-  "bat-m",
-  "bat-l",
-  "ant-s",
-  "ant-m",
-  "ant-l",
-  "cam-s",
-  "cam-m",
-  "cam-l",
-] as const;
+export const DEDICATED_MODULE_SPRITES: readonly string[] = Object.entries(spritesManifest)
+  .filter(([, def]) => typeof def.file === "string" && def.file.startsWith("modules/"))
+  .map(([id]) => id);
 
 const DEDICATED_SET = new Set<string>(DEDICATED_MODULE_SPRITES);
 
@@ -311,12 +299,18 @@ export function DesignScreen({
   customSlotFooter,
   actionsFooter,
   layoutMode = "standalone",
+  resetKey,
   defaultPreviewMode,
   extraPreviewViews,
 }: DesignScreenProps) {
   const { mission, catalog } = state.input;
   const { design } = state;
   const [category, setCategory] = useState<"all" | SlotId | "launcher">("all");
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
+    setCategory("all");
+  }
   const can = (control: string) => (typeof editable === "function" ? editable(control) : editable);
   const act = (action: DesignAction) => {
     const control = controlOf(action);

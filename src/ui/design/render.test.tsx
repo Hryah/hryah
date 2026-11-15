@@ -219,7 +219,11 @@ describe("пульт керування місією та спрайти мод�
     const setup = campaignRoomSetup(marketData as unknown as Market, profiles);
     const ids = profiles.map((a) => a.id);
     let room: RoomState = newRoom("p1", "Commander", ids, 7);
+    room = stepRoom(room, "p1", { type: "wish", agencyId: "borealis" }, setup);
+    room = stepRoom(room, "p2", { type: "join", name: "Rival" }, setup);
+    room = stepRoom(room, "p2", { type: "wish", agencyId: "monsoon" }, setup);
     room = stepRoom(room, "p1", { type: "ready", ready: true }, setup);
+    room = stepRoom(room, "p2", { type: "ready", ready: true }, setup);
     room = stepRoom(room, "p1", { type: "start" }, setup);
     if (room.phase !== "play") throw new Error("Очікувався стан активної кампанії");
 
@@ -244,5 +248,38 @@ describe("пульт керування місією та спрайти мод�
       const tabHtml = renderToStaticMarkup(<Turn state={room.consortium} dispatch={() => undefined} initialTab={tab} />);
       expect(tabHtml).not.toContain("ui.");
     }
+  });
+
+  it("вимикає таби кампанії та показує пояснення під час чужого ходу або поза кампанією, а в таблиці підсвічує лише мою агенцію", () => {
+    const setup = campaignRoomSetup(marketData as unknown as Market, profiles);
+    const ids = profiles.map((a) => a.id);
+    let room: RoomState = newRoom("p1", "Commander", ids, 7);
+    room = stepRoom(room, "p1", { type: "wish", agencyId: "borealis" }, setup);
+    room = stepRoom(room, "p2", { type: "join", name: "Rival" }, setup);
+    room = stepRoom(room, "p2", { type: "wish", agencyId: "monsoon" }, setup);
+    room = stepRoom(room, "p1", { type: "ready", ready: true }, setup);
+    room = stepRoom(room, "p2", { type: "ready", ready: true }, setup);
+    room = stepRoom(room, "p1", { type: "start" }, setup);
+    if (room.phase !== "play") throw new Error("Очікувався стан активної кампанії");
+
+    // Хід активної Borealis, але в онлайні моя агенція — Monsoon: підсвічуватися має лише Monsoon Union.
+    const opponentTurnHtml = renderToStaticMarkup(
+      <Turn state={room.consortium} dispatch={() => undefined} isMyTurn={false} myAgencyIds={["monsoon"]} initialTab="factory" />,
+    );
+    expect(opponentTurnHtml).toContain("Available on your turn.");
+    expect(opponentTurnHtml).toContain('<tr class="is-player"><td>Monsoon Union');
+    expect(opponentTurnHtml).not.toContain('<tr class="is-player"><td>Borealis Federation');
+    expect((opponentTurnHtml.match(/id="mc-tab-(?:factory|ground|trl|research)"[^>]*disabled=""/g) ?? []).length).toBe(4);
+    expect(opponentTurnHtml).not.toContain("ui.");
+
+    // Поза кампанією (`!account`): вкладки кампанії вимкнені, а панель містить пояснення.
+    const borealis = (agenciesData as unknown as Record<string, AgencyProfile>).borealis!;
+    const soloConsortium = newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, marketData as Market, [borealis]);
+    const nonCampaignHtml = renderToStaticMarkup(
+      <Turn state={soloConsortium} dispatch={() => undefined} initialTab="factory" />,
+    );
+    expect(nonCampaignHtml).toContain("Available in campaign mode only.");
+    expect((nonCampaignHtml.match(/id="mc-tab-(?:factory|ground|trl|research)"[^>]*disabled=""/g) ?? []).length).toBe(4);
+    expect(nonCampaignHtml).not.toContain("ui.");
   });
 });

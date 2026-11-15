@@ -54,26 +54,37 @@ export function App() {
     document.title = view === "orbit" ? "hryah · Orbital operations" : `hryah · ${channel}`;
   }, [view]);
 
+  const isConsoleView = view === "play";
+
   return (
     <>
       <div hidden={view !== "orbit"}><OrbitPrototype /></div>
-      <div hidden={view === "orbit"} lang="uk" className="mc-app-backdrop" style={{ fontFamily: "system-ui, sans-serif" }}>
-        <div style={{ background: color, color: "#001524", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
+      <div
+        hidden={view === "orbit"}
+        lang="uk"
+        className={isConsoleView ? "mc-app-backdrop" : undefined}
+        style={
+          isConsoleView
+            ? { fontFamily: "system-ui, sans-serif" }
+            : { fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b0d17", color: "#e8eaf3" }
+        }
+      >
+        <div style={{ background: color, color: isConsoleView ? "#001524" : "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
           {label} · збірка {commit}
         </div>
-        <main style={{ padding: "18px 20px 28px", maxWidth: 1760, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 14 }}>
-            <h1 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, color: "var(--c-cream, #ffecd1)", fontSize: 22 }}>
-              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={24} height={24} />
+        <main style={{ padding: isConsoleView ? "18px 20px 28px" : 24, maxWidth: isConsoleView ? 1760 : 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: isConsoleView ? 14 : 16 }}>
+            <h1 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, color: isConsoleView ? "var(--c-cream, #ffecd1)" : "#e8eaf3", fontSize: isConsoleView ? 22 : undefined }}>
+              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={isConsoleView ? 24 : 26} height={isConsoleView ? 24 : 26} />
               hryah
             </h1>
-            <nav style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 14 }}>
-              <a href="#play" style={{ color: view === "play" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Гра</a>
-              <a href="#room" style={{ color: view === "room" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>{t("room.nav")}</a>
-              <a href="#orbit" style={{ color: "var(--c-text-muted, #ffecd1)" }}>{orbitText["ui.orbitOperations"]}</a>
-              <a href="#mission" style={{ color: view === "mission" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>{t("ui.nav.mission")}</a>
-              <a href="#debug" style={{ color: view === "debug" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Дебаг</a>
-              <a href="#gallery" style={{ color: view === "gallery" ? "var(--c-orange, #ff7d00)" : "var(--c-text-muted, #ffecd1)" }}>Галерея</a>
+            <nav style={{ display: "flex", flexWrap: "wrap", gap: isConsoleView ? 14 : 12, fontSize: isConsoleView ? 14 : undefined }}>
+              <a href="#play" style={{ color: view === "play" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Гра</a>
+              <a href="#room" style={{ color: view === "room" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("room.nav")}</a>
+              <a href="#orbit" style={{ color: isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
+              <a href="#mission" style={{ color: view === "mission" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("ui.nav.mission")}</a>
+              <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>
+              <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>
             </nav>
           </div>
           <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>

@@ -392,6 +392,12 @@ function DevelopPanel({
   const entry = activeAgency(state);
   const [apertureM, setApertureM] = useState(0.3);
   const [inspect, setInspect] = useState(false);
+
+  useEffect(() => {
+    setApertureM(0.3);
+    setInspect(false);
+  }, [entry?.agency.id]);
+
   if (!entry) return null;
   const project: DevProject | undefined = entry.projects[0];
 
@@ -483,6 +489,14 @@ export function Turn({
 }: TurnProps) {
   const [tab, setTab] = useState<WorkspaceTab>(initialTab);
   const entry = activeAgency(state);
+  const currentAgencyId = entry?.agency.id;
+  const [prevAgencyId, setPrevAgencyId] = useState(currentAgencyId);
+  if (currentAgencyId !== prevAgencyId) {
+    setPrevAgencyId(currentAgencyId);
+    setTab(initialTab);
+  }
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
   const { base, market, turn } = state;
   // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
   const catalogNow = entry?.design.input.catalog;
@@ -507,22 +521,46 @@ export function Turn({
       }));
   }, [base, market, turn, catalogNow, blocked, lead]);
 
+  useEffect(() => {
+    const headerEl = headerRef.current;
+    const shellEl = shellRef.current;
+    if (!headerEl || !shellEl) return;
+    const updateOffset = () => {
+      const h = Math.ceil(headerEl.getBoundingClientRect().height);
+      shellEl.style.setProperty("--mc-sticky-offset", `${h + 20}px`);
+    };
+    updateOffset();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateOffset) : null;
+    ro?.observe(headerEl);
+    window.addEventListener("resize", updateOffset);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", updateOffset);
+    };
+  }, [currentAgencyId, state.turn, isMyTurn, state.agencies.length]);
+
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
   const resolvedMyAgencyIds = myAgencyIds ?? [entry.agency.id];
   const account = entry.account;
   const campaign = state.campaign;
+  const campaignTabsEnabled = isMyTurn && Boolean(account);
 
   const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
+    const enabledTabs = WORKSPACE_TABS.filter((item) => item.id === "design" || campaignTabsEnabled);
+    if (enabledTabs.length === 0) return;
+    const currentItem = WORKSPACE_TABS[currentIndex];
+    const currentEnabledIdx = currentItem ? enabledTabs.findIndex((item) => item.id === currentItem.id) : 0;
+    const safeIdx = currentEnabledIdx >= 0 ? currentEnabledIdx : 0;
     const nextIndex =
       e.key === "Home"
         ? 0
         : e.key === "End"
-          ? WORKSPACE_TABS.length - 1
-          : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + WORKSPACE_TABS.length) % WORKSPACE_TABS.length;
-    const target = WORKSPACE_TABS[nextIndex];
+          ? enabledTabs.length - 1
+          : (safeIdx + (e.key === "ArrowRight" ? 1 : -1) + enabledTabs.length) % enabledTabs.length;
+    const target = enabledTabs[nextIndex];
     if (target) {
       setTab(target.id);
       document.getElementById(`mc-tab-${target.id}`)?.focus();
@@ -557,9 +595,15 @@ export function Turn({
     </div>
   );
 
+  const inactiveTabMessage = (
+    <div className="mc-panel" style={{ color: "var(--c-text-muted)", fontSize: 13 }}>
+      {t(!account ? "ui.console.tabCampaignOnly" : "ui.console.tabWaitingTurn")}
+    </div>
+  );
+
   return (
-    <div className="mc-shell" data-testid="mission-control-console">
-      <header className="mc-sticky-bar">
+    <div ref={shellRef} className="mc-shell" data-testid="mission-control-console">
+      <header ref={headerRef} className="mc-sticky-bar">
         <div className="mc-header-top">
           <div className="mc-active-agency">
             <img src={resolveAssetUrl(`assets/icons/agencies/${entry.agency.id}.svg`)} alt="" width={26} height={26} />
@@ -632,7 +676,7 @@ export function Turn({
           </div>
           {isMyTurn && campaign && <BriefingPanel state={state} agencyId={entry.agency.id} />}
           {campaign ? (
-            <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} activeAgencyId={entry.agency.id} />
+            <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} />
           ) : (
             <div className="mc-panel" style={{ display: "grid", gap: 8 }}>
               <strong>{t(entry.agency.nameKey)}</strong>
@@ -645,6 +689,7 @@ export function Turn({
           <div className="mc-tablist" role="tablist" aria-label={t("ui.console.tabsLabel")}>
             {WORKSPACE_TABS.map((item, idx) => {
               const selected = tab === item.id;
+              const disabled = item.id !== "design" && !campaignTabsEnabled;
               return (
                 <button
                   key={item.id}
@@ -654,6 +699,7 @@ export function Turn({
                   aria-selected={selected}
                   aria-controls={`mc-panel-${item.id}`}
                   tabIndex={selected ? 0 : -1}
+                  disabled={disabled}
                   className="mc-tab"
                   onClick={() => setTab(item.id)}
                   onKeyDown={(e) => onTabKeyDown(e, idx)}
@@ -674,6 +720,7 @@ export function Turn({
           >
             <DesignScreen
               layoutMode="console"
+              resetKey={entry.agency.id}
               active={active && tab === "design"}
               state={entry.design}
               editable={(control) => isMyTurn && (entry.actionsLeft > 0 || entry.touched.includes(control))}
@@ -681,7 +728,7 @@ export function Turn({
               upcoming={upcoming}
               customSlotFooter={
                 entry.design.input.mission.kind !== "cargo" ? (
-                  <DevelopPanel state={state} dispatch={dispatch} canInteract={isMyTurn} />
+                  <DevelopPanel key={entry.agency.id} state={state} dispatch={dispatch} canInteract={isMyTurn} />
                 ) : undefined
               }
               dispatch={(action) => dispatch({ type: "design", action })}
@@ -695,8 +742,10 @@ export function Turn({
             className="mc-tabpanel"
             hidden={tab !== "factory"}
           >
-            {isMyTurn && account && (
+            {isMyTurn && account ? (
               <FactoryPanel key={entry.agency.id} entry={entry} turn={state.turn} dispatch={dispatch} />
+            ) : (
+              inactiveTabMessage
             )}
           </div>
 
@@ -707,7 +756,7 @@ export function Turn({
             className="mc-tabpanel"
             hidden={tab !== "ground"}
           >
-            {isMyTurn && account && <GroundPanel entry={entry} dispatch={dispatch} />}
+            {isMyTurn && account ? <GroundPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
           </div>
 
           <div
@@ -717,7 +766,7 @@ export function Turn({
             className="mc-tabpanel"
             hidden={tab !== "trl"}
           >
-            {isMyTurn && account && <TrlPanel entry={entry} dispatch={dispatch} />}
+            {isMyTurn && account ? <TrlPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
           </div>
 
           <div
@@ -727,7 +776,7 @@ export function Turn({
             className="mc-tabpanel"
             hidden={tab !== "research"}
           >
-            {isMyTurn && account && <ResearchPanel entry={entry} dispatch={dispatch} />}
+            {isMyTurn && account ? <ResearchPanel entry={entry} dispatch={dispatch} /> : inactiveTabMessage}
           </div>
         </section>
 

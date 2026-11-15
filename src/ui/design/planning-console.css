@@ -1,6 +1,6 @@
 /* Space-style Mission Control Console for Consortium Planning Screen */
 
-:root,
+.mc-app-backdrop,
 .mc-shell {
   --c-bg-deep: #001524;
   --c-teal: #15616d;
@@ -23,6 +23,8 @@
   --c-status-ok: #4ecdc4;
   --c-status-warn: #ff9f1c;
   --c-status-bad: #ff6b6b;
+
+  --mc-sticky-offset: 136px;
 }
 
 .mc-app-backdrop {
@@ -51,9 +53,7 @@
 .mc-shell button,
 .mc-shell select,
 .mc-shell input,
-.mc-shell summary,
-.mc-app-backdrop a,
-.mc-app-backdrop button {
+.mc-shell summary {
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
@@ -216,7 +216,7 @@
 
 .mc-col-right {
   position: sticky;
-  top: 108px;
+  top: var(--mc-sticky-offset, 136px);
   display: grid;
   gap: 12px;
   min-width: 0;
@@ -247,9 +247,14 @@
   cursor: pointer;
 }
 
-.mc-tab:hover {
+.mc-tab:hover:not(:disabled) {
   color: var(--c-cream);
   background: rgba(21, 97, 109, 0.22);
+}
+
+.mc-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .mc-tab[aria-selected="true"] {
@@ -686,6 +691,12 @@
   font-size: 13px;
 }
 
+@media (min-width: 1200px) and (max-width: 1400px) {
+  .mc-shell {
+    --mc-sticky-offset: 156px;
+  }
+}
+
 /* Narrow viewports (<1200px): clean single column stack */
 @media (max-width: 1199px) {
   .mc-grid {
@@ -709,8 +720,6 @@
   .mc-shell select,
   .mc-shell input,
   .mc-shell summary,
-  .mc-app-backdrop a,
-  .mc-app-backdrop button,
   .mc-progress-fill,
   .mc-margin-bar-fill,
   .mc-details-chevron {
