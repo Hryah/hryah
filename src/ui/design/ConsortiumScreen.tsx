@@ -170,45 +170,45 @@ function Menu({
         </div>
         <div className="mc-panel" style={{ display: "grid", gap: 8, alignContent: "start" }}>
           <strong style={{ color: "var(--c-cream)", fontSize: 16 }}>🌐 {t("ui.menu.online")}</strong>
-      <div style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
-      <form
-        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
-        onSubmit={(e) => {
-          e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
-          if (!named || busy) return;
-          if (code.length === 4) run(() => joinRoom(code, name));
-          else run(() => createRoom(name));
-        }}
-      >
-        <input
-          className="mc-input"
-          value={name}
-          maxLength={24}
-          placeholder={t("ui.menu.name")}
-          aria-label={t("ui.menu.name")}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button type="button" className="mc-btn mc-btn-sm" disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
-          {t("ui.menu.create")}
-        </button>
-        <input
-          className="mc-input"
-          value={code}
-          maxLength={4}
-          size={5}
-          placeholder={t("ui.menu.code")}
-          aria-label={t("ui.menu.code")}
-          onChange={(e) => setCode(e.target.value.replace(/\s/g, "").toUpperCase())}
-        />
-        <button
-          type="button"
-          className="mc-btn mc-btn-sm"
-          disabled={!named || code.length !== 4 || busy}
-          onClick={() => run(() => joinRoom(code, name))}
-        >
-          {t("ui.menu.join")}
-        </button>
-      </form>
+          <div style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
+          <form
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+            onSubmit={(e) => {
+              e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
+              if (!named || busy) return;
+              if (code.length === 4) run(() => joinRoom(code, name));
+              else run(() => createRoom(name));
+            }}
+          >
+            <input
+              className="mc-input"
+              value={name}
+              maxLength={24}
+              placeholder={t("ui.menu.name")}
+              aria-label={t("ui.menu.name")}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <button type="button" className="mc-btn mc-btn-sm" disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
+              {t("ui.menu.create")}
+            </button>
+            <input
+              className="mc-input"
+              value={code}
+              maxLength={4}
+              size={5}
+              placeholder={t("ui.menu.code")}
+              aria-label={t("ui.menu.code")}
+              onChange={(e) => setCode(e.target.value.replace(/\s/g, "").toUpperCase())}
+            />
+            <button
+              type="button"
+              className="mc-btn mc-btn-sm"
+              disabled={!named || code.length !== 4 || busy}
+              onClick={() => run(() => joinRoom(code, name))}
+            >
+              {t("ui.menu.join")}
+            </button>
+          </form>
         </div>
       </div>
       {notice && <div style={{ color: "var(--c-orange)", fontSize: 13 }}>{notice}</div>}
@@ -562,6 +562,10 @@ export function Turn({
 
   if (!entry) return null;
   const blockers = launchBlockers(entry.design);
+  // Запаси для нижньої панелі (картка перевірки рахує їх сама з того ж стану).
+  const margins = designPhase
+    .finish(entry.design)
+    .result.margins.filter((m) => !(m.id === "science" && entry.design.input.mission.kind === "cargo"));
   const canLaunch = blockers.length === 0;
   const resolvedMyAgencyIds = myAgencyIds ?? [entry.agency.id];
   const account = entry.account;
@@ -773,7 +777,8 @@ export function Turn({
               className="mc-tabpanel"
               hidden={tab !== item.id}
             >
-              {tab !== item.id ? null : !(isMyTurn && account) ? (
+              {/* Панелі лишаються змонтованими (лише hidden): вибір лінії й маршруту на фабриці не скидається при перемиканні. */}
+              {!(isMyTurn && account) ? (
                 inactiveTabMessage
               ) : item.id === "factory" ? (
                 <FactoryPanel key={entry.agency.id} entry={entry} turn={state.turn} dispatch={dispatch} />
@@ -794,10 +799,7 @@ export function Turn({
       {!checkVisible && active && (
         <div className="mc-dock" role="region" aria-label={t("ui.margins")} data-testid="margins-dock">
           <div className="mc-dock-margins">
-            {designPhase
-              .finish(entry.design)
-              .result.margins.filter((m) => !(m.id === "science" && entry.design.input.mission.kind === "cargo"))
-              .map((m) => (
+            {margins.map((m) => (
                 <span key={m.id} className={`mc-dock-chip ${m.ok ? "is-ok" : "is-bad"}`} title={`${fmt(m.have)} / ${fmt(m.need)} ${m.unit}`}>
                   {m.ok ? "✓" : "✗"} {t(`ui.margin.${m.id}`)}
                 </span>
