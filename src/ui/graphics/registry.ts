@@ -328,20 +328,26 @@ export class TemplateRegistry implements ITemplateRegistry {
   getBodyTemplate(bodyName: string): VisualTemplate {
     const match = this.findTemplateWithAlias(bodyName);
     if (match) {
-      return match.viaAlias ? { ...match.template, id: bodyName } : match.template;
+      return match.viaAlias
+        ? {
+            ...match.template,
+            id: bodyName,
+            displayName: bodyName,
+            blueprint: { ...match.template.blueprint, label: bodyName.toUpperCase() },
+          }
+        : match.template;
     }
     const resolvedId = this.resolveTemplateId(bodyName);
     const knownBody = BODY_FALLBACKS[bodyName] ?? BODY_FALLBACKS[resolvedId];
     if (knownBody) return knownBody;
 
-    const earth = this.byId.get('Earth');
-    if (earth) return earth;
+    const base = this.byId.get('Earth') ?? BODY_FALLBACKS.Earth!;
     return {
-      ...BODY_FALLBACKS.Earth!,
+      ...base,
       id: bodyName,
       displayName: bodyName,
       blueprint: {
-        ...BODY_FALLBACKS.Earth!.blueprint,
+        ...base.blueprint,
         label: bodyName.toUpperCase(),
       },
     };

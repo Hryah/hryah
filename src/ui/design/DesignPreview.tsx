@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { DesignState } from "../../core/design";
 import { CompositeSpacecraftSvg, templateRegistry } from "../graphics";
 import { t } from "../text";
@@ -93,6 +93,13 @@ export function DesignPreview({
   const activeView = views.find((v) => v.id === mode) ?? views[0]!;
   const stageView = views.find((v) => v.id === "stage");
   const isStageActive = activeView.id === "stage";
+  const shouldKeepStageMounted = stageMounted || isStageActive;
+
+  useEffect(() => {
+    if (isStageActive && !stageMounted) {
+      setStageMounted(true);
+    }
+  }, [isStageActive, stageMounted]);
 
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 12 }}>
@@ -124,7 +131,7 @@ export function DesignPreview({
           })}
         </div>
       </div>
-      {stageMounted && stageView && (
+      {shouldKeepStageMounted && stageView && (
         <div style={{ display: isStageActive ? "block" : "none" }}>
           {stageView.render({ state, active: active && isStageActive })}
         </div>

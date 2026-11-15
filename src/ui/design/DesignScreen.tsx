@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import { BlueprintShapeSvg, resolveAssetUrl, templateRegistry, type VisualTemplate } from "../graphics";
@@ -40,14 +40,21 @@ function TemplateThumbnail({
   readonly height: number;
   readonly opacity?: number;
 }) {
+  const [spriteFailed, setSpriteFailed] = useState(false);
   const spriteUrl = template.sprite2d?.url;
-  if (spriteUrl) {
+
+  useEffect(() => {
+    setSpriteFailed(false);
+  }, [template.id, spriteUrl]);
+
+  if (spriteUrl && !spriteFailed) {
     return (
       <img
         src={spriteUrl}
         alt=""
         width={width}
         height={height}
+        onError={() => setSpriteFailed(true)}
         style={{ objectFit: "contain", opacity, flexShrink: 0 }}
       />
     );

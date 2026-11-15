@@ -201,6 +201,12 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     expect(unknownLauncher.id).toBe('super-heavy-x');
     expect(unknownLauncher.blueprint.label).toBe('SUPER-HEAVY-X');
     expect(unknownLauncher.blueprint.shape).toBe('launcher-medium');
+
+    // Невідоме небесне тіло поза BODY_FALLBACKS у непорожньому реєстрі теж зберігає передані id та label
+    const unknownBody = templateRegistry.getBodyTemplate('Europa');
+    expect(unknownBody.id).toBe('Europa');
+    expect(unknownBody.displayName).toBe('Europa');
+    expect(unknownBody.blueprint.label).toBe('EUROPA');
   });
 
   it('GraphicsRendererRegistry дозволяє підключати нові форми, режими і кнопки у SpacecraftViewport', () => {

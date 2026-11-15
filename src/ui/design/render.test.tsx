@@ -175,4 +175,12 @@ describe("перегляд апарата на екрані проєктуван
     expect(html).toContain('fill="#78350f"');
     expect(html).not.toContain("ui.");
   });
+
+  it("якщо передано невідомий defaultPreviewMode, переглядач коректно відкочується на 3D-стенд і не лишає порожню область", () => {
+    const html = renderToStaticMarkup(
+      <DesignScreen state={state} dispatch={() => undefined} editable defaultPreviewMode="nonexistent-mode" />,
+    );
+    expect(html).toContain("Spacecraft on the test stand");
+    expect(html).toContain('aria-pressed="true"');
+  });
 });
