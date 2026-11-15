@@ -147,7 +147,7 @@ describe("заглушка орбіти поважає ціль місії (як
     stubOrbit({ mission, spec, flight: { ...flight.result, orbit: { ...flight.result.orbit, altKm: mission.altRangeKm[0] } }, log: design.log });
 
   it("проліт знімає лише на своїх витках і вважає успіхом будь-які дані", () => {
-    const guest = (missionsData as Record<string, Mission>)["guest"]!;
+    const guest = (missionsData as unknown as Record<string, Mission>)["guest"]!;
     if (guest.orbitObjective?.type !== "flyby") throw new Error("guest має бути прольотом");
     const [a, b] = guest.orbitObjective.imagingOrbits;
     const allOrbits = run({ ...guest, orbitObjective: undefined, requiredDataMb: 0 }).result.deliveredMb;
@@ -157,7 +157,7 @@ describe("заглушка орбіти поважає ціль місії (як
   });
 
   it("вантажний рейс без контейнера — провал із причиною, а не успіх", () => {
-    const lifeline = (missionsData as Record<string, Mission>)["station-resupply"] ?? (missionsData as Record<string, Mission>)["lifeline"]!;
+    const lifeline = (missionsData as unknown as Record<string, Mission>)["station-resupply"] ?? (missionsData as unknown as Record<string, Mission>)["lifeline"]!;
     const out = run(lifeline, { ...design.result, cargoKind: undefined });
     expect(out.result.success).toBe(false);
     expect(out.log).toContainEqual(expect.objectContaining({ id: "orbit:cargo-missing", kind: "failure", causedBy: ["design:instrument"] }));
