@@ -67,6 +67,14 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
   const [hide, setHide] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => { button.current?.focus(); }, []);
+  // Поки вікно відкрите, сторінка під ним не прокручується (прокручується лише саме вікно, якщо не влазить).
+  useEffect(() => {
+    const html = document.documentElement;
+    const before = { html: html.style.overflow, body: document.body.style.overflow };
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => { html.style.overflow = before.html; document.body.style.overflow = before.body; };
+  }, []);
   const go = () => {
     if (busy) return;
     if (hide) setCardsEnabled(false);
@@ -77,10 +85,11 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
     <div
       role="dialog" aria-modal="true" aria-labelledby={`card-${id}`} data-testid={`phase-card-${id}`}
       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); go(); } }}
-      style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(5, 6, 12, 0.78)", display: "grid", placeItems: "center", padding: 16 }}
+      style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(5, 6, 12, 0.78)", display: "grid", placeItems: "center", padding: 16, overscrollBehavior: "contain" }}
     >
       <div style={{
-        width: "min(560px, 100%)", maxHeight: "calc(100vh - 32px)", overflowY: "auto", background: C.panel, color: "#e8eaf3",
+        width: "min(1040px, 100%)", maxHeight: "calc(100vh - 32px)", overflowY: "auto", overscrollBehavior: "contain",
+        background: C.panel, color: "#e8eaf3",
         border: `1px solid ${C.line}`, borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.6)", fontFamily: "system-ui, sans-serif",
       }}>
         {art && artOk && (
@@ -89,7 +98,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
             style={{ display: "block", width: "100%", aspectRatio: "3 / 2", objectFit: "cover", borderRadius: "14px 14px 0 0" }}
           />
         )}
-        <div style={{ padding: 20, display: "grid", gap: 14 }}>
+        <div style={{ padding: 24, display: "grid", gap: 16 }}>
           <div>
             {step && (
               <div style={{ color: C.accent, fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>
@@ -99,6 +108,9 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
             <h2 id={`card-${id}`} style={{ margin: "4px 0 0", fontSize: 22 }}>{title ?? t(`ui.card.${id}.title`, vars)}</h2>
           </div>
 
+          {/* Широке вікно: ліворуч підсумок і брифінг, праворуч «що далі» й «навіщо». На вузькому екрані — одна колонка. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 14 }}>
           {summary.length > 0 && (
             <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 16px", background: C.bg, borderRadius: 10, padding: 12, fontSize: 14 }}>
               {summary.map((r, i) => (
@@ -110,15 +122,19 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
             </dl>
           )}
           {extra}
+          </div>
 
+          <div style={{ display: "grid", gap: 14 }}>
           <section>
             <div style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{t("ui.card.next")}</div>
-            <p style={{ margin: "4px 0 0", lineHeight: 1.45 }}>{t(`ui.card.${id}.next`, vars)}</p>
+            <p style={{ margin: "4px 0 0", lineHeight: 1.5, fontSize: 16 }}>{t(`ui.card.${id}.next`, vars)}</p>
           </section>
           <section style={{ borderLeft: `3px solid ${C.accent}`, paddingLeft: 12 }}>
             <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{t("ui.card.why")}</div>
             <p style={{ margin: "4px 0 0", lineHeight: 1.45, color: "#c9cde0" }}>{t(`ui.card.${id}.why`, vars)}</p>
           </section>
+          </div>
+          </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <label style={{ color: C.dim, fontSize: 13, display: "inline-flex", gap: 6, alignItems: "center" }}>
