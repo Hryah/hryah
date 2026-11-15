@@ -154,7 +154,7 @@ describe("неактивні гравці й рестарт", () => {
 
   it("той, хто тримає опитування, не вважається зниклим; останній зниклий закриває кімнату", async () => {
     const c = clock();
-    const rooms = new Rooms({ setup, now: c.now, idleMs: 1000 });
+    const rooms = new Rooms({ setup, now: c.now, idleMs: 1000, lobbyAloneIdleMs: 1000 });
     const a = rooms.create("Ann") as { code: string; player: string; token: string };
     const pending = rooms.poll(a.code, a.player, a.token, 99, 50); // відкрите опитування
     c.advance(5000);
@@ -162,6 +162,25 @@ describe("неактивні гравці й рестарт", () => {
     expect(rooms.size()).toBe(1);
     await pending;
     c.advance(5000);
+    rooms.sweep();
+    expect(rooms.size()).toBe(0);
+  });
+
+  it("господар сам у лобі (пішов надіслати код) тримає кімнату до 10 хвилин, а не 90 секунд", () => {
+    const c = clock();
+    const rooms = new Rooms({ setup, now: c.now });
+    const a = rooms.create("Ann") as { code: string; player: string; token: string };
+    c.advance(5 * 60 * 1000); // вкладка у фоні: опитування немає
+    rooms.sweep();
+    expect(rooms.size()).toBe(1);
+    expect(rooms.join(a.code, "Bob")).toHaveProperty("token"); // друг заходить за кодом
+  });
+
+  it("господар, що мовчить понад 10 хвилин сам у лобі, закриває кімнату", () => {
+    const c = clock();
+    const rooms = new Rooms({ setup, now: c.now });
+    rooms.create("Ann");
+    c.advance(11 * 60 * 1000);
     rooms.sweep();
     expect(rooms.size()).toBe(0);
   });

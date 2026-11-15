@@ -131,10 +131,13 @@ function Menu({
     setError(null);
     job()
       .then(onOnline)
-      .catch((e: Error) => setError(e.message))
+      // Сервер каже «no such room», коли кімнати немає саме на цьому сайті: main і /experimental/ мають окремі сервери,
+      // а кімнати живуть у пам'яті й зникають після оновлення сайту. Пояснюємо це гравцю замість сирого повідомлення.
+      .catch((e: Error) => setError(e.message === "no such room" ? t("ui.menu.noSuchRoom") : e.message))
       .finally(() => setBusy(false));
   };
-  const named = name.trim().length > 0;
+  // Ім'я необов'язкове: без нього гравець — «Commander». Раніше порожнє ім'я мовчки блокувало «Create room» і «Join».
+  const playerName = name.trim() || t("ui.menu.defaultName");
   return (
     <div className="mc-panel" style={{ display: "grid", gap: 18, maxWidth: 1100, margin: "24px auto 0" }} data-testid="menu">
       {/* Вітання: що це за гра й що тут обирати (прохання Ашота). */}
@@ -175,9 +178,9 @@ function Menu({
             style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
             onSubmit={(e) => {
               e.preventDefault(); // Enter: із кодом із 4 літер — вхід, інакше створення кімнати
-              if (!named || busy) return;
-              if (code.length === 4) run(() => joinRoom(code, name));
-              else run(() => createRoom(name));
+              if (busy) return;
+              if (code.length === 4) run(() => joinRoom(code, playerName));
+              else run(() => createRoom(playerName));
             }}
           >
             <input
@@ -188,27 +191,31 @@ function Menu({
               aria-label={t("ui.menu.name")}
               onChange={(e) => setName(e.target.value)}
             />
-            <button type="button" className="mc-btn mc-btn-sm" disabled={!named || busy} onClick={() => run(() => createRoom(name))}>
+            <button type="button" className="mc-btn mc-btn-sm" disabled={busy} onClick={() => run(() => createRoom(playerName))}>
               {t("ui.menu.create")}
             </button>
             <input
               className="mc-input"
               value={code}
               maxLength={4}
-              size={5}
+              size={12}
               placeholder={t("ui.menu.code")}
               aria-label={t("ui.menu.code")}
-              onChange={(e) => setCode(e.target.value.replace(/\s/g, "").toUpperCase())}
+              // Код кімнати — 4 латинські літери: цифри й інші символи відкидаємо одразу.
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
             />
             <button
               type="button"
               className="mc-btn mc-btn-sm"
-              disabled={!named || code.length !== 4 || busy}
-              onClick={() => run(() => joinRoom(code, name))}
+              disabled={code.length !== 4 || busy}
+              onClick={() => run(() => joinRoom(code, playerName))}
             >
               {t("ui.menu.join")}
             </button>
           </form>
+          {code.length > 0 && code.length < 4 && (
+            <div role="status" style={{ color: "var(--c-orange)", fontSize: 12 }}>{t("ui.menu.codeHint")}</div>
+          )}
         </div>
       </div>
       {notice && <div style={{ color: "var(--c-orange)", fontSize: 13 }}>{notice}</div>}
