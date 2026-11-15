@@ -95,7 +95,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
         {art && artOk && (
           <img
             src={resolveAssetUrl(art)} alt="" onError={() => setArtOk(false)}
-            style={{ display: "block", width: "100%", aspectRatio: "3 / 2", objectFit: "cover", borderRadius: "14px 14px 0 0" }}
+            style={{ display: "block", width: "100%", aspectRatio: "3 / 2", maxHeight: "34vh", objectFit: "cover", borderRadius: "14px 14px 0 0" }}
           />
         )}
         <div style={{ padding: 24, display: "grid", gap: 16 }}>
@@ -110,7 +110,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
 
           {/* Широке вікно: ліворуч підсумок і брифінг, праворуч «що далі» й «навіщо». На вузькому екрані — одна колонка. */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(380px, 100%), 1fr))", gap: 20, alignItems: "start" }}>
-          <div style={{ display: "grid", gap: 14 }}>
+          {(summary.length > 0 || extra) && <div style={{ display: "grid", gap: 14 }}>
           {summary.length > 0 && (
             <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 16px", background: C.bg, borderRadius: 10, padding: 12, fontSize: 14 }}>
               {summary.map((r, i) => (
@@ -122,7 +122,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
             </dl>
           )}
           {extra}
-          </div>
+          </div>}
 
           <div style={{ display: "grid", gap: 14 }}>
           <section>
