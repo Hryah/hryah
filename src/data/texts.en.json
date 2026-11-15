@@ -408,5 +408,11 @@
   "fab.cargo.food": "Food container (needs cooling power) (own production)",
   "fab.cargo.parts": "Spare parts container (own production)",
   "fab.cargo.experiment": "Live experiment (needs heating power) (own production)",
-  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot.",
+  "ui.campaign.cargoLine": "container delivered, {orbits}/{total} approach orbits survived: contribution {value}, payout {payout} M$ + grant {grant} M$, +{research} research",
+  "ui.campaign.cargoMissed": "never reached the station orbit: nothing delivered; grant {grant} M$, +{research} research",
+  "ui.cargoKind.water": "water",
+  "ui.cargoKind.food": "food",
+  "ui.cargoKind.parts": "spare parts",
+  "ui.cargoKind.experiment": "experiment"
 }

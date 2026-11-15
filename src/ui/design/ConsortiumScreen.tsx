@@ -358,7 +358,7 @@ export function Turn({ state, dispatch, active = true }: { state: ConsortiumStat
         </button>
       </div>
       <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.waitHint")}</div>
-      <DevelopPanel state={state} dispatch={dispatch} />
+      {entry.design.input.mission.kind !== "cargo" && <DevelopPanel state={state} dispatch={dispatch} />}
     </div>
   );
 
