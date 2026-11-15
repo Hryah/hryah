@@ -40,7 +40,8 @@ describe("buildSpec", () => {
     expect(summary.total).toBe(6561);
     expect(summary.launchable).toBe(4836);
     // was fixed here. may be the source of bugs?
-    expect(summary.wins).toBe(290);
+    // 290 → 292: заглушка орбіти, як і справжня, зараховує орбіту до 5% нижче мінімуму (orbit-rules.json → orbit).
+    expect(summary.wins).toBe(292);
     expect(summary.failsByMargin).toEqual({
       dv: 3168,
       science: 3645,

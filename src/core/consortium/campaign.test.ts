@@ -4,6 +4,7 @@ import campaignData from "../../data/campaign.json";
 import marketData from "../../data/market.json";
 import { flightPhase } from "../flight";
 import { orbitPhase, type OrbitAction } from "../orbit";
+import { minOrbitAltKm, orbitInfo } from "../model";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../stubs";
 import { botTarget } from "./bot";
 import { depositsOf } from "../factory";
@@ -128,6 +129,23 @@ describe("кампанія в кімнаті", () => {
     expect(s.players.map((p) => p.id)).toEqual(["me", "bot-2"]);
     expect(send(s, "me", { type: "removeBot", playerId: "me" })).toBe(s);
     expect(send(s, "me", { type: "leave" })).toBe(s); // лишились би самі боти
+  });
+
+  it("звіт з орбітою трохи нижче мінімуму (смуга допуску) зараховує вихід на орбіту й не знімає репутацію", () => {
+    let s = launchLikeBot(soloRoom());
+    const honest = honestReport(s);
+    const mission = flownMission(s.consortium);
+    const lowAlt = Math.ceil(minOrbitAltKm(mission) + 1); // між 95% мінімуму і самим мінімумом
+    expect(lowAlt).toBeLessThan(mission.altRangeKm[0]);
+    const low: MissionReport = { ...honest, flight: { ...honest.flight, orbit: orbitInfo(mission.body, lowAlt) } };
+    const repBefore = s.consortium.agencies.find((e) => e.agency.id === "borealis")!.account!.reputation ?? 0;
+    s = send(s, "me", { type: "report", report: low }) as PlayState;
+    const run = s.consortium.campaign!.rounds[0]!.runs.find((r) => r.agencyId === "borealis")!;
+    expect(run.reachedOrbit).toBe(true);
+    if (run.outcome.success) {
+      const repAfter = s.consortium.agencies.find((e) => e.agency.id === "borealis")!.account!.reputation ?? 0;
+      expect(repAfter).toBeGreaterThanOrEqual(repBefore);
+    }
   });
 
   it("боти ходять самі, гравця чекають, а вікно не закривається без його звіту", () => {

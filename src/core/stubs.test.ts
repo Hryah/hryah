@@ -106,10 +106,10 @@ describe("заглушки: наскрізний прохід", () => {
 
 
 describe("межі висоти орбітальної заглушки", () => {
-  it("зараховує межі діапазону та пояснює провал поза ними", () => {
+  it("зараховує межі діапазону з допуском 5% знизу (як справжня орбіта) та пояснює провал поза ними", () => {
     const design = stubDesign({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG });
     const flight = stubFlight({ mission: SAMPLE_MISSION, spec: design.result, log: design.log });
-    for (const [altKm, success] of [[200, false], [399.999, false], [400, true], [800, true], [800.001, false]] as const) {
+    for (const [altKm, success] of [[200, false], [379.999, false], [380, true], [399.999, true], [400, true], [800, true], [800.001, false]] as const) {
       const input = { mission: SAMPLE_MISSION, spec: design.result,
         flight: { ...flight.result, orbit: { ...flight.result.orbit, altKm } }, log: design.log };
       const initial = stubOrbitPhase.init(input, 42);

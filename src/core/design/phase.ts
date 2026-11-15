@@ -59,7 +59,7 @@ function modulesOf(input: DesignInput, slot: SlotId): ModuleDef[] {
   return input.catalog.modules.filter((m) => m.slot === slot);
 }
 
-// Стартовий проєкт: середній модуль у кожному слоті, найменший носій, найнижча орбіта.
+// Стартовий проєкт: середній модуль у кожному слоті, найменший носій, орбіта на крок вище нижньої межі.
 // «Середній» дає робочий, але не найкращий апарат: є що покращувати й де зекономити.
 export function startDesign(input: DesignInput): Design {
   const modules = {} as Record<SlotId, string>;
@@ -75,12 +75,10 @@ export function startDesign(input: DesignInput): Design {
     modules,
     fuelKg: START_FUEL_KG,
     // На крок вище нижньої межі (якщо діапазон дозволяє): невеликий недолiт у польоті не виводить апарат за межі місії.
-    altKm: Math.min(input.mission.altRangeKm[1], input.mission.altRangeKm[0] + DEFAULT_ALT_MARGIN_KM),
+    altKm: Math.min(input.mission.altRangeKm[1], input.mission.altRangeKm[0] + ALT_STEP_KM),
     launcherId: launcher.id,
   };
 }
-
-const DEFAULT_ALT_MARGIN_KM = 50;
 
 // Які запаси зараз червоні й заважають запуску. Порожній список означає, що запускати можна.
 export function launchBlockers(state: DesignState): MarginId[] {

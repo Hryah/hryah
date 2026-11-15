@@ -6,7 +6,7 @@ import type {
   Catalog, CauseEntry, Design, DesignInput, FlightInput, FlightResult, Mission,
   MissionOutcome, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
 } from './contracts';
-import { buildSpec, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
+import { buildSpec, orbitAccepted, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
 import { fuelLeftKg } from './physics';
 import catalogData from '../data/catalog.json';
 import missionsData from '../data/missions.json';
@@ -105,7 +105,7 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
 
   const enoughData = deliveredMb >= mission.requiredDataMb;
   const enoughResolution = spec.resolutionM <= mission.requiredResolutionM;
-  const orbitOk = flight.orbit.altKm >= mission.altRangeKm[0] && flight.orbit.altKm <= mission.altRangeKm[1];
+  const orbitOk = orbitAccepted(mission, flight.orbit.altKm); // той самий допуск, що й у справжній орбіті
   const endS = flight.orbit.periodS * survivedOrbits;
 
   // Розряд батареї вже пояснює передчасне завершення й недоставлені дані.

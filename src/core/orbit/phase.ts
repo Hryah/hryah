@@ -1,5 +1,5 @@
 import type { CauseEntry, OrbitInput, OrbitPhase, MissionOutcome, SystemId } from '../contracts';
-import { downlinkMb, orbitGeneratedMb, orbitProfile, orbitTiming, segmentLoadW, stepCharge,
+import { downlinkMb, orbitAccepted, orbitGeneratedMb, orbitLowBand, orbitProfile, orbitTiming, segmentLoadW, stepCharge,
   transmitSeconds, validateOrbitMission } from '../model';
 import { nextRandom } from '../physics';
 import rules from '../../data/orbit-rules.json';
@@ -83,10 +83,8 @@ function capabilities(state: OrbitState) {
     resolutionOk: mission.orbitObjective?.type === 'cargo' || resolutionM <= mission.requiredResolutionM,
     // Трохи нижче мінімуму (до lowToleranceFraction) — не провал, а нижча якість: штраф польоту на кілька кілометрів
     // не повинен зводити нанівець місію з усіма даними. Сильний недолiт і вихід за верх діапазону лишаються провалом.
-    orbitOk: flight.orbit.altKm >= mission.altRangeKm[0] * (1 - rules.orbit.lowToleranceFraction)
-      && flight.orbit.altKm <= mission.altRangeKm[1],
-    orbitLow: flight.orbit.altKm < mission.altRangeKm[0]
-      && flight.orbit.altKm >= mission.altRangeKm[0] * (1 - rules.orbit.lowToleranceFraction),
+    orbitOk: orbitAccepted(mission, flight.orbit.altKm),
+    orbitLow: orbitLowBand(mission, flight.orbit.altKm),
   };
 }
 
