@@ -6,7 +6,7 @@ import { orbitPhase, type OrbitAction } from "../../core/orbit";
 import { FlightScreen } from "../flight";
 import { OrbitPanel } from "../play/OrbitPanel";
 import { fmt, t } from "../text";
-import { cardsEnabled, PhaseCard, type SummaryRow } from "./PhaseCard";
+import { cardsEnabled, PhaseCard, useCardsEnabled, type SummaryRow } from "./PhaseCard";
 
 // Виконавець місії в кампанії: гравець сам грає політ і орбіту свого запуску, а наприкінці звіт іде в кімнату.
 // Кімната перераховує орбіту з тих самих дій і сіду, тож показане тут збігається з тим, що зарахують.
@@ -44,6 +44,9 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
   const [orbitActions, setOrbitActions] = useState<OrbitAction[]>([]);
   // Звіт надіслано й чекаємо, поки кімната його прийме (тоді цей екран зникне). Якщо мережа підвела, кнопка знову активна.
   const [sending, setSending] = useState(false);
+  const cardsOn = useCardsEnabled();
+  // Звіт надіслано саме з вікна: воно лишається відкритим до відповіді кімнати, навіть якщо гравець щойно вимкнув вікна.
+  const [viaCard, setViaCard] = useState(false);
   useEffect(() => {
     if (!sending) return;
     const timer = setTimeout(() => setSending(false), 8000);
@@ -80,12 +83,11 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
     if (card === "launch") {
       return active ? <PhaseCard id="launch" step={{ n: 2, total: 4 }} summary={launchSummary(mission, spec)} onContinue={() => setCard(null)} /> : null;
     }
-    // Поки звіт летить, вікно лишається, навіть якщо гравець щойно вимкнув вікна галочкою.
-    if (lost && flightPhase.isDone(flight) && (cardsEnabled() || sending)) {
+    if (lost && flightPhase.isDone(flight) && ((cardsOn && !sending) || viaCard)) {
       const result = flightPhase.finish(flight).result;
       return active ? (
         <PhaseCard
-          id="lost" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.card.sendReport")} onContinue={sendLost}
+          id="lost" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.campaign.sendReport")} onContinue={() => { setViaCard(true); sendLost(); }}
           summary={[
             { label: t("ui.card.row.status"), value: t("ui.card.lostStatus"), tone: "bad" },
             { label: t("ui.card.row.damageFlight"), value: String(result.damage.length), tone: result.damage.length > 0 ? "bad" : undefined },
@@ -140,13 +142,13 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
     );
   }
   // Місію завершено: підсумок і звіт з одного вікна. Числа лише тоді, коли орбіта дограна (рання відправка дограє автопілотом).
-  if (done && (cardsEnabled() || sending)) {
+  if (done && ((cardsOn && !sending) || viaCard)) {
     if (!active) return null;
     const outcome = orbitPhase.finish(orbit).result;
     const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
     return (
       <PhaseCard
-        id="report" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.campaign.sendReport")} onContinue={send}
+        id="report" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.campaign.sendReport")} onContinue={() => { setViaCard(true); send(); }}
         summary={[
           { label: t("ui.card.row.status"), value: t(outcome.success ? "ui.card.success" : "ui.card.failure"), tone: outcome.success ? "ok" : "bad" },
           cargo

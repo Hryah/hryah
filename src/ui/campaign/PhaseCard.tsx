@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { resolveAssetUrl } from "../graphics";
 import { load, save } from "../../storage";
 import { t } from "../text";
@@ -23,13 +23,21 @@ export interface SummaryRow { label: string; value: string; tone?: "ok" | "bad" 
 export function cardsEnabled(): boolean {
   return load<unknown>(KEY) !== false;
 }
+// Спільний стан для всіх компонентів: галочка у вікні й кнопка під панеллю кампанії бачать одне й те саме.
+const listeners = new Set<() => void>();
+export function setCardsEnabled(on: boolean) {
+  save(KEY, on);
+  listeners.forEach((l) => l());
+}
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
+export const useCardsEnabled = () => useSyncExternalStore(subscribe, cardsEnabled, cardsEnabled);
 
 // Повернути вікна після «не показувати» (або вимкнути їх наперед).
 export function CardsToggle() {
-  const [on, setOn] = useState(cardsEnabled);
+  const on = useCardsEnabled();
   return (
     <button
-      type="button" aria-pressed={on} onClick={() => { save(KEY, !on); setOn(!on); }}
+      type="button" aria-pressed={on} onClick={() => setCardsEnabled(!on)}
       style={{ justifySelf: "start", padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent", color: on ? C.accent : C.dim, cursor: "pointer", fontSize: 13 }}
     >
       {t(on ? "ui.card.toggleOn" : "ui.card.toggleOff")}
@@ -57,7 +65,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
   useEffect(() => { button.current?.focus(); }, []);
   const go = () => {
     if (busy) return;
-    if (hide) save(KEY, false);
+    if (hide) setCardsEnabled(false);
     onContinue();
   };
   const tone = (r: SummaryRow) => (r.tone === "ok" ? C.ok : r.tone === "bad" ? C.bad : r.tone === "gold" ? C.gold : "inherit");
