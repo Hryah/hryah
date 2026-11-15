@@ -1,41 +1,45 @@
 # Графічний адаптер та система темплейтів (`src/ui/graphics/`)
 
-Цей модуль реалізує **адаптерну архітектуру візуальних темплейтів** для гри `hryah`.
-Він повністю ізольований у `src/ui/` (відповідно до правила `core purity` з `REVIEW_RULES.md`) і автоматично перетворює чистий JSON-стан гри (`Design`, `SpacecraftSpec`, `FlightResult`, `Mission`) на візуальне представлення.
+Цей модуль реалізує **розширювану адаптерну архітектуру візуальних темплейтів** для гри `hryah`.
+Він повністю ізольований у `src/ui/` (відповідно до правила `core purity` з `REVIEW_RULES.md`) і автоматично перетворює чистий JSON-стан гри (`Design`, `SpacecraftSpec`, `FlightResult`, `Mission`) на 2D SVG-спрайти або інженерні векторні схеми (`blueprint`).
 
 ## Архітектура
 
-1. **[`types.ts`](./types.ts)** — контракти темплейтів (`VisualTemplate`, `SpacecraftVisualAssembly`, `AttachmentSocket`, `ViewportContext`, `ITemplateRegistry`).
-2. **[`registry.ts`](./registry.ts)** — центральний реєстр (`templateRegistry`), який прив'язує ID модулів (`eng-*`, `sol-*`, `bat-*`, `ant-*`, `cam-*`), ракет-носіїв (`small`, `medium`, `heavy`) та небесних тіл (`Earth`, `Moon`) до:
-   - **3D-моделей `.glb`** (`model3d.url` у `public/assets/models/...`);
-   - **2D-спрайтів та текстур планет** (`sprite2d.url`, `planetTextures.dayMapUrl` у `public/assets/textures/...`);
-   - **Вбудованих інженерних SVG-схем (`blueprint`)** — гарантують, що будь-який модуль (навіть щойно доданий у `catalog.json` без 3D-моделі) відмальовується без помилок.
-3. **[`glb-viewer.tsx`](./glb-viewer.tsx)** — вбудований парсер бінарного формату `glTF 2.0 (.glb)` та інтерактивний 3D-рендерер на чистому `<canvas>` (обертання мишею, освітлення, нормалізація сітки) без потреби додавати важкі залежності в `package.json`.
-4. **[`adapters.tsx`](./adapters.tsx)** — компоненти `TemplateUnitView` (перемикач `Auto` / `3D GLB` / `2D/Tex` / `Blueprint` із автоматичним фолбеком) та `CompositeSpacecraftSvg` (динамічна збірка супутника на точках кріплення `SATELLITE_SOCKETS`).
-5. **[`SpacecraftViewport.tsx`](./SpacecraftViewport.tsx)** — готовий віджет в'юпорта, який можна вставити на екрани `ui/design/`, `ui/flight/`, `ui/orbit/` або `ui/debug/`.
+1. **[`types.ts`](./types.ts)** — контракти темплейтів (`VisualTemplate`, `SpacecraftVisualAssembly`, `AttachmentSocket`, `ViewportContext`, `ITemplateRegistry`) та контракти розширень (`IGraphicsRendererRegistry`, `UnitRenderMode`, `BlueprintShapeRenderer`, `UnitRenderer`, `SlotCompositeRenderer`).
+2. **[`registry.ts`](./registry.ts)** — центральний реєстр (`templateRegistry`), який завантажує `src/data/visual-templates.json`, підтримує карту `aliases` (наприклад, для ринкових чи кампанійних варіантів модулів), автоматично знаходить базу для `fab-*`, `cargo-*` і відомих небесних тіл (`Earth`, `Moon`, `Mars`) із безпечним фолбеком.
+3. **[`renderer-registry.tsx`](./renderer-registry.tsx)** — реєстр розширень (`rendererRegistry`), через який можна підключати власні векторні `blueprint`-форми, кастомні режими відображення (наприклад, `'thermal'`, `'xray'` або майбутній `'3d'`) і кастомні рендерери слотів.
+4. **[`adapters.tsx`](./adapters.tsx)** — компоненти `BlueprintShapeSvg`, `TemplateUnitView`, `EntityView` та `CompositeSpacecraftSvg` (динамічна збірка супутника на точках кріплення `SATELLITE_SOCKETS`, чистий векторний контур планет у режимі `blueprint`).
+5. **[`SpacecraftViewport.tsx`](./SpacecraftViewport.tsx)** — готовий віджет інтерактивного 2D/Blueprint-в'юпорта для `ui/debug/` та інших екранів.
 
-## Як прив'язати нову модель або спрайт
+## Як розширити темплейтами, аліасами або кастомним режимом
 
-1. Покладіть `.glb` файл у `public/assets/models/modules/` (або `.png` у `public/assets/sprites/modules/`).
-2. У файлі [`registry.ts`](./registry.ts) вкажіть шлях у відповідному об'єкті, або зареєструйте динамічно:
+1. Покладіть `.svg` файл у `public/assets/templates/` і додайте запис (або запис в `"aliases"`) у [`src/data/visual-templates.json`](../../data/visual-templates.json), або зареєструйте динамічно:
 
 ```ts
-import { templateRegistry } from '../graphics';
+import { rendererRegistry, templateRegistry } from '../graphics';
 
 templateRegistry.register({
-  id: 'eng-ion',
+  id: 'eng-plasma',
   category: 'module',
   slot: 'engine',
   system: 'propulsion',
-  displayName: 'Іонний двигун NASA NEXT-C',
-  model3d: { url: '/assets/models/modules/my_custom_ion.glb', format: 'glb', scale: 1.0 },
+  displayName: 'Плазмовий рушій',
+  sprite2d: { url: 'assets/templates/design/eng-ion.svg', format: 'svg' },
   blueprint: {
     shape: 'engine-ion',
     primaryColor: '#1e293b',
     secondaryColor: '#60a5fa',
     accentColor: '#06b6d4',
     scaleFactor: 1.15,
-    label: 'ION-NEXT',
+    label: 'PLASMA',
   },
 });
+
+templateRegistry.registerAlias('eng-plasma-mk2', 'eng-plasma');
+
+// За потреби — додатковий кастомний режим у в'юпорті:
+rendererRegistry.registerModeOption({ id: 'thermal', label: 'Thermal' });
+rendererRegistry.registerUnitRenderer('thermal', ({ template }) => (
+  <span>{template.blueprint.label}</span>
+));
 ```

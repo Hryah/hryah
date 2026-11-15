@@ -2,10 +2,14 @@
 // Дозволяє прив'язувати 3D-моделі (.glb/.gltf), 2D-спрайти (.png/.svg), текстури планет
 // та процедурні креслення (blueprints) до будь-яких ID модулів, ракет і небесних тіл із ядра.
 
+import type { ReactNode } from 'react';
 import type { Damage, Design, FlightResult, Mission, SlotId, SpacecraftSpec, SystemId } from '../../core/contracts';
 
 // Графіка дизайну суто 2D: 'auto' бере SVG-спрайт, а без нього інженерне креслення.
 export type RenderMode = 'auto' | 'sprite' | 'blueprint';
+
+/** Розширюваний режим рендеру одиниці (вбудовані 2D/Blueprint + кастомні рендерери з GraphicsRendererRegistry) */
+export type UnitRenderMode = RenderMode | (string & {});
 
 export type TemplateCategory =
   | 'module'
@@ -59,8 +63,8 @@ export interface PlanetTextureSource {
   readonly attribution?: string;
 }
 
-/** Вбудований процедурний векторний шаблон (працює завжди, навіть без зовнішніх файлів) */
-export type BlueprintShapeId =
+/** Вбудовані процедурні векторні форми (працюють завжди, навіть без зовнішніх файлів) */
+export type BuiltinBlueprintShapeId =
   | 'engine-cold'
   | 'engine-chem'
   | 'engine-ion'
@@ -76,15 +80,20 @@ export type BlueprintShapeId =
   | 'camera-compact'
   | 'camera-medium'
   | 'camera-telescope'
+  | 'cargo-container'
   | 'launcher-small'
   | 'launcher-medium'
   | 'launcher-heavy'
   | 'satellite-bus'
   | 'body-earth'
   | 'body-moon'
+  | 'body-mars'
   | 'character-astronaut'
   | 'character-engineer'
   | 'prop-custom';
+
+/** Ідентифікатор векторної форми: підтримує всі вбудовані форми та довільні розширення */
+export type BlueprintShapeId = BuiltinBlueprintShapeId | (string & {});
 
 export interface BlueprintSpec {
   readonly shape: BlueprintShapeId;
@@ -144,10 +153,71 @@ export interface ViewportContext {
   readonly damages?: Damage[];
 }
 
+/** Контекст рендеру окремої векторної blueprint-форми */
+export interface BlueprintShapeRenderContext {
+  readonly spec: BlueprintSpec;
+  readonly stroke: string;
+  readonly damaged: boolean;
+  readonly idPrefix: string;
+}
+
+/** Функція рендеру векторної blueprint-форми */
+export type BlueprintShapeRenderer = (ctx: BlueprintShapeRenderContext) => ReactNode;
+
+/** Контекст кастомного рендерера одного юніта (для TemplateUnitView / додаткових режимів) */
+export interface TemplateUnitRenderContext {
+  readonly template: VisualTemplate;
+  readonly mode: UnitRenderMode;
+  readonly width: number;
+  readonly height: number;
+  readonly damaged: boolean;
+  readonly spriteUrl?: string;
+}
+
+/** Функція кастомного рендеру юніта у певному режимі */
+export type UnitRenderer = (ctx: TemplateUnitRenderContext) => ReactNode;
+
+/** Контекст рендеру слота всередині композитної схеми апарата */
+export interface SlotCompositeRenderContext {
+  readonly slot: SlotId;
+  readonly template: VisualTemplate;
+  readonly socket: AttachmentSocket;
+  readonly damageSeverity: number;
+  readonly useSprites: boolean;
+  readonly spriteUrl?: string;
+  readonly spriteMissing: boolean;
+  readonly isSelected: boolean;
+  readonly isDamaged: boolean;
+  readonly onSelectSlot?: (slot: SlotId) => void;
+}
+
+/** Функція рендеру конкретного слота на композитній схемі апарата */
+export type SlotCompositeRenderer = (ctx: SlotCompositeRenderContext) => ReactNode;
+
+/** Опис опції режиму в перемикачі в'юпорта */
+export interface ViewportModeOption {
+  readonly id: UnitRenderMode;
+  readonly label: string;
+}
+
+/** Реєстр розширень рендерингу для масштабування форм, режимів та слотів без редагування ядра адаптерів */
+export interface IGraphicsRendererRegistry {
+  registerBlueprintShape(shape: BlueprintShapeId, renderer: BlueprintShapeRenderer): void;
+  getBlueprintShape(shape: BlueprintShapeId): BlueprintShapeRenderer | undefined;
+  registerUnitRenderer(mode: UnitRenderMode, renderer: UnitRenderer): void;
+  getUnitRenderer(mode: UnitRenderMode): UnitRenderer | undefined;
+  registerSlotRenderer(slot: SlotId, renderer: SlotCompositeRenderer): void;
+  getSlotRenderer(slot: SlotId): SlotCompositeRenderer | undefined;
+  registerModeOption(option: ViewportModeOption): void;
+  listModeOptions(): readonly ViewportModeOption[];
+}
+
 /** Інтерфейс реєстру темплейтів ( дозволить легко підміняти або довантажувати паки ) */
 export interface ITemplateRegistry {
   register(template: VisualTemplate): void;
   registerBatch(templates: readonly VisualTemplate[]): void;
+  registerAlias(aliasId: string, targetId: string): void;
+  resolveTemplateId(id: string): string;
   getTemplate(id: string): VisualTemplate;
   getModuleTemplate(slot: SlotId, moduleId: string): VisualTemplate;
   getLauncherTemplate(launcherId: string): VisualTemplate;
@@ -155,4 +225,5 @@ export interface ITemplateRegistry {
   getBusTemplate(): VisualTemplate;
   buildAssembly(ctx: ViewportContext): SpacecraftVisualAssembly;
   listAll(): readonly VisualTemplate[];
+  listAliases(): Readonly<Record<string, string>>;
 }

@@ -1,75 +1,15 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from '../../core/stubs';
-import { parseGlbBuffer } from './glb-viewer';
+import {
+  BlueprintShapeSvg,
+  CompositeSpacecraftSvg,
+  GraphicsRendererRegistry,
+  SpacecraftViewport,
+  TemplateUnitView,
+} from './index';
 import { DEFAULT_TEMPLATES, resolveAssetUrl, TemplateRegistry, templateRegistry } from './registry';
-
-function buildTestGlbWithNodeTransforms(): ArrayBuffer {
-  // Трикутник у локальних координатах [0,0,0], [1,0,0], [0,1,0]
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0, 1, 0,
-  ]);
-  const binBytes = new Uint8Array(vertices.buffer);
-
-  // Два вузли, що посилаються на той самий меш 0, але рознесені по осі X через translation
-  const gltfJson = {
-    asset: { version: '2.0' },
-    scene: 0,
-    scenes: [{ nodes: [0, 1] }],
-    nodes: [
-      { mesh: 0, translation: [-10, 0, 0] },
-      { mesh: 0, translation: [10, 0, 0] },
-    ],
-    meshes: [
-      {
-        primitives: [{ attributes: { POSITION: 0 } }],
-      },
-    ],
-    accessors: [
-      {
-        bufferView: 0,
-        componentType: 5126,
-        count: 3,
-        type: 'VEC3',
-      },
-    ],
-    bufferViews: [
-      {
-        buffer: 0,
-        byteOffset: 0,
-        byteLength: binBytes.byteLength,
-      },
-    ],
-  };
-
-  const jsonStr = JSON.stringify(gltfJson);
-  const jsonPadded = jsonStr + ' '.repeat((4 - (jsonStr.length % 4)) % 4);
-  const jsonBytes = new TextEncoder().encode(jsonPadded);
-
-  const totalLen = 12 + 8 + jsonBytes.byteLength + 8 + binBytes.byteLength;
-  const buf = new ArrayBuffer(totalLen);
-  const view = new DataView(buf);
-  const outBytes = new Uint8Array(buf);
-
-  // GLB Header
-  view.setUint32(0, 0x46546c67, true);
-  view.setUint32(4, 2, true);
-  view.setUint32(8, totalLen, true);
-
-  // JSON Chunk
-  view.setUint32(12, jsonBytes.byteLength, true);
-  view.setUint32(16, 0x4e4f534a, true);
-  outBytes.set(jsonBytes, 20);
-
-  // BIN Chunk
-  const binChunkOffset = 20 + jsonBytes.byteLength;
-  view.setUint32(binChunkOffset, binBytes.byteLength, true);
-  view.setUint32(binChunkOffset + 4, 0x004e4942, true);
-  outBytes.set(binBytes, binChunkOffset + 8);
-
-  return buf;
-}
 
 // URL у реєстрі вже з префіксом BASE_URL (напр. /experimental/): для звірки з файлами public/ знімаємо його.
 const fromBase = (url: string): string => {
@@ -166,14 +106,130 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     expect(resolveAssetUrl(tpl.sprite2d!.url)).toBe(tpl.sprite2d!.url);
   });
 
-  it('parseGlbBuffer враховує трансформації вузлів glTF (scenes/nodes translation)', () => {
-    const glb = buildTestGlbWithNodeTransforms();
-    const parsed = parseGlbBuffer(glb);
-    // Обидва вузли з мешем 0 мають бути інстансовані (2 трикутники) і рознесені по осі X
-    expect(parsed.triangleCount).toBe(2);
-    const t0 = parsed.triangles[0]!;
-    const t1 = parsed.triangles[1]!;
-    expect(t0.v0.x).toBeLessThan(-0.5);
-    expect(t1.v0.x).toBeGreaterThan(0.5);
+  it('у режимі Blueprint CompositeSpacecraftSvg не містить <image> (зокрема earth-map.svg) і рендерить векторний контур', () => {
+    const assembly = templateRegistry.buildAssembly({
+      phase: 'design',
+      mission: SAMPLE_MISSION,
+      design: SAMPLE_DESIGN,
+    });
+
+    const blueprintHtml = renderToStaticMarkup(
+      createElement(CompositeSpacecraftSvg, {
+        assembly,
+        altKm: SAMPLE_DESIGN.altKm,
+        fuelKg: SAMPLE_DESIGN.fuelKg,
+        mode: 'blueprint',
+      }),
+    );
+    expect(blueprintHtml).not.toContain('<image');
+    expect(blueprintHtml).not.toContain('earth-map.svg');
+    expect(blueprintHtml).toContain('ORBIT: 500 km (Earth)');
+    expect(blueprintHtml).toContain('<circle');
+    expect(blueprintHtml).toContain('<ellipse');
+
+    const preferSpritesFalseHtml = renderToStaticMarkup(
+      createElement(CompositeSpacecraftSvg, {
+        assembly,
+        altKm: SAMPLE_DESIGN.altKm,
+        fuelKg: SAMPLE_DESIGN.fuelKg,
+        preferSprites: false,
+      }),
+    );
+    expect(preferSpritesFalseHtml).not.toContain('<image');
+
+    const spriteHtml = renderToStaticMarkup(
+      createElement(CompositeSpacecraftSvg, {
+        assembly,
+        altKm: SAMPLE_DESIGN.altKm,
+        fuelKg: SAMPLE_DESIGN.fuelKg,
+        mode: 'sprite',
+      }),
+    );
+    expect(spriteHtml).toContain('<image');
+    expect(spriteHtml).toContain('earth');
+  });
+
+  it('TemplateUnitView у режимі blueprint прибирає <img> і малює векторну форму', () => {
+    const body = templateRegistry.getBodyTemplate('Earth');
+    const bpHtml = renderToStaticMarkup(createElement(TemplateUnitView, { template: body, mode: 'blueprint' }));
+    expect(bpHtml).not.toContain('<img');
+    expect(bpHtml).toContain('<svg');
+    expect(bpHtml).toContain('EARTH');
+
+    const spriteHtml = renderToStaticMarkup(createElement(TemplateUnitView, { template: body, mode: 'sprite' }));
+    expect(spriteHtml).toContain('<img');
+    expect(spriteHtml).toContain('earth');
+  });
+
+  it('TemplateRegistry масштабується через aliases, префікси fab-*, cargo-* та фолбеки планет (Mars)', () => {
+    // Вбудовані аліаси з маніфесту
+    const hall = templateRegistry.getModuleTemplate('engine', 'eng-hall');
+    expect(hall.id).toBe('eng-hall');
+    expect(hall.blueprint.shape).toBe('engine-ion');
+    expect(hall.sprite2d?.url).toContain('eng-ion.svg');
+
+    const roll = templateRegistry.getModuleTemplate('solar', 'sol-roll');
+    expect(roll.blueprint.shape).toBe('solar-large');
+    expect(roll.sprite2d?.url).toContain('sol-l.svg');
+
+    // Динамічний ланцюговий аліас і захист від циклів
+    const customReg = new TemplateRegistry();
+    customReg.registerAlias('eng-custom-v2', 'eng-hall');
+    customReg.registerAlias('cycle-a', 'cycle-b');
+    customReg.registerAlias('cycle-b', 'cycle-a');
+    expect(customReg.getModuleTemplate('engine', 'eng-custom-v2').blueprint.shape).toBe('engine-ion');
+    expect(customReg.resolveTemplateId('cycle-a')).toBe('cycle-a');
+
+    // Власні згенеровані модулі fab-* наслідують базу без втрати спрайта
+    const fabCam = templateRegistry.getModuleTemplate('instrument', 'fab-cam-s-borealis-1');
+    expect(fabCam.id).toBe('fab-cam-s-borealis-1');
+    expect(fabCam.blueprint.shape).toBe('camera-compact');
+    expect(fabCam.sprite2d?.url).toContain('cam-s.svg');
+
+    // Вантажні контейнери cargo-* отримують спеціалізовану форму cargo-container замість камери
+    const cargoWater = templateRegistry.getModuleTemplate('instrument', 'cargo-water');
+    expect(cargoWater.blueprint.shape).toBe('cargo-container');
+    expect(cargoWater.sprite2d).toBeUndefined();
+
+    // Відомі небесні тіла мають окремий векторний контур без підміни ID на Earth
+    const mars = templateRegistry.getBodyTemplate('Mars');
+    expect(mars.id).toBe('Mars');
+    expect(mars.blueprint.shape).toBe('body-mars');
+  });
+
+  it('GraphicsRendererRegistry дозволяє підключати нові форми, режими і кнопки у SpacecraftViewport', () => {
+    const customRegistry = new GraphicsRendererRegistry();
+    customRegistry.registerBlueprintShape('thruster-nuclear', ({ spec }) =>
+      createElement('polygon', { points: '50,10 80,85 20,85', fill: spec.accentColor, 'data-custom-shape': 'nuclear' }),
+    );
+    customRegistry.registerModeOption({ id: 'thermal', label: 'Thermal' });
+    customRegistry.registerUnitRenderer('thermal', ({ template }) =>
+      createElement('div', { 'data-thermal-unit': template.id }, template.blueprint.label),
+    );
+
+    const customHtml = renderToStaticMarkup(
+      createElement(BlueprintShapeSvg, {
+        spec: {
+          shape: 'thruster-nuclear',
+          primaryColor: '#111827',
+          secondaryColor: '#374151',
+          accentColor: '#22d3ee',
+          scaleFactor: 1,
+          label: 'NTR-1',
+        },
+        registry: customRegistry,
+      }),
+    );
+    expect(customHtml).toContain('data-custom-shape="nuclear"');
+
+    const viewportHtml = renderToStaticMarkup(
+      createElement(SpacecraftViewport, {
+        context: { phase: 'design', mission: SAMPLE_MISSION, design: SAMPLE_DESIGN },
+        defaultMode: 'thermal',
+        registry: customRegistry,
+      }),
+    );
+    expect(viewportHtml).toContain('Thermal');
+    expect(viewportHtml).toContain('data-thermal-unit=');
   });
 });

@@ -44,6 +44,18 @@
     "antenna": "ant-m",
     "instrument": "cam-m"
   },
+  "aliases": {
+    "eng-mono": "eng-cold",
+    "eng-hall": "eng-ion",
+    "sol-gaas": "sol-m",
+    "sol-roll": "sol-l",
+    "bat-nih2": "bat-m",
+    "bat-ss": "bat-s",
+    "ant-ka": "ant-m",
+    "ant-laser": "ant-s",
+    "cam-ms": "cam-m",
+    "cam-swir": "cam-m"
+  },
   "templates": [
     {
       "id": "bus:standard",
