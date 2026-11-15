@@ -11,6 +11,7 @@ import { ResearchPanel } from "../campaign/ResearchPanel";
 import { FactoryPanel } from "../campaign/FactoryPanel";
 import { TrlPanel } from "../campaign/TrlPanel";
 import { BriefingPanel } from "../campaign/BriefingPanel";
+import { WindowCard } from "../campaign/WindowCard";
 import { GroundPanel } from "../campaign/GroundPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
@@ -237,6 +238,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
   const mine = local || owner?.playerId === meId;
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      {mine && entry && active && <WindowCard key={`${entry.agency.id}:${consortium.campaign?.round ?? 0}`} state={consortium} agencyId={entry.agency.id} />}
       {mine && entry && <BriefingPanel state={consortium} agencyId={entry.agency.id} />}
       <CampaignPanel state={consortium} myAgencyIds={myAgencyIds} />
       <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
