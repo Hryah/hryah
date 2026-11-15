@@ -8,7 +8,7 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 export type PowerSpec = Pick<SpacecraftSpec, 'panelPowerW' | 'baseLoadW' | 'instrumentW' | 'transmitterW' | 'heaterW'>;
 
-// Стан тумблерів. У безпечному режимі камера й передавач вимкнені, базове споживання вдвічі менше.
+// Стан тумблерів. У безпечному режимі камера й передавач вимкнені, базове споживання зберігається.
 export interface Loads {
   camera: boolean;
   transmitter: boolean;
@@ -22,7 +22,7 @@ export interface Loads {
 export function netPowerW(spec: PowerSpec, loads: Loads, sunlit: boolean, powerDamage = 0): number {
   const generation = sunlit ? spec.panelPowerW * (1 - clamp01(powerDamage)) : 0;
   const consumption = loads.safeMode
-    ? spec.baseLoadW / 2 + (loads.heater && !sunlit ? spec.heaterW : 0)
+    ? spec.baseLoadW + (loads.heater && !sunlit ? spec.heaterW : 0)
     : spec.baseLoadW +
       (loads.camera ? spec.instrumentW : 0) +
       (loads.transmitter ? spec.transmitterW : 0) +
