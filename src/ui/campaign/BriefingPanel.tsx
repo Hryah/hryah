@@ -28,7 +28,8 @@ const TONE_ICON: Record<BriefTone, string> = {
   muted: "○",
 };
 
-export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; agencyId: string }) {
+// testId відрізняє копію брифінгу у вікні старту від панелі на сторінці.
+export function BriefingPanel({ state, agencyId, testId = "briefing" }: { state: ConsortiumState; agencyId: string; testId?: string }) {
   const campaign = state.campaign;
   const entry = state.agencies.find((e) => e.agency.id === agencyId);
   const account = entry?.account;
@@ -123,7 +124,7 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   if (scenario?.def.analogKey) lines.push({ text: t("ui.brief.analog", { analog: t(scenario.def.analogKey) }), tone: "muted" });
 
   return (
-    <details open className="mc-panel mc-details" data-testid="briefing">
+    <details open className="mc-panel mc-details" data-testid={testId}>
       <summary aria-label={`${t("ui.brief.title")} (${t("ui.console.toggleSection")})`}>
         <span>📋 {t("ui.brief.title")}</span>
         <span className="mc-details-chevron" aria-hidden="true">▸</span>

@@ -10,6 +10,7 @@ import orbitText from "./ui/orbit/texts.en.json";
 import { Gallery } from "./scenes/gallery";
 import "./ui/design/planning-console.css";
 import { t } from "./ui/text";
+import { RetroProvider, RetroToggle } from "./ui/style/RetroStyle";
 
 const RoomScreen = lazy(() =>
   import("./ui/room/RoomScreen").then((module) => ({
@@ -57,8 +58,12 @@ export function App() {
   const isConsoleView = view === "play";
 
   return (
-    <>
-      <div hidden={view !== "orbit"}><OrbitPrototype /></div>
+    <RetroProvider>
+      <div hidden={view !== "orbit"}>
+        <OrbitPrototype />
+        {/* На #orbit навігації немає, а сцена теж під фільтром: перемикач окремо в куті, під довідковим вікном (z-index 10). */}
+        {view === "orbit" && <div style={{ position: "fixed", right: 16, bottom: 12, zIndex: 5 }}><RetroToggle /></div>}
+      </div>
       <div
         hidden={view === "orbit"}
         lang="uk"
@@ -85,6 +90,7 @@ export function App() {
               <a href="#mission" style={{ color: view === "mission" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("ui.nav.mission")}</a>
               <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>
               <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>
+              <RetroToggle />
             </nav>
           </div>
           <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
@@ -101,6 +107,6 @@ export function App() {
           )}
         </main>
       </div>
-    </>
+    </RetroProvider>
   );
 }

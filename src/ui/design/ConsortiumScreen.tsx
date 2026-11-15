@@ -25,6 +25,8 @@ import { ResearchPanel } from "../campaign/ResearchPanel";
 import { FactoryPanel } from "../campaign/FactoryPanel";
 import { TrlPanel } from "../campaign/TrlPanel";
 import { BriefingPanel } from "../campaign/BriefingPanel";
+import { WindowCard } from "../campaign/WindowCard";
+import { CardsToggle } from "../campaign/PhaseCard";
 import { GroundPanel } from "../campaign/GroundPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
@@ -367,14 +369,17 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
   const mine = local || owner?.playerId === meId;
 
   return (
-    <Turn
-      state={consortium}
-      active={active}
-      myAgencyIds={myAgencyIds}
-      playerTurnText={t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}
-      isMyTurn={mine}
-      dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })}
-    />
+    <>
+      {mine && entry && active && <WindowCard key={`${entry.agency.id}:${consortium.campaign?.round ?? 0}`} state={consortium} agencyId={entry.agency.id} />}
+      <Turn
+        state={consortium}
+        active={active}
+        myAgencyIds={myAgencyIds}
+        playerTurnText={t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}
+        isMyTurn={mine}
+        dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })}
+      />
+    </>
   );
 }
 
@@ -676,7 +681,10 @@ export function Turn({
           </div>
           {isMyTurn && campaign && <BriefingPanel state={state} agencyId={entry.agency.id} />}
           {campaign ? (
-            <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} />
+            <>
+              <CampaignPanel state={state} myAgencyIds={resolvedMyAgencyIds} />
+              <CardsToggle />
+            </>
           ) : (
             <div className="mc-panel" style={{ display: "grid", gap: 8 }}>
               <strong>{t(entry.agency.nameKey)}</strong>
