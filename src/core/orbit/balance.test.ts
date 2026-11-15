@@ -11,7 +11,8 @@ import {
 import { SAMPLE_MISSION } from '../stubs';
 import type { Mission, OrbitInput } from '../contracts';
 import missionsData from '../../data/missions.json';
-import { orbitInfo } from '../model';
+import { buildSpec, orbitInfo } from '../model';
+import { CARGO_CATALOG } from '../consortium/scenarios';
 import { createDemoOrbit } from './demo';
 import { orbitPhase } from './phase';
 
@@ -28,10 +29,12 @@ describe('mission-specific orbit scoring', () => {
   it.each(['station-resupply', 'colony-resupply'] as const)('ignores the optical placeholder when scoring %s cargo', (id) => {
     const mission = missionsData[id] as Mission;
     const { input } = createDemoOrbit();
+    const design = { ...input.spec.design, modules: { ...input.spec.design.modules, instrument: 'cargo-water' } };
+    const spec = buildSpec({ mission, catalog: CARGO_CATALOG }, design).result;
     const cargoInput: OrbitInput = {
       ...input,
       mission,
-      spec: { ...input.spec, batteryWh: 10_000 },
+      spec: { ...spec, batteryWh: 10_000 },
       flight: { ...input.flight, orbit: orbitInfo(mission.body, 400) },
     };
     const result = finishOrbit(cargoInput);
