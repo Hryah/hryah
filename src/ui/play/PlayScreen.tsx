@@ -9,6 +9,7 @@ import { FlightScreen } from "../flight";
 import { resolveAssetUrl } from "../graphics/registry";
 import { OrbitPanel } from "./OrbitPanel";
 import { fmt, t } from "../text";
+import { RetroToggle } from "../style/RetroStyle";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
 // core/game і шле дії; перехід між частинами робить сама склейка в core/game.ts, коли частина завершується.
@@ -89,6 +90,8 @@ export function PlayScreen({ game, setGame, active }: Props) {
                 {t(game.flight.gameMode === "GAME_OVER" ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
               </button>
             </div>
+            {/* Політ перекриває шапку, тож перемикач стилю дублюємо тут. */}
+            <div><RetroToggle /></div>
           </div>
         </>
       );
