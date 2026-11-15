@@ -188,3 +188,63 @@ describe("неактивні гравці й рестарт", () => {
     expect(rooms.join(a.code, "Bob")).toMatchObject({ status: 503 });
   });
 });
+
+describe("кімнати з ботами", () => {
+  it("остання людина виходить: кімната закривається, боти її не тримають", () => {
+    const rooms = new Rooms({ setup });
+    const c = rooms.create("Host");
+    if ("error" in c) throw new Error(c.error);
+    expect(rooms.act(c.code, c.player, c.token, { type: "addBot" })).not.toHaveProperty("error");
+    expect(rooms.act(c.code, c.player, c.token, { type: "start" })).not.toHaveProperty("error");
+    rooms.act(c.code, c.player, c.token, { type: "leave" });
+    expect(rooms.join(c.code, "Late")).toHaveProperty("error");
+  });
+
+  it("в лобі: людина виходить, лишився лише бот — кімнату закрито", () => {
+    const rooms = new Rooms({ setup });
+    const c = rooms.create("Host");
+    if ("error" in c) throw new Error(c.error);
+    rooms.act(c.code, c.player, c.token, { type: "addBot" });
+    rooms.act(c.code, c.player, c.token, { type: "leave" });
+    expect(rooms.join(c.code, "Late")).toHaveProperty("error");
+  });
+});
+
+describe("сервер кімнат: кампанія через HTTP", () => {
+  it("соло з ботом: запуск, звіт із 400 діями орбіти пролазить у ліміт тіла, вікно закривається", async () => {
+    const { campaignRoomSetup } = await import("../src/core/consortium");
+    const { flightPhase } = await import("../src/core/flight");
+    const { flownMission, flownSpec, sanitizeFlight, seedsFor } = await import("../src/core/consortium");
+    const rooms = new Rooms({ setup: campaignRoomSetup(setup.market, setup.agencies) });
+    const server = createRoomsServer(rooms, 300);
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const addr = server.address();
+    const base = `http://127.0.0.1:${typeof addr === "object" && addr ? addr.port : 0}`;
+    closer = () => server.close();
+    const post = async (path: string, body: unknown) => {
+      const r = await fetch(base + path, { method: "POST", body: JSON.stringify(body) });
+      return { status: r.status, json: (await r.json()) as Record<string, any> };
+    };
+    const me = (await post("/api/rooms", { name: "Ann" })).json;
+    const act = (action: unknown) => post(`/api/rooms/${me.code}/action`, { player: me.player, token: me.token, action });
+    expect((await act({ type: "addBot" })).status).toBe(200);
+    expect((await act({ type: "start" })).status).toBe(200);
+    expect((await act({ type: "play", action: { type: "launch" } })).status).toBe(200);
+    const snap = await rooms.poll(me.code, me.player, me.token, 0, 0);
+    if (!("state" in snap) || !snap.state || snap.state.phase !== "play") throw new Error("немає гри");
+    const c = snap.state.consortium;
+    expect(c.awaiting).toBe(true);
+    const entry = c.agencies.find((e) => e.launch && (c.reportsFrom ?? []).includes(e.agency.id))!;
+    const mission = flownMission(c);
+    const spec = flownSpec(entry)!;
+    let flight = flightPhase.init({ mission, spec, log: [] }, seedsFor(c, entry.agency.id).flight);
+    flight = flightPhase.step(flight, { type: "complete_phase" } as never);
+    const result = sanitizeFlight(mission, spec, flightPhase.finish(flight).result);
+    const orbitActions = Array.from({ length: 400 }, (_, i) => (i % 2 ? { type: "tick", dtS: result.orbit.periodS } : { type: "toggle", id: "heater" }));
+    const r = await act({ type: "report", report: { flight: result, orbitActions } });
+    expect(r.status).toBe(200);
+    const after = await rooms.poll(me.code, me.player, me.token, 0, 0);
+    if (!("state" in after) || !after.state || after.state.phase !== "play") throw new Error("немає гри");
+    expect(after.state.consortium.campaign!.rounds).toHaveLength(1);
+  });
+});

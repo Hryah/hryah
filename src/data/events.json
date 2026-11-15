@@ -1,0 +1,10 @@
+{
+  "note": "Події між вікнами кампанії. Одна подія на вікно (з першого вікна після старту), вибір за вагою від сіду кімнати.",
+  "events": [
+    { "id": "breakthrough", "kind": "breakthrough", "weight": 3, "priceFactor": 0.6 },
+    { "id": "disruption", "kind": "disruption", "weight": 3 },
+    { "id": "sanctions-lifted", "kind": "sanctionsLifted", "weight": 1 },
+    { "id": "programme", "kind": "grant", "weight": 2, "grantMUsd": 15 },
+    { "id": "quiet", "kind": "none", "weight": 2 }
+  ]
+}

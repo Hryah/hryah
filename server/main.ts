@@ -7,20 +7,14 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import agenciesData from "../src/data/agencies.json";
 import marketData from "../src/data/market.json";
-import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../src/core/stubs";
 import type { AgencyProfile } from "../src/core/design/agency";
-import type { Market } from "../src/core/consortium";
+import { campaignRoomSetup, type Market } from "../src/core/consortium";
 import { Rooms, createRoomsServer } from "./rooms";
 
 const channel = process.argv.find((a) => a.startsWith("--channel="))?.slice(10) ?? "main";
 const port = Number(process.env.PORT ?? (channel === "experimental" ? 8091 : 8090));
-const rooms = new Rooms({
-  setup: {
-    base: { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG },
-    market: marketData as unknown as Market,
-    agencies: Object.values(agenciesData) as AgencyProfile[],
-  },
-});
+// Основний режим — кампанія (docs/EXPANSION.md): сценарії, ширший каталог; ті самі налаштування, що й на екрані.
+const rooms = new Rooms({ setup: campaignRoomSetup(marketData as unknown as Market, Object.values(agenciesData) as AgencyProfile[]) });
 const server = createRoomsServer(rooms);
 server.listen(port, "127.0.0.1", () => console.log(`rooms[${channel}] listening on 127.0.0.1:${port}`));
 
