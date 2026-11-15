@@ -175,48 +175,48 @@ function Menu({
         <div className="mc-panel" style={{ display: "grid", gap: 8, alignContent: "start" }}>
           <strong style={{ color: "var(--c-cream)", fontSize: 16 }}>🌐 {t("ui.menu.online")}</strong>
           <div style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
-          <form
-            style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Enter: повний код — вхід; порожнє поле коду — нова кімната. Неповний код нічого не створює:
-              // інакше гравець, що набирав код, опинявся в новій кімнаті з іншим кодом.
-              if (busy) return;
-              if (code.length === 4) run(() => joinRoom(code, playerName));
-              else if (code.length === 0) run(() => createRoom(playerName));
-            }}
-          >
-            <input
-              className="mc-input"
-              value={name}
-              maxLength={24}
-              placeholder={t("ui.menu.name")}
-              aria-label={t("ui.menu.name")}
-              onChange={(e) => setName(e.target.value)}
-            />
-            {/* Нова кімната завжди отримує код від сервера. Поки в полі коду щось набрано, гравець явно хоче увійти,
-                тож «Create room» вимкнена: інакше він опинявся в новій кімнаті з іншим кодом. */}
+          {/* Ім'я окремо від кнопок: раніше воно стояло в одному рядку з «Create room», і гравці вписували туди код кімнати. */}
+          <input
+            className="mc-input"
+            value={name}
+            maxLength={24}
+            placeholder={t("ui.menu.name")}
+            aria-label={t("ui.menu.name")}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {/* Створити: код дає сервер, його треба надіслати друзям. */}
+          <div style={{ display: "grid", gap: 4 }}>
+            <span className="mc-label">{t("ui.menu.hostLabel")}</span>
+            {/* Поки в полі коду щось набрано, гравець явно хоче увійти, тож «Create room» вимкнена. */}
             <button type="button" className="mc-btn mc-btn-sm" disabled={busy || code.length > 0} onClick={() => run(() => createRoom(playerName))}>
               {t("ui.menu.create")}
             </button>
-            <input
-              className="mc-input"
-              value={code}
-              maxLength={4}
-              size={12}
-              placeholder={t("ui.menu.code")}
-              aria-label={t("ui.menu.code")}
-              // Код кімнати — 4 латинські літери; кирилиця з української розкладки перекладається за клавішами.
-              onChange={(e) => setCode(normalizeRoomCode(e.target.value))}
-            />
-            <button
-              type="button"
-              className="mc-btn mc-btn-sm"
-              disabled={code.length !== 4 || busy}
-              onClick={() => run(() => joinRoom(code, playerName))}
-            >
-              {t("ui.menu.join")}
-            </button>
+            <span style={{ color: "var(--c-text-dim)", fontSize: 12 }}>{t("ui.menu.hostHint")}</span>
+          </div>
+          {/* Увійти: Enter у полі коду теж входить, але ніколи не створює нову кімнату. */}
+          <form
+            style={{ display: "grid", gap: 4 }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!busy && code.length === 4) run(() => joinRoom(code, playerName));
+            }}
+          >
+            <span className="mc-label">{t("ui.menu.joinLabel")}</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                className="mc-input"
+                value={code}
+                maxLength={4}
+                size={12}
+                placeholder={t("ui.menu.code")}
+                aria-label={t("ui.menu.code")}
+                // Код кімнати — 4 латинські літери; кирилиця з української розкладки перекладається за клавішами.
+                onChange={(e) => setCode(normalizeRoomCode(e.target.value))}
+              />
+              <button type="submit" className="mc-btn mc-btn-sm" disabled={code.length !== 4 || busy}>
+                {t("ui.menu.join")}
+              </button>
+            </div>
           </form>
           {code.length > 0 && code.length < 4 && (
             <div role="status" style={{ color: "var(--c-orange)", fontSize: 12 }}>{t("ui.menu.codeHint")}</div>
