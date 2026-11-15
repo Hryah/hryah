@@ -78,6 +78,7 @@ function isConsortiumAction(a: unknown): a is ConsortiumAction {
     case 'launch': case 'wait': return true;
     case 'research': return isStr(a.nodeId);
     case 'analyze': return isStr(a.line) && isStr(a.depositId);
+    case 'qualify': return isStr(a.moduleId);
     case 'factory': {
       const o = a.order;
       return isObj(o) && isStr(o.line) && isStr(o.depositId) && isStr(o.baseModuleId)

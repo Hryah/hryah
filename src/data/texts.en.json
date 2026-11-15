@@ -408,5 +408,14 @@
   "fab.cargo.food": "Food container (needs cooling power) (own production)",
   "fab.cargo.parts": "Spare parts container (own production)",
   "fab.cargo.experiment": "Live experiment (needs heating power) (own production)",
-  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot.",
+  "trl.failure.engine": "The {module} (TRL {trl}, {chancePercent}% risk) underperformed after launch: {lossPercent}% of its thrust lost, the way Mars Observer's untested propulsion line failed.",
+  "trl.failure.solar": "The {module} (TRL {trl}, {chancePercent}% risk) did not fully deploy: {lossPercent}% of power lost, like Skylab's torn array.",
+  "trl.failure.battery": "The {module} (TRL {trl}, {chancePercent}% risk) degraded early: {lossPercent}% of capacity lost, like the battery that ended Mars Global Surveyor.",
+  "trl.failure.antenna": "The {module} (TRL {trl}, {chancePercent}% risk) jammed half-open: {lossPercent}% of the link lost, like Galileo's high-gain antenna.",
+  "trl.failure.instrument": "The {module} (TRL {trl}, {chancePercent}% risk) came out of focus: {lossPercent}% of image quality lost, like Hubble's first mirror.",
+  "ui.trl.title": "Technology readiness (TRL)",
+  "ui.trl.hint": "New technology is not more expensive, it is less proven. Every successful flight and every ground test makes it one level more mature for your agency.",
+  "ui.trl.row": "{module}: TRL {trl} · failure risk {risk}%",
+  "ui.trl.qualify": "Ground test ({cost} M$, 1 action)"
 }

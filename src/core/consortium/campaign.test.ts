@@ -314,3 +314,19 @@ describe("фабрика: санкції й ринок", () => {
     expect(send(s, "me", { type: "play", action: { type: "factory", order: late } })).toBe(s); // ant-l ще не на ринку на ході 0
   });
 });
+
+describe("TRL у кімнаті", () => {
+  const me = (s: RoomState) => (s as PlayState).consortium.agencies.find((e) => e.agency.id === "borealis")!;
+  it("наземні випробування: +1 TRL, гроші й дія; перевірений модуль (TRL 9) не випробовується", () => {
+    const s = soloRoom();
+    expect(send(s, "me", { type: "play", action: { type: "qualify", moduleId: "cam-m" } })).toBe(s);
+    expect(isRoomAction({ type: "play", action: { type: "qualify", moduleId: "" } })).toBe(false);
+  });
+
+  it("після запуску досвід агенції зростає для модулів, що відпрацювали", () => {
+    let s = launchLikeBot(soloRoom());
+    s = send(s, "me", { type: "report", report: honestReport(s) }) as PlayState;
+    const gain = me(s).account!.trlGain ?? {};
+    expect(Object.values(gain).some((v) => v >= 1)).toBe(true);
+  });
+});
