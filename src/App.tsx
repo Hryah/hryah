@@ -56,6 +56,9 @@ export function App() {
   }, [view]);
 
   const isConsoleView = view === "play";
+  // Тестові екрани (каюта, дебаг, галерея) на стабільному сайті не показуємо в навігації: туди дивиться журі.
+  // За прямою адресою (#room, #debug, #gallery) вони й далі відкриваються.
+  const devLinks = channel !== "main";
 
   return (
     <RetroProvider>
@@ -85,11 +88,11 @@ export function App() {
             </h1>
             <nav style={{ display: "flex", flexWrap: "wrap", gap: isConsoleView ? 14 : 12, fontSize: isConsoleView ? 14 : undefined }}>
               <a href="#play" style={{ color: view === "play" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Гра</a>
-              <a href="#room" style={{ color: view === "room" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("room.nav")}</a>
+              {devLinks && <a href="#room" style={{ color: view === "room" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("room.nav")}</a>}
               <a href="#orbit" style={{ color: isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
               <a href="#mission" style={{ color: view === "mission" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("ui.nav.mission")}</a>
-              <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>
-              <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>
+              {devLinks && <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>}
+              {devLinks && <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>}
               <RetroToggle />
             </nav>
           </div>

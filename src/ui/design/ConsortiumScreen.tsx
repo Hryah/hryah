@@ -136,7 +136,7 @@ function Menu({
   };
   const named = name.trim().length > 0;
   return (
-    <div className="mc-panel" style={{ display: "grid", gap: 18, maxWidth: 1100 }} data-testid="menu">
+    <div className="mc-panel" style={{ display: "grid", gap: 18, maxWidth: 1100, margin: "24px auto 0" }} data-testid="menu">
       {/* Вітання: що це за гра й що тут обирати (прохання Ашота). */}
       <div style={{ display: "grid", gap: 8 }}>
         <span className="mc-label">{t("ui.menu.title")}</span>

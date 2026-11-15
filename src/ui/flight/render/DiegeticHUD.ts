@@ -170,8 +170,9 @@ export class DiegeticHUD {
     state: FlightState,
     viewportW: number,
   ): void {
-    const mapW = 220;
-    const mapH = 160;
+    // Більша мапа (прохання команди): ~1.6× від початкових 220×160, але не ширша за чверть екрана.
+    const mapW = Math.round(Math.min(360, Math.max(220, viewportW * 0.26)));
+    const mapH = Math.round(mapW * (160 / 220));
     const mapX = viewportW - mapW - 16;
     const mapY = 14;
 
@@ -188,9 +189,9 @@ export class DiegeticHUD {
 
     // Заголовок радара
     ctx.fillStyle = "#38bdf8";
-    ctx.font = "700 10px monospace";
+    ctx.font = "700 12px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("STATION TACTICAL RADAR", mapX + 10, mapY + 15);
+    ctx.fillText("STATION TACTICAL RADAR", mapX + 10, mapY + 17);
 
     // Обчислюємо світовий bounding box усіх модулів для масштабу ~1:18
     const worldMinX = -80;

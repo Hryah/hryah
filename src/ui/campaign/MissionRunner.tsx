@@ -17,7 +17,8 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 15,
 } as const;
 const overlay = {
-  position: "fixed", right: 16, top: 16, zIndex: 1100, maxWidth: 360, gap: 8, display: "grid",
+  // Знизу ліворуч: правий верхній кут займає мінікарта станції, а внизу по центру — підказка керування.
+  position: "fixed", left: 16, bottom: 16, zIndex: 1100, maxWidth: 300, fontSize: 13, gap: 8, display: "grid",
   background: "rgba(20, 24, 41, 0.92)", border: `1px solid ${C.line}`, borderRadius: 12, padding: 12,
 } as const;
 
@@ -105,7 +106,8 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
         )}
         <div data-testid="campaign-flight-overlay" style={{ ...overlay, display: active ? "grid" : "none" }}>
           <strong>{t("ui.campaign.flightOf", { agency: agencyName })}</strong>
-          <div style={{ color: C.dim, fontSize: 13 }}>{t(lost ? "ui.play.lostFlightHint" : "ui.play.flightHint")}</div>
+          {/* Підказку керування й так показує нижня смуга польоту; тут лише пояснення втрати. */}
+          {lost && <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.lostFlightHint")}</div>}
           <div>
             <button
               disabled={sending}
