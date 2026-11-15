@@ -37,3 +37,11 @@
   - `design/launcher-small.svg` — адаптовано з [File:Vega.svg](https://commons.wikimedia.org/wiki/File:Vega.svg) (Wikimedia Commons).
   - `design/launcher-medium.svg`, `design/launcher-heavy.svg` — адаптовано з [File:Falcon_9_&_Heavy.svg](https://commons.wikimedia.org/wiki/File:Falcon_9_%26_Heavy.svg) (Wikimedia Commons).
   - `orbit/ground-station.svg` — адаптовано з `satellite_antenna` у [Microsoft FluentUI Emoji](https://github.com/microsoft/fluentui-emoji). Ліцензія: **MIT License**.
+
+## 6. Ілюстрації та портрет директора карток кампанії (`public/assets/cards/`)
+- `window.svg` — ілюстрація фази проєктування / вікна старту (`Проєктування.svg`).
+- `launch.svg` — ілюстрація фази запуску (`Зліт.svg`).
+- `orbit.svg` — ілюстрація орбітальної фази (`Орбіта.svg`, додано `viewBox="0 0 2304 1440"`).
+- `report.svg` — ілюстрація звіту / завершення (`Підсумок.svg`).
+- `director.png` — портрет директора місії (1:1 растровий аватар із прозорістю, витягнуто з `Іконка (2).svg`).
+
