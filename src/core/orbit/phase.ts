@@ -32,7 +32,22 @@ export interface OrbitState {
   history: OrbitTelemetry[];
 }
 
+export interface OrbitTurnCost {
+  elapsedS: number;
+  consumedWh: number;
+  generatedWh: number;
+  minimumChargeWh: number;
+  peakBufferMb: number;
+  cameraS: number;
+  transmitterS: number;
+  heaterS: number;
+}
+
 export interface OrbitForecast {
+  bufferMb: number;
+  chargeDeltaWh: number;
+  bufferDeltaMb: number;
+  cost: OrbitTurnCost;
   nextState: OrbitState;
   chargeWh: number;
   deliveredMb: number;
@@ -150,8 +165,8 @@ function completeMission(state: OrbitState): void {
     addEntry(state, 'orbit.proto.insufficientData', 'failure', 'comms',
       { deliveredMb: state.deliveredMb, requiredMb: mission.requiredDataMb },
       causes(state, ['design:instrument', 'design:antenna', ...eventIds(state,
-        ['orbit.proto.storm', 'orbit.proto.cameraCold', 'orbit.proto.overflow'])],
-      ['camera', 'transmitter', 'safeMode']));
+        ['orbit.proto.storm', 'orbit.proto.cameraCold', 'orbit.proto.overflow',
+          'orbit.clarity.missedImaging', 'orbit.clarity.missedDownlink'])]));
   }
   if (!caps.resolutionOk) {
     addEntry(state, 'orbit.proto.resolutionFailure', 'failure', 'science',
@@ -167,7 +182,7 @@ function completeMission(state: OrbitState): void {
 }
 
 // Integrates only a fresh local state; the incoming state and its nested values are never changed.
-function advanceOrbit(previous: OrbitState): OrbitState {
+function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
   if (previous.status !== 'active') return previous;
   const state: OrbitState = { ...previous, log: [...previous.log], history: [...previous.history] };
   const caps = capabilities(state);
@@ -183,18 +198,28 @@ function advanceOrbit(previous: OrbitState): OrbitState {
   }
 
   const move = (durationS: number, generation: number, loadW: number,
-    operation: 'idle' | 'camera' | 'transmitter' = 'idle') => {
+    operation: 'idle' | 'camera' | 'transmitter' | 'heater' = 'idle') => {
     if (state.status !== 'active' || durationS <= 0) return;
     const deficitW = loadW - generation;
     const untilEmptyS = deficitW > 0 ? Math.max(0, state.chargeWh) * 3600 / deficitW : Infinity;
     const elapsedS = Math.min(durationS, untilEmptyS);
     state.chargeWh = stepCharge(state.chargeWh, caps.capacityWh, generation - loadW, elapsedS);
     state.tS += elapsedS;
+    if (cost) {
+      cost.elapsedS += elapsedS;
+      cost.consumedWh += loadW * elapsedS / 3600;
+      cost.generatedWh += generation * elapsedS / 3600;
+      cost.minimumChargeWh = Math.min(cost.minimumChargeWh, state.chargeWh);
+      if (operation === 'camera') cost.cameraS += elapsedS;
+      if (operation === 'transmitter') cost.transmitterS += elapsedS;
+      if (operation === 'heater' && active.heater) cost.heaterS += elapsedS;
+    }
 
     if (operation === 'camera') {
       const producedMb = caps.instrumentRateMbps * elapsedS;
       const addedMb = Math.min(producedMb, Math.max(0, spec.bufferMb - state.bufferMb));
       state.bufferMb += addedMb;
+      if (cost) cost.peakBufferMb = Math.max(cost.peakBufferMb, state.bufferMb);
       const lostMb = producedMb - addedMb;
       state.lostMb += lostMb;
       if (lostMb > 0.000001) {
@@ -219,18 +244,31 @@ function advanceOrbit(previous: OrbitState): OrbitState {
 
   // Навантаження відрізків і тривалість передачі беруться з model/: їх же рахує запас energy у частині 1.
   move(caps.idleSunS, generationW, segmentLoadW(spec, 'sunIdle', active));
+  if (state.status === 'active' && caps.imagingS > 0 && !active.camera) {
+    addEntry(state, 'orbit.clarity.missedImaging', 'event', 'science', {},
+      causes(state, ['design:instrument', ...eventIds(state, ['orbit.proto.cameraCold'])],
+        state.toggles.safeMode ? ['safeMode'] : ['camera']));
+  }
   move(caps.imagingS, generationW, segmentLoadW(spec, 'imaging', active), active.camera ? 'camera' : 'idle');
+  if (state.status === 'active' && caps.passS > 0 && state.bufferMb > 0 && !active.transmitter) {
+    addEntry(state, 'orbit.clarity.missedDownlink', 'event', 'comms', {},
+      causes(state, ['design:antenna'], state.toggles.safeMode ? ['safeMode'] : ['transmitter']));
+  }
   const transmitS = transmitSeconds(caps.passS, state.bufferMb, linkMbps, active.transmitter);
   move(transmitS, generationW, segmentLoadW(spec, 'transmit', active), 'transmitter');
   move(caps.passS - transmitS, generationW, segmentLoadW(spec, 'passRest', active));
-  move(caps.shadowS, 0, segmentLoadW(spec, 'shadow', active));
+  move(caps.shadowS, 0, segmentLoadW(spec, 'shadow', active), 'heater');
 
   if (state.status === 'active') {
     const previousStress = state.coldStress;
+    if (caps.shadowS > 0 && !active.heater) {
+      addEntry(state, 'orbit.clarity.unheatedShadow', 'event', 'thermal', {},
+        causes(state, [], ['heater', 'safeMode']));
+    }
     if (caps.shadowS > 0) state.coldStress = clamp(state.coldStress + (active.heater ? -caps.heaterFactor : 1), 0, 2);
     if (state.coldStress >= 2 && previousStress < 2) {
       addEntry(state, 'orbit.proto.cameraCold', 'failure', 'thermal', {},
-        causes(state, ['design:battery'], ['heater', 'safeMode']));
+        causes(state, eventIds(state, ['orbit.clarity.unheatedShadow'])));
     } else if (state.coldStress < 2 && previousStress >= 2) {
       addEntry(state, 'orbit.proto.cameraRecovered', 'event', 'thermal');
     }
@@ -292,11 +330,15 @@ export const orbitPhase: OrbitPhase<OrbitState, OrbitAction> = {
 };
 
 export function forecastOrbit(state: OrbitState): OrbitForecast {
-  const nextState = advanceOrbit(state);
+  const cost: OrbitTurnCost = { elapsedS: 0, consumedWh: 0, generatedWh: 0,
+    minimumChargeWh: state.chargeWh, peakBufferMb: state.bufferMb, cameraS: 0, transmitterS: 0, heaterS: 0 };
+  const nextState = advanceOrbit(state, cost);
   const deliveredMb = nextState.deliveredMb - state.deliveredMb;
   const lostMb = nextState.lostMb - state.lostMb;
   return {
     nextState, chargeWh: nextState.chargeWh, deliveredMb, lostMb,
+    bufferMb: nextState.bufferMb, chargeDeltaWh: nextState.chargeWh - state.chargeWh,
+    bufferDeltaMb: nextState.bufferMb - state.bufferMb, cost,
     generatedMb: Math.max(0, nextState.bufferMb - state.bufferMb + deliveredMb + lostMb),
     storm: state.status === 'active' && state.stormOrbit === state.completedOrbits + 1,
     powerFailure: state.status === 'active' && nextState.status === 'failed',
