@@ -201,5 +201,6 @@
   "ui.campaign.leader": "Biggest contribution: {agency} ({points})",
   "ui.campaign.awaiting": "Window closed. Waiting for mission reports from: {players}",
   "ui.nav.mission": "Single mission",
-  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit.",
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
 }
