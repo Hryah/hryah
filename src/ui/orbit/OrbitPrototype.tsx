@@ -8,16 +8,10 @@ import type { CauseEntry } from '../../core/contracts';
 import { describeEntry } from '../design/cause';
 import './orbit.css';
 
+// Записи журналу перекладає спільний describeEntry; тут лише числа екрана з локальним форматуванням.
 const t = (key: string, params: Record<string, string | number> = {}) => {
   const formatted: Record<string, string | number> = {};
-  for (const [name, value] of Object.entries(params)) {
-    if (name === 'toggle' && typeof value === 'string') {
-      const labelKey = `ui.control.${value}`;
-      const label = translate(labelKey);
-      formatted[name] = label === labelKey ? value : label;
-    } else if (name === 'enabled') formatted[name] = translate(value ? 'ui.enabled' : 'ui.off');
-    else formatted[name] = typeof value === 'number' ? number(value, 1) : value;
-  }
+  for (const [name, value] of Object.entries(params)) formatted[name] = typeof value === 'number' ? number(value, 1) : value;
   return translate(key, formatted);
 };
 const number = (n: number, digits = 0) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(n);

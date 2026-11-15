@@ -325,3 +325,19 @@ describe('purity, reproducibility and event links', () => {
     for (const entry of actions) expect(() => orbitPhase.step(state, entry.action as OrbitAction)).not.toThrow();
   });
 });
+
+describe('missed imaging and downlink causes', () => {
+  it('links both SAFE and the switched-off command when the player used both', () => {
+    let state = orbitPhase.init(createDemoOrbit().input, 42);
+    state = orbitPhase.step(state, { type: 'toggle', id: 'camera' });
+    state = orbitPhase.step(state, { type: 'toggle', id: 'transmitter' });
+    state = orbitPhase.step(state, { type: 'toggle', id: 'safeMode' });
+    state = orbitPhase.step(state, { type: 'tick', dtS: state.input.flight.orbit.periodS });
+    const decisions = (toggle: string) => state.log.filter((e) => e.kind === 'decision' && e.params?.toggle === toggle).map((e) => e.id);
+    const imaging = state.log.find((e) => e.messageKey === 'orbit.clarity.missedImaging');
+    expect(imaging).toBeDefined();
+    expect(imaging!.causedBy).toEqual(expect.arrayContaining([...decisions('camera'), ...decisions('safeMode')]));
+    const downlink = state.log.find((e) => e.messageKey === 'orbit.clarity.missedDownlink');
+    if (downlink) expect(downlink.causedBy).toEqual(expect.arrayContaining([...decisions('transmitter'), ...decisions('safeMode')]));
+  });
+});

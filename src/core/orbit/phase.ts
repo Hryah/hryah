@@ -255,14 +255,19 @@ function advanceOrbit(previous: OrbitState, cost?: OrbitTurnCost): OrbitState {
   move(caps.idleSunS, generationW, segmentLoadW(spec, 'sunIdle', active));
   if (state.status === 'active' && caps.imagingS > 0 && !active.camera) {
     addEntry(state, 'orbit.clarity.missedImaging', 'event', 'science', {},
-      causes(state, ['design:instrument', ...(state.coldStress >= 2 ? eventIds(state, ['orbit.proto.cameraCold']) : [])],
-        state.toggles.safeMode ? { safeMode: true } : caps.instrumentRateMbps > 0 ? { camera: false } : {}));
+      // Причиною є кожна команда, що зупинила камеру: і SAFE, і вимкнений тумблер (обидві, якщо гравець зробив обидва).
+      causes(state, ['design:instrument', ...(state.coldStress >= 2 ? eventIds(state, ['orbit.proto.cameraCold']) : [])], {
+        ...(state.toggles.safeMode ? { safeMode: true } : {}),
+        ...(!state.toggles.camera && caps.instrumentRateMbps > 0 ? { camera: false } : {}),
+      }));
   }
   move(caps.imagingS, generationW, segmentLoadW(spec, 'imaging', active), active.camera ? 'camera' : 'idle');
   if (state.status === 'active' && caps.passS > 0 && state.bufferMb > 0 && !active.transmitter) {
     addEntry(state, 'orbit.clarity.missedDownlink', 'event', 'comms', {},
-      causes(state, ['design:antenna'], state.toggles.safeMode ? { safeMode: true }
-        : caps.downlinkMbps > 0 ? { transmitter: false } : {}));
+      causes(state, ['design:antenna'], {
+        ...(state.toggles.safeMode ? { safeMode: true } : {}),
+        ...(!state.toggles.transmitter && caps.downlinkMbps > 0 ? { transmitter: false } : {}),
+      }));
   }
   const transmitS = transmitSeconds(caps.passS, state.bufferMb, linkMbps, active.transmitter);
   move(transmitS, generationW, segmentLoadW(spec, 'transmit', active), 'transmitter');

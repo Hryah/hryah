@@ -37,7 +37,6 @@ export function orbitClarity(state: OrbitState) {
     else if (id === 'transmitter' && operationS <= 0
       && (!forecast.powerFailure || forecast.cost.elapsedS > view.idleSunS + view.imagingS)) reason = 'noData';
     else if (operationS <= 0 && forecast.powerFailure) reason = 'powerFailure';
-    else if (id === 'transmitter' && operationS <= 0) reason = 'noData';
     return { commandOn, effectiveOn: reason === 'ready', reason, operationS, forcedBySafe };
   };
   const systems: Record<ToggleId, SystemPlan> = {
