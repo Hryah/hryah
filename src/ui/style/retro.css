@@ -1,6 +1,5 @@
 /* Ретро-фільтр для графіки, яку малює не рушій WebGL: canvas польоту й каюти, SVG орбіти й превʼю апарата.
    Текст і кнопки інтерфейсу не фільтруються. Пікселі не згладжуються. */
-.retro .retro-surface,
 .retro .orbit-scene,
 .retro .room-stage canvas {
   filter: url(#hryah-retro);

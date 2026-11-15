@@ -58,8 +58,8 @@ export function App() {
     <RetroProvider>
       <div hidden={view !== "orbit"}>
         <OrbitPrototype />
-        {/* На #orbit навігації немає, а сцена теж під фільтром: перемикач окремо в куті. */}
-        {view === "orbit" && <div style={{ position: "fixed", right: 16, bottom: 12, zIndex: 50 }}><RetroToggle /></div>}
+        {/* На #orbit навігації немає, а сцена теж під фільтром: перемикач окремо в куті, під довідковим вікном (z-index 10). */}
+        {view === "orbit" && <div style={{ position: "fixed", right: 16, bottom: 12, zIndex: 5 }}><RetroToggle /></div>}
       </div>
       <div hidden={view === "orbit"} lang="uk" style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b0d17", color: "#e8eaf3" }}>
         <div style={{ background: color, color: "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>

@@ -15,7 +15,9 @@ const NO_FILTERS: readonly Filter[] = [];
 
 export function DesignStage({ state, active = true }: { state: DesignState; active?: boolean }) {
   const { on } = useRetro();
-  const retroFilters = useMemo(gameFilters, []);
+  // DPR може змінитись (вікно перенесли на інший монітор): перераховуємо, коли він інший.
+  const dpr = globalThis.devicePixelRatio || 1;
+  const retroFilters = useMemo(() => gameFilters(), [dpr]);
   return (
     <div style={{ height: 320, borderRadius: 12, overflow: "hidden" }}>
       <StageCanvas createScene={createDesignScene} view={designSceneView(state)} options={STAGE} active={active} filters={on ? retroFilters : NO_FILTERS}
