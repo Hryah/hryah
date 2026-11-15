@@ -61,6 +61,20 @@ describe('orbit prototype integration', () => {
     expect(end.log.some((e) => e.messageKey === 'orbit.proto.insufficientData')).toBe(true);
   });
 
+  it('accepts the minimum altitude and rejects 200 km with a causal failure', () => {
+    const original = createDemoOrbit();
+    for (const [altKm, success] of [[200, false], [399.999, false], [400, true]] as const) {
+      const input = { ...original.input, flight: { ...original.input.flight,
+        orbit: { ...original.input.flight.orbit, altKm } } };
+      const end = play(orbitPhase.init(input, 42));
+      expect(orbitPhase.finish(end).result.success).toBe(success);
+      if (!success) {
+        expect(end.log).toContainEqual(expect.objectContaining({ messageKey: 'orbit.proto.orbitFailure', kind: 'failure', causedBy: expect.any(Array) }));
+        expect(danglingCauses([...input.log, ...end.log])).toEqual([]);
+      }
+    }
+  });
+
   it('requires image quality and the actual orbit as well as data', () => {
     const original = createDemoOrbit();
     const quality = orbitPhase.init({ ...original.input, spec: { ...original.input.spec, resolutionM: 9 } }, 42);
