@@ -436,5 +436,11 @@
   "ui.brief.risk": "Some modules in our design are not flight-proven yet (see TRL). A ground test or two would lower the risk.",
   "ui.brief.lastResult": "Last window we got {value} of the {optimal} the best available design would have given ({percent}%).",
   "ui.brief.analog": "Real counterpart: {analog}",
-  "ui.campaign.optimal": "Best available design would have given {optimal} ({percent}% achieved)."
+  "ui.campaign.optimal": "Best available design would have given {optimal} ({percent}% achieved).",
+  "ui.campaign.cargoLine": "container delivered, {orbits}/{total} approach orbits survived: contribution {value}, payout {payout} M$ + grant {grant} M$, +{research} research",
+  "ui.campaign.cargoMissed": "never reached the station orbit: nothing delivered; grant {grant} M$, +{research} research",
+  "ui.cargoKind.water": "water",
+  "ui.cargoKind.food": "food",
+  "ui.cargoKind.parts": "spare parts",
+  "ui.cargoKind.experiment": "experiment"
 }

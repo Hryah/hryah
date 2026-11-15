@@ -81,7 +81,12 @@ export function CampaignPanel({ state, myAgencyIds }: { state: ConsortiumState; 
               <div key={r.agencyId} style={{ fontSize: 13 }}>
                 <div style={{ color: r.launched ? "inherit" : C.dim }}>
                   {nameOf(r.agencyId)}:{" "}
-                  {r.launched
+                  {r.launched && state.base.mission.kind === "cargo"
+                    ? t(run?.reachedOrbit === false ? "ui.campaign.cargoMissed" : "ui.campaign.cargoLine", {
+                        value: fmt(r.valuePts, 1), payout: fmt(r.payoutMUsd), grant: fmt(r.grantMUsd), research: r.researchPts,
+                        orbits: run?.outcome.survivedOrbits ?? 0, total: state.base.mission.durationOrbits,
+                      })
+                    : r.launched
                     ? t("ui.campaign.roundLine", {
                         mb: fmt(run?.outcome.deliveredMb ?? 0, 0), value: fmt(r.valuePts, 1), payout: fmt(r.payoutMUsd), grant: fmt(r.grantMUsd), research: r.researchPts,
                       })
