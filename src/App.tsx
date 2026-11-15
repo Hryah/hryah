@@ -16,15 +16,15 @@ const RoomScreen = lazy(() =>
   })),
 );
 
-// #play — гра, #design — консорціум, #orbit — прототип орбіти,
+// #play — гра (кампанія агенції, docs/EXPANSION.md), #mission — одна місія без економіки, #orbit — прототип орбіти,
 // #debug — дебаг, #room — 3D-каюта, #gallery — галерея сцен.
 // Каюта завантажується при першому відкритті та зберігає стан.
-type View = "play" | "orbit" | "design" | "debug" | "room" | "gallery";
+type View = "play" | "mission" | "orbit" | "debug" | "room" | "gallery";
 
 const viewFromHash = (hash: string): View =>
   hash === "#debug" ? "debug" :
   hash === "#gallery" ? "gallery" :
-  hash === "#design" ? "design" :
+  hash === "#mission" ? "mission" :
   hash === "#orbit" ? "orbit" :
   hash === "#room" ? "room" :
   "play";
@@ -69,12 +69,12 @@ export function App() {
             <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>Гра</a>
             <a href="#room" style={{ color: view === "room" ? color : "#8a90a8" }}>{t("room.nav")}</a>
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
-            <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
+            <a href="#mission" style={{ color: view === "mission" ? color : "#8a90a8" }}>{t("ui.nav.mission")}</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
             <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
           </nav>
-          <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
-          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen active={view === "design"} /></div>
+          <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
+          <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
           {view === "gallery" && <Gallery active />}
 

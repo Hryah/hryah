@@ -7,9 +7,10 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import agenciesData from "../src/data/agencies.json";
 import marketData from "../src/data/market.json";
+import campaignData from "../src/data/campaign.json";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../src/core/stubs";
 import type { AgencyProfile } from "../src/core/design/agency";
-import type { Market } from "../src/core/consortium";
+import type { CampaignConfig, Market } from "../src/core/consortium";
 import { Rooms, createRoomsServer } from "./rooms";
 
 const channel = process.argv.find((a) => a.startsWith("--channel="))?.slice(10) ?? "main";
@@ -19,6 +20,7 @@ const rooms = new Rooms({
     base: { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG },
     market: marketData as unknown as Market,
     agencies: Object.values(agenciesData) as AgencyProfile[],
+    campaign: campaignData as CampaignConfig, // основний режим: кампанія (docs/EXPANSION.md)
   },
 });
 const server = createRoomsServer(rooms);

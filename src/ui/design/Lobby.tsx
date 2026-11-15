@@ -30,6 +30,7 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
   const nextN = Math.max(0, ...room.players.map((p) => Number(/^p(\d+)$/.exec(p.id)?.[1] ?? 0))) + 1;
   const nextId = `p${nextN}`;
   const full = room.players.length >= Math.min(MAX_PLAYERS, room.agencyIds.length);
+  const isHost = local || meId === room.hostId;
 
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="lobby">
@@ -42,8 +43,8 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
         const contested = p.wish !== null && wishCount(p.wish) > 1;
         return (
           <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <strong style={{ minWidth: 110 }}>{p.name}{p.id === room.hostId ? " ★" : ""}</strong>
-            <select value={p.wish ?? ""} disabled={!mine} aria-label={t("ui.lobby.wishFor", { player: p.name })}
+            <strong style={{ minWidth: 110 }}>{p.bot ? "🤖 " : ""}{p.name}{p.id === room.hostId ? " ★" : ""}</strong>
+            <select value={p.wish ?? ""} disabled={!mine || p.bot} aria-label={t("ui.lobby.wishFor", { player: p.name })}
               onChange={(e) => send(p.id, { type: "wish", agencyId: e.target.value || null })}>
               <option value="">{t("ui.lobby.anyAgency")}</option>
               {agencies.filter((a) => room.agencyIds.includes(a.id)).map((a) => <option key={a.id} value={a.id}>{t(a.nameKey)}</option>)}
@@ -55,8 +56,10 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
               </span>
             )}
             {got && got.how === "free" && <span style={{ color: C.dim, fontSize: 13 }}>→ {nameOf(got.agencyId)}</span>}
-            {!local && <label><input type="checkbox" checked={p.ready} disabled={!mine} onChange={(e) => send(p.id, { type: "ready", ready: e.target.checked })} /> {t("ui.lobby.ready")}</label>}
-            {mine && room.players.length > 1 && <button style={button} onClick={() => send(p.id, { type: "leave" })}>✕</button>}
+            {!local && !p.bot && <label><input type="checkbox" checked={p.ready} disabled={!mine} onChange={(e) => send(p.id, { type: "ready", ready: e.target.checked })} /> {t("ui.lobby.ready")}</label>}
+            {p.bot
+              ? isHost && <button style={button} onClick={() => send(room.hostId, { type: "removeBot", playerId: p.id })}>✕</button>
+              : mine && room.players.some((o) => o.id !== p.id && !o.bot) && <button style={button} onClick={() => send(p.id, { type: "leave" })}>✕</button>}
           </div>
         );
       })}
@@ -66,13 +69,18 @@ export function Lobby({ room, agencies, send, onStart, local = false, meId }: Lo
           {t("ui.lobby.coinHint")}
         </div>
       )}
-      {local && (
-        <div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {local && (
           <button style={button} disabled={full} onClick={() => send(nextId, { type: "join", name: `Player ${nextN}` })}>
             + {t("ui.lobby.addPlayer")}
           </button>
-        </div>
-      )}
+        )}
+        {isHost && (
+          <button style={button} disabled={full} onClick={() => send(room.hostId, { type: "addBot" })}>
+            + 🤖 {t("ui.lobby.addBot")}
+          </button>
+        )}
+      </div>
       {blockers.map((b) => <div key={b} style={{ color: C.dim, fontSize: 13 }}>{t(`ui.${b}`)}</div>)}
       <div>
         <button style={{ ...button, borderColor: C.accent, opacity: canStart ? 1 : 0.5 }} disabled={!canStart} onClick={onStart}>

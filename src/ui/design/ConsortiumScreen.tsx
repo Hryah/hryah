@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
-import { activeAgency, newRoom, stepRoom, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState } from "../../core/consortium";
+import campaignData from "../../data/campaign.json";
+import {
+  activeAgency, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  type CampaignConfig, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
+} from "../../core/consortium";
+import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
+import { MissionRunner } from "../campaign/MissionRunner";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -30,10 +36,17 @@ const button = {
 
 // Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
 // Онлайн: той самий RoomState приходить із сервера кімнат (online.ts), а дії йдуть на сервер.
-const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES };
+// Основний режим — кампанія з кількох вікон запуску (docs/EXPANSION.md); сервер кімнат грає з тими самими налаштуваннями.
+const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES, campaign: campaignData as CampaignConfig };
 const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
+// Соло: одна людина й три боти-конкуренти. Країну гравець обирає в лобі.
+const newSoloRoom = (): RoomState => {
+  let room: RoomState = newLocalRoom();
+  for (let i = 0; i < 3; i++) room = stepRoom(room, "p1", { type: "addBot" }, ROOM_SETUP);
+  return room;
+};
 
-type Mode = { kind: "menu" } | { kind: "local" } | { kind: "online"; session: Session };
+type Mode = { kind: "menu" } | { kind: "local"; solo: boolean } | { kind: "online"; session: Session };
 
 export function ConsortiumScreen({ active = true }: { active?: boolean }) {
   const [mode, setMode] = useState<Mode>(() => {
@@ -42,12 +55,12 @@ export function ConsortiumScreen({ active = true }: { active?: boolean }) {
   });
   const [notice, setNotice] = useState<string | null>(null);
   const leave = (message?: string) => { saveSession(null); setNotice(message ?? null); setMode({ kind: "menu" }); };
-  if (mode.kind === "local") return <LocalRoom active={active} onExit={() => leave()} />;
+  if (mode.kind === "local") return <LocalRoom key={String(mode.solo)} solo={mode.solo} active={active} onExit={() => leave()} />;
   if (mode.kind === "online") return <OnlineRoom active={active} session={mode.session} onExit={leave} />;
-  return <Menu notice={notice} onLocal={() => setMode({ kind: "local" })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
+  return <Menu notice={notice} onSolo={() => setMode({ kind: "local", solo: true })} onLocal={() => setMode({ kind: "local", solo: false })} onOnline={(session) => { saveSession(session); setMode({ kind: "online", session }); }} />;
 }
 
-function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s: Session) => void; notice: string | null }) {
+function Menu({ onSolo, onLocal, onOnline, notice }: { onSolo: () => void; onLocal: () => void; onOnline: (s: Session) => void; notice: string | null }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +73,10 @@ function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 12 }} data-testid="menu">
       <h2 style={{ margin: 0 }}>{t("ui.menu.title")}</h2>
+      <div>
+        <button style={{ ...button, borderColor: C.ok }} onClick={onSolo}>{t("ui.menu.solo")}</button>
+        <span style={{ color: C.dim, marginLeft: 10, fontSize: 13 }}>{t("ui.menu.soloHint")}</span>
+      </div>
       <div>
         <button style={{ ...button, borderColor: C.accent }} onClick={onLocal}>{t("ui.menu.local")}</button>
         <span style={{ color: C.dim, marginLeft: 10, fontSize: 13 }}>{t("ui.menu.localHint")}</span>
@@ -89,8 +106,8 @@ function Menu({ onLocal, onOnline, notice }: { onLocal: () => void; onOnline: (s
   );
 }
 
-function LocalRoom({ onExit, active }: { onExit: () => void; active: boolean }) {
-  const [room, setRoom] = useState<RoomState>(newLocalRoom);
+function LocalRoom({ onExit, active, solo }: { onExit: () => void; active: boolean; solo: boolean }) {
+  const [room, setRoom] = useState<RoomState>(solo ? newSoloRoom : newLocalRoom);
   const send = (playerId: string, action: RoomAction) => setRoom((r) => stepRoom(r, playerId, action, ROOM_SETUP));
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -105,7 +122,7 @@ function LocalRoom({ onExit, active }: { onExit: () => void; active: boolean }) 
             return stepRoom(ready, r.hostId, { type: "start" }, ROOM_SETUP);
           });
         }}
-        onRestart={() => setRoom(newLocalRoom())}
+        onRestart={() => setRoom(solo ? newSoloRoom() : newLocalRoom())}
       />
     </div>
   );
@@ -172,13 +189,53 @@ interface RoomViewProps {
 function RoomView({ room, local = false, active = true, meId, send, onStart, onRestart }: RoomViewProps) {
   if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
   const { consortium } = room;
-  if (consortium.result) return <Results state={consortium} onRestart={onRestart} />;
+  const bots = room.bots ?? [];
+  // Чиї агенції «мої»: за одним екраном — усіх людей, онлайн — лише своя.
+  const myAgencyIds = room.assignments
+    .filter((a) => !bots.includes(a.playerId) && (local ? !room.left.includes(a.playerId) : a.playerId === meId))
+    .map((a) => a.agencyId);
+  if (consortium.result) {
+    return (
+      <div style={{ display: "grid", gap: 8 }}>
+        <CampaignStandings state={consortium} />
+        <Results state={consortium} onRestart={onRestart} />
+      </div>
+    );
+  }
+  // Мій апарат уже злетів: граю політ і орбіту, звіт іде в кімнату. Решта агенцій тим часом ходять далі.
+  const flying = pendingReports(consortium).find((id) => myAgencyIds.includes(id));
+  const flyingEntry = consortium.agencies.find((e) => e.agency.id === flying);
+  const flyingOwner = room.assignments.find((a) => a.agencyId === flying);
+  const spec = flyingEntry ? flownSpec(flyingEntry) : null;
+  if (flyingEntry && flyingOwner && spec) {
+    return (
+      <MissionRunner
+        key={`${flyingEntry.agency.id}:${consortium.campaign?.round ?? 0}`}
+        agencyName={t(flyingEntry.agency.nameKey)} mission={flownMission(consortium)} spec={spec}
+        seeds={seedsFor(consortium, flyingEntry.agency.id)} active={active}
+        onReport={(report) => send(flyingOwner.playerId, { type: "report", report })}
+      />
+    );
+  }
+  if (consortium.awaiting) {
+    const waiting = pendingReports(consortium).map((id) => {
+      const a = room.assignments.find((x) => x.agencyId === id);
+      return a ? room.playerNames[a.playerId] ?? a.playerId : id;
+    });
+    return (
+      <div style={{ display: "grid", gap: 8 }}>
+        <CampaignPanel state={consortium} myAgencyIds={myAgencyIds} />
+        <div style={{ color: C.dim }}>{t("ui.campaign.awaiting", { players: waiting.join(", ") })}</div>
+      </div>
+    );
+  }
   const entry = activeAgency(consortium);
   const owner = room.assignments.find((a) => a.agencyId === entry?.agency.id);
   const name = owner ? room.playerNames[owner.playerId] ?? owner.playerId : "";
   const mine = local || owner?.playerId === meId;
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      <CampaignPanel state={consortium} myAgencyIds={myAgencyIds} />
       <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
       <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
         <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
@@ -248,12 +305,17 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
 export function Turn({ state, dispatch, active = true }: { state: ConsortiumState; dispatch: (a: ConsortiumAction) => void; active?: boolean }) {
   const entry = activeAgency(state);
   const { base, market, turn } = state;
+  // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
+  const catalogNow = entry?.design.input.catalog;
+  const blocked = entry?.agency.blockedModules;
   const upcoming: Upcoming[] = useMemo(
-    () =>
-      base.catalog.modules
-        .filter((m) => (market[m.id]?.fromTurn ?? 0) > turn)
-        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 })),
-    [base, market, turn],
+    () => {
+      const available = new Set((catalogNow?.modules ?? []).map((m) => m.id));
+      return base.catalog.modules
+        .filter((m) => market[m.id] !== undefined && (market[m.id]?.fromTurn ?? 0) > turn && !available.has(m.id) && !(blocked ?? []).includes(m.id))
+        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 }));
+    },
+    [base, market, turn, catalogNow, blocked],
   );
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
