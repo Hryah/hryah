@@ -345,7 +345,8 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   }
 
   // Нове вікно: календар іде далі, проєкт агенції лишається (друге коло коротше), звіти скидаються.
-  const turn = state.turn + 1;
+  // Між вікнами може бути пауза (gapTurns): ринок дешевшає, розробки й партії дозрівають, але запуску немає.
+  const turn = state.turn + 1 + (config.gapTurns ?? 0);
   const opened: CampaignState = { ...nextCampaign, round: campaign.round + 1, windowStartTurn: turn };
   const head = { ...state, campaign: opened };
   return {

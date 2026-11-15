@@ -21,6 +21,9 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   lines.push({ text: t(account.knowsConditions ? "ui.brief.known" : "ui.brief.unknown"), color: account.knowsConditions ? undefined : C.gold });
   lines.push({ text: t("ui.brief.window", { n: campaign.round + 1, total: campaign.config.rounds, turns: Math.max(0, state.deadlineTurn - state.turn + 1) }) });
   lines.push({ text: t("ui.brief.funds", { funds: fmt(account.fundsMUsd), research: account.researchPts }) });
+  if ((campaign.config.gapTurns ?? 0) > 0 && campaign.round + 1 < campaign.config.rounds) {
+    lines.push({ text: t("ui.brief.gap", { gap: campaign.config.gapTurns ?? 0 }) });
+  }
   if (account.missedInRow >= 1) lines.push({ text: t("ui.brief.missed"), color: C.bad });
 
   const available = new Set(entry.design.input.catalog.modules.map((m) => m.id));

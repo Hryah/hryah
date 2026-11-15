@@ -98,3 +98,18 @@ describe("доопрацювання: боти й стартовий проєк�
     expect(s.agencies.some((e) => e.account!.unlocked.length > 0)).toBe(true);
   });
 });
+
+describe("Марс: вікна запуску з паузою", () => {
+  it("наступне вікно відкривається після паузи gapTurns; ринок за цей час дешевшає", () => {
+    const sc = SCENARIOS["red-planet"]!;
+    let s = newConsortium({ mission: sc.mission, catalog: CAMPAIGN_CATALOG }, market, agencies, 12, 5, { campaign: sc.campaign });
+    for (let g = 0; g < 3000 && s.campaign!.round === 0; g++) {
+      const n = stepConsortium(s, botAction(s));
+      s = n === s ? stepConsortium(s, { type: "wait" }) : n;
+    }
+    // Вікно могло закритись раніше (усі запустились), але пауза додається завжди.
+    expect(s.campaign!.windowStartTurn).toBeGreaterThanOrEqual(1 + (sc.campaign.gapTurns ?? 0));
+    expect(s.turn).toBe(s.campaign!.windowStartTurn);
+    expect(s.deadlineTurn).toBe(s.campaign!.windowStartTurn + sc.campaign.windowTurns - 1);
+  });
+});

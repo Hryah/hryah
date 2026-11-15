@@ -292,5 +292,46 @@
       "parts": 24,
       "experiment": 30
     }
+  },
+  "mars-relay": {
+    "id": "mars-relay",
+    "titleKey": "mission.marsRelay.title",
+    "briefKey": "mission.marsRelay.brief",
+    "body": {
+      "name": "Mars",
+      "radiusKm": 3390,
+      "muKm3S2": 42828
+    },
+    "budgetMUsd": 110,
+    "dvRequiredMs": 1100,
+    "altRangeKm": [
+      300,
+      500
+    ],
+    "requiredResolutionM": 3,
+    "requiredDataMb": 6000,
+    "durationOrbits": 8,
+    "imagingSPerOrbit": 400,
+    "passSPerOrbit": 300,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
   }
 }

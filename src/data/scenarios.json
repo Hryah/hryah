@@ -111,5 +111,22 @@
       "mbPerResearchPt": 2000
     },
     "analogKey": "scenario.lifeline.analog"
+  },
+  "red-planet": {
+    "titleKey": "scenario.redPlanet.title",
+    "briefKey": "scenario.redPlanet.brief",
+    "missionId": "mars-relay",
+    "analogKey": "scenario.red-planet.analog",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 600,
+      "grantMUsd": 45,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "gapTurns": 6
+    }
   }
 }

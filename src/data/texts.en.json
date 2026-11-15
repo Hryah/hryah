@@ -436,5 +436,11 @@
   "ui.brief.risk": "Some modules in our design are not flight-proven yet (see TRL). A ground test or two would lower the risk.",
   "ui.brief.lastResult": "Last window we got {value} of the {optimal} the best available design would have given ({percent}%).",
   "ui.brief.analog": "Real counterpart: {analog}",
-  "ui.campaign.optimal": "Best available design would have given {optimal} ({percent}% achieved)."
+  "ui.campaign.optimal": "Best available design would have given {optimal} ({percent}% achieved).",
+  "mission.marsRelay.title": "Red Planet Mapper",
+  "mission.marsRelay.brief": "Map Mars from a low orbit. Getting there takes a lot of delta-v, and the data trickles home over short relay passes.",
+  "scenario.redPlanet.title": "Red Planet",
+  "scenario.redPlanet.brief": "Launch windows to Mars open only every 26 months. Between windows you can only build, test and research. Miss one and you wait.",
+  "scenario.red-planet.analog": "Mars Reconnaissance Orbiter: launched in the 2005 window, it has mapped Mars and relayed rover data home since 2006.",
+  "ui.brief.gap": "After this window the next launch opportunity is {gap} turns away. Use that time for factory batches, tests and research."
 }
