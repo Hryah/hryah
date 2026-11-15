@@ -1,10 +1,9 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
-import { CompositeSpacecraftSvg } from "../graphics/adapters";
-import { resolveAssetUrl, templateRegistry } from "../graphics/registry";
+import { BlueprintShapeSvg, resolveAssetUrl, templateRegistry, type VisualTemplate } from "../graphics";
 import { fmt, t } from "../text";
-import { DesignStage } from "./DesignStage";
+import { DesignPreview, type DesignPreviewMode, type DesignPreviewView } from "./DesignPreview";
 
 // Екран частини 1. Лише читає стан і шле дії: усі розрахунки робить core/design.
 
@@ -26,6 +25,45 @@ interface Props {
   upcoming?: Upcoming[];
   actionsLeft?: number;
   header?: ReactNode;
+  defaultPreviewMode?: DesignPreviewMode;
+  extraPreviewViews?: readonly DesignPreviewView[];
+}
+
+function TemplateThumbnail({
+  template,
+  width,
+  height,
+  opacity = 1,
+}: {
+  readonly template: VisualTemplate;
+  readonly width: number;
+  readonly height: number;
+  readonly opacity?: number;
+}) {
+  const [spriteFailed, setSpriteFailed] = useState(false);
+  const spriteUrl = template.sprite2d?.url;
+
+  useEffect(() => {
+    setSpriteFailed(false);
+  }, [template.id, spriteUrl]);
+
+  if (spriteUrl && !spriteFailed) {
+    return (
+      <img
+        src={spriteUrl}
+        alt=""
+        width={width}
+        height={height}
+        onError={() => setSpriteFailed(true)}
+        style={{ objectFit: "contain", opacity, flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div style={{ width, height, display: "flex", alignItems: "center", justifyContent: "center", opacity, flexShrink: 0 }}>
+      <BlueprintShapeSvg spec={template.blueprint} size={Math.min(width, height)} />
+    </div>
+  );
 }
 
 const MARGIN_ORDER: MarginId[] = ["dv", "energy", "link", "science", "mass", "budget"];
@@ -47,7 +85,17 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 14,
 } as const;
 
-export function DesignScreen({ state, dispatch, editable, active = true, upcoming = [], actionsLeft, header }: Props) {
+export function DesignScreen({
+  state,
+  dispatch,
+  editable,
+  active = true,
+  upcoming = [],
+  actionsLeft,
+  header,
+  defaultPreviewMode,
+  extraPreviewViews,
+}: Props) {
   const spec = designPhase.finish(state).result;
   const { mission, catalog } = state.input;
   const { design } = state;
@@ -58,24 +106,19 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
     if (control !== null && can(control)) dispatch(action);
   };
 
-  const assembly = templateRegistry.buildAssembly({ phase: "design", mission, design });
-
   return (
     <div style={{ display: "grid", gap: 16 }}>
       {header}
-      <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center" }}>
-        <div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
-            <strong style={{ fontSize: 18 }}>{t(mission.titleKey)}</strong>
-            <span style={{ color: C.dim }}>{t("ui.budget")}: {fmt(mission.budgetMUsd)} M$</span>
-            {actionsLeft !== undefined && <span style={{ color: C.accent }}>{t("ui.actionsLeft", { n: actionsLeft })}</span>}
-          </div>
-          <p style={{ color: C.dim, margin: "8px 0 0" }}>{t(mission.briefKey)}</p>
+      <div style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}>
+          <strong style={{ fontSize: 18 }}>{t(mission.titleKey)}</strong>
+          <span style={{ color: C.dim }}>{t("ui.budget")}: {fmt(mission.budgetMUsd)} M$</span>
+          {actionsLeft !== undefined && <span style={{ color: C.accent }}>{t("ui.actionsLeft", { n: actionsLeft })}</span>}
         </div>
-        <CompositeSpacecraftSvg assembly={assembly} altKm={design.altKm} fuelKg={design.fuelKg} />
+        <p style={{ color: C.dim, margin: "8px 0 0" }}>{t(mission.briefKey)}</p>
       </div>
 
-      <DesignStage state={state} active={active} />
+      <DesignPreview state={state} active={active} defaultMode={defaultPreviewMode} extraViews={extraPreviewViews} />
 
       <div style={{ background: C.panel, borderRadius: 12, padding: 16 }}>
         <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>{t("ui.margins")}</div>
@@ -117,7 +160,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8 }}>
               {options.map((m) => {
                 const selected = design.modules[slot] === m.id;
-                const spriteUrl = templateRegistry.getModuleTemplate(slot, m.id).sprite2d?.url;
+                const template = templateRegistry.getModuleTemplate(slot, m.id);
                 return (
                   <button
                     key={m.id} disabled={!can(`slot:${slot}`)} onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
@@ -127,9 +170,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
                       display: "flex", alignItems: "center", gap: 10,
                     }}
                   >
-                    {spriteUrl && (
-                      <img src={spriteUrl} alt="" width={36} height={36} style={{ objectFit: "contain", flexShrink: 0 }} />
-                    )}
+                    <TemplateThumbnail template={template} width={36} height={36} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>{t(m.nameKey)}</div>
                       <div style={{ color: C.dim, fontSize: 12 }}>{keyStat(m)}</div>
@@ -139,12 +180,10 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
                 );
               })}
               {later.map((u) => {
-                const upcomingSpriteUrl = templateRegistry.getModuleTemplate(slot, u.id).sprite2d?.url;
+                const upcomingTemplate = templateRegistry.getModuleTemplate(slot, u.id);
                 return (
                   <div key={u.id} style={{ ...button, cursor: "default", border: `1px dashed ${C.line}`, color: C.dim, display: "flex", alignItems: "center", gap: 10 }}>
-                    {upcomingSpriteUrl && (
-                      <img src={upcomingSpriteUrl} alt="" width={36} height={36} style={{ objectFit: "contain", opacity: 0.45, flexShrink: 0 }} />
-                    )}
+                    <TemplateThumbnail template={upcomingTemplate} width={36} height={36} opacity={0.45} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>{t(u.nameKey)}</div>
                       <div style={{ fontSize: 12 }}>{t("ui.availableFrom", { turn: u.fromTurn })}</div>
@@ -163,7 +202,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {mission.launchers.map((l) => {
               const selected = design.launcherId === l.id;
-              const launcherSpriteUrl = templateRegistry.getLauncherTemplate(l.id).sprite2d?.url;
+              const launcherTemplate = templateRegistry.getLauncherTemplate(l.id);
               return (
                 <button
                   key={l.id} disabled={!can("launcher")} onClick={() => act({ type: "setLauncher", launcherId: l.id })}
@@ -172,9 +211,7 @@ export function DesignScreen({ state, dispatch, editable, active = true, upcomin
                     textAlign: "left", display: "flex", alignItems: "center", gap: 10,
                   }}
                 >
-                  {launcherSpriteUrl && (
-                    <img src={launcherSpriteUrl} alt="" width={28} height={40} style={{ objectFit: "contain", flexShrink: 0 }} />
-                  )}
+                  <TemplateThumbnail template={launcherTemplate} width={28} height={40} />
                   <div>
                     <div style={{ fontWeight: 600 }}>{t(l.nameKey)}</div>
                     <div style={{ color: C.dim, fontSize: 12 }}>≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$</div>
