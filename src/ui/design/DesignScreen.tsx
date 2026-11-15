@@ -38,7 +38,7 @@ function keyStat(m: ModuleDef): string {
     case "solar": return `${m.powerW} W`;
     case "battery": return `${m.capacityWh} Wh`;
     case "antenna": return `${m.downlinkMbps} Mbps`;
-    case "instrument": return `⌀ ${m.apertureM} m`;
+    case "instrument": return m.cargoKind ? `${t(`ui.cargoKind.${m.cargoKind}`)} · ${m.powerW} W` : `⌀ ${m.apertureM} m`;
   }
 }
 

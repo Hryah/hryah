@@ -453,5 +453,11 @@
   "ui.campaign.winnerCommercial": "{agency} wins the commercial race with {funds} M$.",
   "ui.campaign.winnerRace": "{agency} wins the race with a breakthrough mission.",
   "ui.brief.victoryCommercial": "Victory: the first agency to bank {target} M$. Each image sold lowers the price of the next.",
-  "ui.brief.victoryRace": "Victory: the first single mission with a contribution of {target} or more."
+  "ui.brief.victoryRace": "Victory: the first single mission with a contribution of {target} or more.",
+  "ui.campaign.cargoLine": "container delivered, {orbits}/{total} approach orbits survived: contribution {value}, payout {payout} M$ + grant {grant} M$, +{research} research",
+  "ui.campaign.cargoMissed": "never reached the station orbit: nothing delivered; grant {grant} M$, +{research} research",
+  "ui.cargoKind.water": "water",
+  "ui.cargoKind.food": "food",
+  "ui.cargoKind.parts": "spare parts",
+  "ui.cargoKind.experiment": "experiment"
 }

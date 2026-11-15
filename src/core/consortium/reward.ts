@@ -25,6 +25,7 @@ export interface AgencyRun {
   spec: SpacecraftSpec;
   outcome: MissionOutcome;
   log: CauseEntry[];   // журнал причин усіх частин: з нього розбір будує «чому так вийшло»
+  reachedOrbit?: boolean; // вийшов на робочу орбіту місії (для вантажу: дістався до станції); відсутнє = так
 }
 
 export interface Payout {
@@ -55,9 +56,14 @@ export function timeFactor(launchTurn: number, t: Tuning = TUNING): number {
   return Math.max(t.timeFloor, 1 - t.timeDecayPerTurn * launchTurn);
 }
 
-export function cargoKindOf(catalog: Catalog | undefined, run: AgencyRun): CargoKind | undefined {
+export function cargoKindOf(catalog: Catalog | undefined, run: Pick<AgencyRun, 'spec'>): CargoKind | undefined {
   const id = run.spec.design.modules.instrument;
-  const m = catalog?.modules.find((x) => x.slot === 'instrument' && x.id === id);
+  const instruments = (catalog?.modules ?? []).filter((x) => x.slot === 'instrument');
+  // Контейнер власного виробництва (fab-<базовий id>-<агенція>-<n>) має тип свого базового контейнера.
+  const fabBase = id.startsWith('fab-')
+    ? instruments.map((x) => x.id).filter((k) => id.slice(4).startsWith(`${k}-`)).sort((a, b) => b.length - a.length)[0]
+    : undefined;
+  const m = instruments.find((x) => x.id === (fabBase ?? id));
   return m && m.slot === 'instrument' ? m.cargoKind : undefined;
 }
 
@@ -65,6 +71,8 @@ export function cargoKindOf(catalog: Catalog | undefined, run: AgencyRun): Cargo
 // витків підходу, які апарат пережив, × час (порожній чи загублений рейс нічого не дає).
 export function runValueMUsd(mission: Mission, run: AgencyRun, t: Tuning = TUNING, catalog?: Catalog): number {
   if (mission.kind === 'cargo') {
+    // Не дістався до орбіти станції — вантаж не доставлено, хоч би скільки витків апарат прожив.
+    if (run.reachedOrbit === false) return 0;
     const kind = cargoKindOf(catalog, run);
     const need = kind ? mission.stationNeeds?.[kind] ?? 0 : 0;
     const survived = clamp(run.outcome.survivedOrbits / Math.max(1, mission.durationOrbits), 0, 1);

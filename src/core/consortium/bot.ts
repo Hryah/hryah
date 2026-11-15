@@ -65,7 +65,7 @@ export function botAction(state: ConsortiumState): ConsortiumAction {
   const others = state.agencies.filter((e) => e !== entry && e.launch);
   const taken: Taken = {
     designs: others.map((e) => designKey(e.launch!.spec.design)).sort(),
-    cargo: others.map((e) => cargoKindOf(state.base.catalog, { agencyId: '', launchTurn: 0, spec: e.launch!.spec, outcome: { success: true, deliveredMb: 0, survivedOrbits: 0, score: 0 }, log: [] })).filter((k): k is NonNullable<typeof k> => k !== undefined).sort(),
+    cargo: others.map((e) => cargoKindOf(state.base.catalog, { spec: e.launch!.spec })).filter((k): k is NonNullable<typeof k> => k !== undefined).sort(),
   };
   const target = botTarget(entry.design.input, taken);
   if (target) {
