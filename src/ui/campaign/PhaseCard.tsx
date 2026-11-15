@@ -9,7 +9,8 @@ import "./phase-card.css";
 // Місце під ілюстрацію 3:2. Готові файли вписуємо в ART (так немає 404 і стрибка висоти, поки ілюстрацій немає).
 
 const C = { bg: "#0b0d17", panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", accent: "#5ca8ff", gold: "#ffd166", ok: "#3ddc84", bad: "#ff5c7a" };
-const KEY = "phaseCards";
+// v2: скидає старе «не показувати», після якого частина команди не бачила вікон узагалі.
+const KEY = "phaseCards.v2";
 
 export type PhaseCardId = "window" | "launch" | "orbit" | "orbitCargo" | "report" | "lost";
 // Ілюстрації, що вже лежать у public/: додай рядок, коли художники здадуть файл (наприклад, window: "assets/cards/window.png").
