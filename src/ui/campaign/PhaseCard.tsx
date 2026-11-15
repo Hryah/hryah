@@ -13,10 +13,15 @@ const KEY = "phaseCards";
 
 export type PhaseCardId = "window" | "launch" | "orbit" | "orbitCargo" | "report" | "lost";
 // Ілюстрації, що вже лежать у public/: додай рядок, коли художники здадуть файл (наприклад, window: "assets/cards/window.png").
-const ART: Partial<Record<PhaseCardId, string>> = {};
+export const ART: Partial<Record<PhaseCardId, string>> = {
+  window: "assets/cards/window.svg",
+  launch: "assets/cards/launch.svg",
+  orbit: "assets/cards/orbit.svg",
+  report: "assets/cards/report.svg",
+};
 // Варіанти без власної ілюстрації беруть найближчу.
-const ART_FALLBACK: Partial<Record<PhaseCardId, PhaseCardId>> = { orbitCargo: "orbit", lost: "report" };
-const artFor = (id: PhaseCardId) => ART[id] ?? ART[ART_FALLBACK[id] ?? id];
+export const ART_FALLBACK: Partial<Record<PhaseCardId, PhaseCardId>> = { orbitCargo: "orbit", lost: "report" };
+export const artFor = (id: PhaseCardId): string | undefined => ART[id] ?? ART[ART_FALLBACK[id] ?? id];
 
 export interface SummaryRow { label: string; value: string; tone?: "ok" | "bad" | "gold" }
 
@@ -66,7 +71,7 @@ interface Props {
 }
 
 // Портрет директора місії (1:1, PNG з прозорістю). Вписати шлях, коли художники здадуть файл; до того — монограма.
-const DIRECTOR_PORTRAIT: string | null = null;
+export const DIRECTOR_PORTRAIT: string | null = "assets/cards/director.png";
 
 function SenderLine({ name, role }: { name: string; role: string }) {
   const [ok, setOk] = useState(true);
