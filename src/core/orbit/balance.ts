@@ -16,11 +16,10 @@ export type ScenarioId = 'nominal' | 'high-orbit' | 'power-stress' | 'comms-stre
 export const BALANCE_SEEDS = [4, 7, 12, 42] as const;
 
 export const STRATEGY_BUILDS: Record<BuildId, Design> = {
-  // Холодний азот має реальний Isp 75 с (#57): для 300 м/с йому треба ~44 кг палива, а це вже середній носій.
   economy: {
-    launcherId: 'medium',
-    modules: { engine: 'eng-cold', solar: 'sol-s', battery: 'bat-m', antenna: 'ant-m', instrument: 'cam-m' },
-    fuelKg: 44,
+    launcherId: 'small',
+    modules: { engine: 'eng-chem', solar: 'sol-s', battery: 'bat-m', antenna: 'ant-m', instrument: 'cam-m' },
+    fuelKg: 14,
     altKm: 400,
   },
   imaging: {
@@ -36,9 +35,9 @@ export const STRATEGY_BUILDS: Record<BuildId, Design> = {
     altKm: 600,
   },
   downlink: {
-    launcherId: 'medium',
-    modules: { engine: 'eng-cold', solar: 'sol-m', battery: 'bat-m', antenna: 'ant-l', instrument: 'cam-m' },
-    fuelKg: 48,
+    launcherId: 'small',
+    modules: { engine: 'eng-chem', solar: 'sol-m', battery: 'bat-m', antenna: 'ant-l', instrument: 'cam-m' },
+    fuelKg: 16,
     altKm: 400,
   },
   overbuilt: {

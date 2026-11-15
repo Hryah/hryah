@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BALANCE_SEEDS,
   STRATEGY_BUILDS,
+  createBalanceInput,
   runBalanceSuite,
   runOrbitStrategy,
   type BuildId,
@@ -58,6 +59,19 @@ describe('mission-specific orbit scoring', () => {
 });
 
 describe('orbit balance and multi-strategy progression', () => {
+  it('starts every representative build on its intended orbit within launch constraints', () => {
+    for (const build of Object.keys(STRATEGY_BUILDS) as BuildId[]) {
+      for (const scenario of ['nominal', 'high-orbit', 'power-stress', 'comms-stress', 'science-stress'] as const) {
+        const input = createBalanceInput(build, scenario);
+        const label = `${build}/${scenario}`;
+        expect(input.spec.dvMs, label).toBeGreaterThanOrEqual(input.mission.dvRequiredMs);
+        expect(input.spec.margins.filter(margin => ['mass', 'budget'].includes(margin.id) && !margin.ok), label).toEqual([]);
+        expect(input.flight.orbit.altKm, label).toBe(input.spec.design.altKm);
+        expect(input.log.some(entry => entry.id === 'flight:low-orbit'), label).toBe(false);
+      }
+    }
+  });
+
   it('passes the mission deterministically across fixed seeds for three distinct build strategies', () => {
     const pairs: Array<{ build: BuildId; strategy: 'economy' | 'imaging' | 'downlink' }> = [
       { build: 'economy', strategy: 'economy' },
