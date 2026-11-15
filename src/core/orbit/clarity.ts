@@ -1,5 +1,6 @@
 import type { CauseEntry } from '../contracts';
 import { orbitView, type OrbitState, type ToggleId } from './phase';
+import rules from '../../data/orbit-rules.json';
 
 export type SystemReason = 'ready' | 'commandOff' | 'safeMode' | 'cold' | 'damage'
   | 'noWindow' | 'noData' | 'ended' | 'powerFailure';
@@ -30,8 +31,8 @@ export function orbitClarity(state: OrbitState) {
     else if ((id === 'camera' && view.instrumentRateMbps <= 0)
       || (id === 'transmitter' && view.downlinkMbps <= 0)
       || (id === 'heater' && view.heaterFactor <= 0)) reason = 'damage';
-    else if (id === 'camera' && state.coldStress >= 2) reason = 'cold';
-    else if ((id === 'camera' && view.imagingS <= 0)
+    else if (id === 'camera' && state.coldStress >= rules.cold.lockStress) reason = 'cold';
+    else if ((id === 'camera' && (view.imagingS <= 0 || !view.profile.cameraWindow))
       || (id === 'transmitter' && view.passS <= 0)
       || (id === 'heater' && view.shadowS <= 0)) reason = 'noWindow';
     else if (id === 'transmitter' && operationS <= 0
@@ -46,7 +47,7 @@ export function orbitClarity(state: OrbitState) {
   if (state.status === 'active') {
     if (forecast.powerFailure) risks.push('clarity.risk.power');
     if (forecast.lostMb > 0) risks.push('clarity.risk.overflow');
-    if (forecast.nextState.coldStress >= 2) risks.push('clarity.risk.cold');
+    if (forecast.nextState.coldStress >= rules.cold.lockStress) risks.push('clarity.risk.cold');
     else if (forecast.nextState.coldStress > state.coldStress) risks.push('clarity.risk.cooling');
     if (forecast.storm) risks.push('ui.stormWarning');
     else if (view.stormInOrbits !== null && view.stormInOrbits <= 2) risks.push('ui.stormSoon');
