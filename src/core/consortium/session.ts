@@ -167,7 +167,7 @@ export function newConsortium(
       : undefined;
     return {
       agency,
-      design: designPhase.init(entryInput(head, agency, 0, [], account), 0),
+      design: fitLauncher(designPhase.init(entryInput(head, agency, 0, [], account), 0), Boolean(campaign)),
       actionsLeft: ACTIONS_PER_TURN,
       touched: [],
       projects: [],
@@ -181,6 +181,18 @@ export function newConsortium(
     seed, turn: 0, active: 0, agencies: entries, result: null,
     ...(options.reportsFrom && options.reportsFrom.length > 0 ? { reportsFrom: [...options.reportsFrom] } : {}),
   };
+}
+
+// Стартовий проєкт кампанії одразу на носії, що витягує його масу: інакше перший запуск новачка блокується масою
+// без пояснення. Одиночна місія лишається як була (там вибір носія — частина навчання).
+function fitLauncher(design: DesignState, enabled: boolean): DesignState {
+  if (!enabled || !launchBlockers(design).includes('mass')) return design;
+  const launchers = [...design.input.mission.launchers].sort((a, b) => a.maxPayloadKg - b.maxPayloadKg);
+  for (const l of launchers) {
+    const next = designPhase.step(design, { type: 'setLauncher', launcherId: l.id });
+    if (!launchBlockers(next).includes('mass')) return next;
+  }
+  return design;
 }
 
 // Профіль агенції для власної розробки: скло з власної фабрики впливає на брак дзеркала.
