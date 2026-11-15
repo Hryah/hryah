@@ -21,7 +21,8 @@ const card = (selected: boolean) => ({
 const ARROW = <div style={{ alignSelf: "center", color: C.dim, fontSize: 18 }}>→</div>;
 
 export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; turn: number; dispatch: (a: ConsortiumAction) => void }) {
-  const lineIds = Object.keys(MATERIALS.lines);
+  // У вантажному рейсі лінії оптичного скла немає сенсу: слот приладу там — контейнер.
+  const lineIds = Object.keys(MATERIALS.lines).filter((id) => !(entry.design.input.mission.kind === "cargo" && MATERIALS.lines[id]!.slot === "instrument"));
   const [lineId, setLineId] = useState(lineIds[0]!);
   const line = MATERIALS.lines[lineId]!;
   const deposits = depositsOf(entry.agency.id, lineId);
@@ -43,14 +44,16 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
     setBaseId(entry.design.input.catalog.modules.find((m) => m.slot === l.slot && !m.id.startsWith("fab-") && !m.id.startsWith("custom-"))?.id ?? "");
   };
   const safeDeposit = deposits.includes(depositId) ? depositId : deposits[0]!;
-  const order: FactoryOrder = { line: lineId, depositId: safeDeposit, steps, baseModuleId: baseId };
+  // Обраний модуль міг зникнути з каталогу (зрив постачальника): тоді беремо перший доступний.
+  const safeBaseId = bases.some((m) => m.id === baseId) ? baseId : bases[0]?.id ?? "";
+  const order: FactoryOrder = { line: lineId, depositId: safeDeposit, steps, baseModuleId: safeBaseId };
   const plan = planBatch(entry.agency, factory, order, turn, entry.design.input.catalog.modules);
   const expected = expectedQuality(entry.agency, factory, order, turn);
   const known = knownFlaws(factory, lineId, safeDeposit, turn);
   const analyzedKey = `${lineId}:${safeDeposit}`;
   const canAnalyze = safeDeposit !== IMPORT_DEPOSIT && !factory.analyzed.includes(analyzedKey) && entry.actionsLeft > 0 && !entry.launch
     && entry.account.fundsMUsd >= MATERIALS.analyzeCostMUsd;
-  const affordable = plan.batch !== undefined && entry.account.fundsMUsd > plan.batch.costMUsd;
+  const affordable = plan.batch !== undefined && entry.account.fundsMUsd >= plan.batch.costMUsd;
   const canOrder = plan.ok && affordable && entry.actionsLeft > 0 && !entry.launch;
   const cured = new Set([...(line.stages[0][steps[0]]?.cures ?? []), ...(line.stages[1][steps[1]]?.cures ?? [])]);
 
@@ -124,7 +127,7 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
         {ARROW}
         <div style={{ display: "grid", gap: 6, alignContent: "start" }}>
           <div style={{ color: C.dim, fontSize: 12 }}>{t("ui.factory.product")}</div>
-          <select value={baseId} onChange={(e) => setBaseId(e.target.value)} aria-label={t("ui.factory.product")}>
+          <select value={safeBaseId} onChange={(e) => setBaseId(e.target.value)} aria-label={t("ui.factory.product")}>
             {bases.map((m) => <option key={m.id} value={m.id}>{t(m.nameKey)}</option>)}
           </select>
           {plan.batch && (

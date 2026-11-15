@@ -127,5 +127,5 @@ export function optimalValue(input: DesignInput, trueMission: DesignInput['missi
   const { result: spec, log } = buildSpec(known, design);
   const flight = stubFlight({ mission: known.mission, spec, log });
   const orbit = stubOrbit({ mission: known.mission, spec, flight: flight.result, log });
-  return { design, value: Math.round(runValueMUsd(known.mission, { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [] }, undefined, input.catalog) * 100) / 100 };
+  return { design, value: Math.round(runValueMUsd(known.mission, { agencyId: '', launchTurn: 0, spec, outcome: orbit.result, log: [], reachedOrbit: spec.dvMs >= known.mission.dvRequiredMs }, undefined, input.catalog) * 100) / 100 };
 }

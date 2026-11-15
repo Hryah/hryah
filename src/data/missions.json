@@ -261,7 +261,7 @@
       420
     ],
     "requiredResolutionM": 1000000,
-    "requiredDataMb": 1,
+    "requiredDataMb": 0,
     "durationOrbits": 6,
     "imagingSPerOrbit": 300,
     "passSPerOrbit": 480,
@@ -333,5 +333,94 @@
         "costMUsd": 30
       }
     ]
+  },
+  "cubesat-101": {
+    "id": "cubesat-101",
+    "titleKey": "mission.cubesat101.title",
+    "briefKey": "mission.cubesat101.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 45,
+    "dvRequiredMs": 200,
+    "altRangeKm": [
+      400,
+      800
+    ],
+    "requiredResolutionM": 4,
+    "requiredDataMb": 3000,
+    "durationOrbits": 5,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "colony-resupply": {
+    "id": "colony-resupply",
+    "titleKey": "mission.colony.title",
+    "briefKey": "mission.colony.brief",
+    "body": {
+      "name": "Mars",
+      "radiusKm": 3390,
+      "muKm3S2": 42828
+    },
+    "budgetMUsd": 120,
+    "dvRequiredMs": 900,
+    "altRangeKm": [
+      350,
+      420
+    ],
+    "requiredResolutionM": 1000000,
+    "requiredDataMb": 0,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ],
+    "kind": "cargo",
+    "stationNeeds": {
+      "water": 30,
+      "food": 36,
+      "parts": 40,
+      "experiment": 20
+    }
   }
 }

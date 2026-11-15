@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import {
-  activeAgency, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  activeAgency, agencyAfterEvents, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
   type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
@@ -11,6 +11,7 @@ import { ResearchPanel } from "../campaign/ResearchPanel";
 import { FactoryPanel } from "../campaign/FactoryPanel";
 import { TrlPanel } from "../campaign/TrlPanel";
 import { BriefingPanel } from "../campaign/BriefingPanel";
+import { GroundPanel } from "../campaign/GroundPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -212,7 +213,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
     return (
       <MissionRunner
         key={`${flyingEntry.agency.id}:${consortium.campaign?.round ?? 0}`}
-        agencyName={t(flyingEntry.agency.nameKey)} mission={flownMission(consortium)} spec={spec}
+        agencyName={t(flyingEntry.agency.nameKey)} mission={flownMission(consortium, flyingEntry)} spec={spec}
         seeds={seedsFor(consortium, flyingEntry.agency.id)} active={active}
         onReport={(report) => send(flyingOwner.playerId, { type: "report", report })}
       />
@@ -245,6 +246,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
       {mine && entry && entry.account && (
         <>
           <FactoryPanel key={entry.agency.id} entry={entry} turn={consortium.turn} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+          <GroundPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
           <TrlPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
           <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
         </>
@@ -316,7 +318,8 @@ export function Turn({ state, dispatch, active = true }: { state: ConsortiumStat
   const { base, market, turn } = state;
   // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
   const catalogNow = entry?.design.input.catalog;
-  const blocked = entry?.agency.blockedModules;
+  // Санкції з урахуванням подій (зняття санкцій діє назавжди).
+  const blocked = entry ? agencyAfterEvents(entry.agency, state.campaign?.events ?? []).blockedModules : undefined;
   const lead = entry?.agency.marketLeadTurns ?? 0; // дослідження «ранній доступ»: новинки на кілька ходів раніше
   const upcoming: Upcoming[] = useMemo(
     () => {
