@@ -95,7 +95,7 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
   const entryText = (entry: CauseEntry) =>
     describeEntry(entry, { mission: state.input.mission, catalog: SAMPLE_CATALOG });
 
-  return <div className="orbit-app">
+  return <div className={`orbit-app ${campaign ? 'is-campaign' : ''}`}>
     <aside className="mission-sidebar">
       <a className="orbit-brand" href="#orbit" aria-label={t('ui.home')}><span className="brand-symbol"><Icon name="orbit" size={25} /></span>hryah<span className="brand-dot">.</span></a>
       <div className="sidebar-section-label">{t('ui.missionControl')}</div>
@@ -113,7 +113,7 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
 
     <main className="orbit-main">
       <div className="forecast-note" data-testid="orbit-objective"><p>{t(view.goalKey, goalParams)}</p><p>{t('orbit.objective.altitude', goalParams)}</p>{view.cargoNameKey && <p>{t('orbit.telemetry.progress', { sent: view.telemetryReportsSent, expected: view.telemetryReportsExpected })} · {t('orbit.telemetry.optional')}</p>}</div>
-      <header className="orbit-topbar"><div className="breadcrumb">{t('ui.missionControl')}<Icon name="chevron" size={12} /><span>{t('ui.stage.orbit')}</span></div><div className="topbar-actions"><span className="local-badge">{t('ui.interactivePrototype')}</span><button className="icon-button" aria-label={t('ui.howToPlay')} onClick={() => setHelpOpen(true)}><Icon name="help" size={19} /></button></div></header>
+      <header className="orbit-topbar"><div className="breadcrumb">{t('ui.missionControl')}<Icon name="chevron" size={12} /><span>{t('ui.stage.orbit')}</span></div><div className="topbar-actions">{!campaign && <span className="local-badge">{t('ui.interactivePrototype')}</span>}<button className="icon-button" aria-label={t('ui.howToPlay')} onClick={() => setHelpOpen(true)}><Icon name="help" size={19} /></button></div></header>
       <div className="page-heading"><div><div className="eyebrow">{t('ui.phaseThree')}</div><h1>{t('ui.orbitOperations')}</h1><p>{t('ui.tagline')}</p>{!campaign && <button className="loadout-chip" onClick={() => setSetupOpen(!setupOpen)}>{t(`ui.preset.${preset}`)}<Icon name="chevron" size={11} /></button>}</div>{!campaign && <button className="quiet-button" onClick={() => reset()}><Icon name="reset" size={16} />{t('ui.restart')}</button>}</div>
 
       {setupOpen && <section className="setup-panel" aria-label={t('ui.chooseLoadout')}><div><strong>{t('ui.chooseLoadout')}</strong><p>{t('ui.loadoutHint')}</p></div><div className="preset-options">{(['balanced', 'comms', 'power'] as Preset[]).map(id => <button key={id} className={preset === id ? 'selected' : ''} onClick={() => { reset(id); setSetupOpen(false); }}><strong>{t(`ui.preset.${id}`)}</strong><small>{t(`ui.preset.${id}.description`)}</small></button>)}</div></section>}
@@ -153,10 +153,10 @@ export function OrbitPrototype({ initialState, campaign }: { initialState?: Orbi
             <div className="forecast-row"><span>{t('clarity.peakStorage')}</span><strong>{number(forecast.cost.peakBufferMb)} Mb</strong></div>
             <div className="forecast-row"><span>{t('ui.dataDownlink')}</span><strong>+{number(forecast.deliveredMb)} Mb</strong></div>
             <div className="forecast-row"><span>{t('ui.dataLoss')}</span><strong className={forecast.lostMb > 0 ? 'text-amber' : ''}>{number(forecast.lostMb)} Mb</strong></div>
-            <div className="forecast-row"><span>{t('clarity.turnCost')}</span><strong>{number(forecast.cost.consumedWh, 1)} Wh</strong></div>
-            <div className="forecast-row"><span>{t('clarity.generation')}</span><strong>{number(forecast.cost.generatedWh, 1)} Wh</strong></div>
-            <div className="forecast-row"><span>{t('clarity.duration')}</span><strong>{number(forecast.cost.elapsedS / 60, 1)} min</strong></div>
-            <p className="forecast-note">{t('clarity.costHint')}</p>
+            <div className="forecast-row forecast-extra"><span>{t('clarity.turnCost')}</span><strong>{number(forecast.cost.consumedWh, 1)} Wh</strong></div>
+            <div className="forecast-row forecast-extra"><span>{t('clarity.generation')}</span><strong>{number(forecast.cost.generatedWh, 1)} Wh</strong></div>
+            <div className="forecast-row forecast-extra"><span>{t('clarity.duration')}</span><strong>{number(forecast.cost.elapsedS / 60, 1)} min</strong></div>
+            <p className="forecast-note forecast-extra">{t('clarity.costHint')}</p>
           </>}
           {risks.map(key => <div key={key} className="forecast-note warning"><Icon name="activity" size={16} /><span>{t(key, { turns: view.stormInOrbits ?? 0 })}</span></div>)}
           {risks.length === 0 && <div className="forecast-note"><Icon name="shield" size={16} /><span>{t(done ? 'forecast.finished' : 'ui.forecastNominal')}</span></div>}
