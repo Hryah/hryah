@@ -45,9 +45,11 @@ export function orbitClarity(state: OrbitState) {
   };
   const risks: string[] = [];
   if (state.status === 'active') {
+    // Вантажний рейс: камери немає, а пакет телеметрії прострочується після прольоту, тож тексти ризиків інші.
+    const cargo = state.input.mission.orbitObjective?.type === 'cargo';
     if (forecast.powerFailure) risks.push('clarity.risk.power');
-    if (forecast.lostMb > 0) risks.push('clarity.risk.overflow');
-    if (forecast.nextState.coldStress >= rules.cold.lockStress) risks.push('clarity.risk.cold');
+    if (forecast.lostMb > 0) risks.push(cargo ? 'clarity.risk.overflowCargo' : 'clarity.risk.overflow');
+    if (forecast.nextState.coldStress >= rules.cold.lockStress) risks.push(cargo ? 'clarity.risk.coldCargo' : 'clarity.risk.cold');
     else if (forecast.nextState.coldStress > state.coldStress) risks.push('clarity.risk.cooling');
     if (forecast.storm) risks.push('ui.stormWarning');
     else if (view.stormInOrbits !== null && view.stormInOrbits <= 2) risks.push('ui.stormSoon');

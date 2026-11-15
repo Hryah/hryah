@@ -202,7 +202,8 @@ function completeMission(state: OrbitState): void {
   }
   const cargoKind = state.input.spec.cargoKind;
   if (cargo && cargoKind && outcome(state).success) {
-    addEntry(state, 'orbit.cargo.delivered', 'event', 'structure', { cargoKind, orbits: state.completedOrbits },
+    // Назву контейнера дає ключ тексту (orbit.cargo.delivered.<kind>): ядро не перекладає сирий cargoKind.
+    addEntry(state, `orbit.cargo.delivered.${cargoKind}`, 'event', 'structure', { cargoKind, orbits: state.completedOrbits },
       causes(state, ['design:instrument', 'orbit:arrival']));
   }
   addEntry(state, outcome(state).success ? 'orbit.proto.success' : 'orbit.proto.complete',
