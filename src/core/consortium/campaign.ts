@@ -21,6 +21,12 @@ export interface CampaignConfig {
   missedTwiceGrantFactor: number; // грант після двох пропущених поспіль (sudden death)
   missedResearchPts: number;   // очки досліджень за пропущене вікно (аутсайдер іде в R&D)
   mbPerResearchPt: number;     // скільки доставлених мегабіт дає одне очко досліджень
+  // Режим перемоги: 'program' — найбільший внесок у наукову програму (типово); 'commercial' — перший, хто заробив
+  // victoryTarget M$ (а ціна даних падає, коли ринок насичується); 'race' — перший запуск із цінністю ≥ victoryTarget.
+  victory?: 'program' | 'commercial' | 'race';
+  victoryTarget?: number;
+  saturation?: number;         // commercial: на скільки падає виплата, коли програма (ринок) заповнена повністю, 0..1
+  gapTurns?: number;           // ходів між вікнами (Марс: вікно раз на ~26 місяців); тим часом іде лише виробництво
 }
 
 export interface MissionReport {
@@ -40,6 +46,11 @@ export function checkCampaign(c: CampaignConfig): void {
   for (const key of positive) {
     if (!Number.isFinite(c[key]) || c[key] <= 0) throw new Error(`campaign.${key} має бути додатним числом`);
   }
+  if (c.victory && c.victory !== 'program' && !(Number.isFinite(c.victoryTarget) && (c.victoryTarget ?? 0) > 0)) {
+    throw new Error('campaign.victoryTarget потрібен для режимів commercial і race');
+  }
+  if (c.saturation !== undefined && !(c.saturation >= 0 && c.saturation < 1)) throw new Error('campaign.saturation має бути в 0..1');
+  if (c.gapTurns !== undefined && (!Number.isInteger(c.gapTurns) || c.gapTurns < 0)) throw new Error('campaign.gapTurns має бути цілим ≥ 0');
   for (const key of ['grantMUsd', 'missedGrantFactor', 'missedTwiceGrantFactor', 'missedResearchPts'] as const) {
     if (!Number.isFinite(c[key]) || c[key] < 0) throw new Error(`campaign.${key} не може бути від'ємним`);
   }

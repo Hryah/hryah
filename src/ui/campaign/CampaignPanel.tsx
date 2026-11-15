@@ -128,7 +128,15 @@ export function CampaignStandings({ state }: { state: ConsortiumState }) {
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 20, display: "grid", gap: 8 }} data-testid="campaign-standings">
       <h2 style={{ margin: 0 }}>{t(progress >= 1 ? "ui.campaign.programDone" : "ui.campaign.programEnded", { percent: fmt(progress * 100, 1) })}</h2>
-      {top && <div style={{ color: C.gold }}>🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}</div>}
+      {(() => {
+        const w = state.campaign.winner;
+        const winner = w ? state.agencies.find((e) => e.agency.id === w.agencyId) : undefined;
+        if (winner && w) {
+          const key = w.reason === "commercial" ? "ui.campaign.winnerCommercial" : w.reason === "race" ? "ui.campaign.winnerRace" : "ui.campaign.winnerProgram";
+          return <div style={{ color: C.gold, fontWeight: 700 }}>🏆 {t(key, { agency: t(winner.agency.nameKey), funds: fmt(winner.account?.fundsMUsd ?? 0) })}</div>;
+        }
+        return top ? <div style={{ color: C.gold }}>🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}</div> : null;
+      })()}
       {(() => {
         const key = state.campaign.scenarioId ? SCENARIOS[state.campaign.scenarioId]?.def.analogKey : undefined;
         return key ? <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.brief.analog", { analog: t(key) })}</div> : null;

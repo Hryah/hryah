@@ -111,5 +111,59 @@
       "mbPerResearchPt": 2000
     },
     "analogKey": "scenario.lifeline.analog"
+  },
+  "red-planet": {
+    "titleKey": "scenario.redPlanet.title",
+    "briefKey": "scenario.redPlanet.brief",
+    "missionId": "mars-relay",
+    "analogKey": "scenario.red-planet.analog",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 600,
+      "grantMUsd": 45,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "gapTurns": 6
+    }
+  },
+  "gold-rush": {
+    "titleKey": "scenario.goldRush.title",
+    "briefKey": "scenario.goldRush.brief",
+    "missionId": "earth-observer",
+    "analogKey": "scenario.gold-rush.analog",
+    "campaign": {
+      "rounds": 6,
+      "windowTurns": 4,
+      "programGoal": 1800,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "victory": "commercial",
+      "victoryTarget": 550,
+      "saturation": 0.7
+    }
+  },
+  "first-light": {
+    "titleKey": "scenario.firstLight.title",
+    "briefKey": "scenario.firstLight.brief",
+    "missionId": "big-eye",
+    "analogKey": "scenario.first-light.analog",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 5,
+      "programGoal": 260,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "victory": "race",
+      "victoryTarget": 80
+    }
   }
 }
