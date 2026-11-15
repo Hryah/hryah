@@ -61,9 +61,9 @@ describe('orbit prototype integration', () => {
     expect(end.log.some((e) => e.messageKey === 'orbit.proto.insufficientData')).toBe(true);
   });
 
-  it('accepts the minimum altitude and rejects 200 km with a causal failure', () => {
+  it('accepts the minimum altitude, tolerates a 5% shortfall and rejects lower orbits with a causal failure', () => {
     const original = createDemoOrbit();
-    for (const [altKm, success] of [[200, false], [399.999, false], [400, true]] as const) {
+    for (const [altKm, success] of [[200, false], [379.999, false], [380, true], [399.999, true], [400, true]] as const) {
       const input = { ...original.input, flight: { ...original.input.flight,
         orbit: { ...original.input.flight.orbit, altKm } } };
       const end = play(orbitPhase.init(input, 42));
@@ -73,6 +73,20 @@ describe('orbit prototype integration', () => {
         expect(danglingCauses([...input.log, ...end.log])).toEqual([]);
       }
     }
+  });
+
+  it('scores a slightly low orbit lower and explains it with a causal warning', () => {
+    const original = createDemoOrbit();
+    const at = (altKm: number) => {
+      const input = { ...original.input, flight: { ...original.input.flight, orbit: { ...original.input.flight.orbit, altKm } } };
+      return play(orbitPhase.init(input, 42));
+    };
+    const nominal = at(400);
+    const low = at(390);
+    expect(orbitPhase.finish(low).result.success).toBe(true);
+    expect(orbitPhase.finish(low).result.score).toBeLessThan(orbitPhase.finish(nominal).result.score);
+    expect(low.log).toContainEqual(expect.objectContaining({ messageKey: 'orbit.proto.orbitLow', kind: 'warning', causedBy: expect.any(Array) }));
+    expect(nominal.log.some((e) => e.messageKey === 'orbit.proto.orbitLow')).toBe(false);
   });
 
   it('requires image quality and the actual orbit as well as data', () => {

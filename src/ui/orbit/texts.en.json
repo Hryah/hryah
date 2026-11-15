@@ -383,5 +383,7 @@
   "orbit.cargo.delivered.water": "The water container was delivered after {orbits} approach orbits.",
   "orbit.cargo.delivered.food": "The food container was delivered after {orbits} approach orbits.",
   "orbit.cargo.delivered.parts": "The spare parts container was delivered after {orbits} approach orbits.",
-  "orbit.cargo.delivered.experiment": "The live experiment was delivered after {orbits} approach orbits."
+  "orbit.cargo.delivered.experiment": "The live experiment was delivered after {orbits} approach orbits.",
+  "orbit.proto.orbitLow": "Actual altitude {altKm} km is slightly below the required {minKm} km: the mission still counts, with a lower score.",
+  "clarity.risk.orbitLow": "Altitude is slightly below the mission range: the mission still counts, but the score is reduced."
 }

@@ -195,7 +195,7 @@ describe("сесія: хід агенцій", () => {
       s,
       { type: "design", action: { type: "setModule", slot: "battery", moduleId: "bat-s" } },
       { type: "design", action: { type: "setFuel", fuelKg: 10 } },
-      { type: "design", action: { type: "setAlt", altKm: 450 } },
+      { type: "design", action: { type: "setAlt", altKm: 500 } }, // старт на 450 км: справжня зміна висоти
       { type: "design", action: { type: "setLauncher", launcherId: "medium" } },
     );
     expect(s.agencies[0]?.actionsLeft).toBe(0);

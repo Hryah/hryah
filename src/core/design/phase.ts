@@ -74,10 +74,13 @@ export function startDesign(input: DesignInput): Design {
   return {
     modules,
     fuelKg: START_FUEL_KG,
-    altKm: input.mission.altRangeKm[0],
+    // На крок вище нижньої межі (якщо діапазон дозволяє): невеликий недолiт у польоті не виводить апарат за межі місії.
+    altKm: Math.min(input.mission.altRangeKm[1], input.mission.altRangeKm[0] + DEFAULT_ALT_MARGIN_KM),
     launcherId: launcher.id,
   };
 }
+
+const DEFAULT_ALT_MARGIN_KM = 50;
 
 // Які запаси зараз червоні й заважають запуску. Порожній список означає, що запускати можна.
 export function launchBlockers(state: DesignState): MarginId[] {
