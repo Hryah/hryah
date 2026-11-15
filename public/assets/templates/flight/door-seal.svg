@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" width="240" height="64">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Outer frame tracks -->
+    <rect x="6" y="6" width="228" height="52" rx="10" fill="#32446A" stroke="#0D1736" stroke-width="6"/>
+    <!-- Left & Right interlocking armor door leaves -->
+    <polygon points="14,12 126,12 118,32 126,52 14,52" fill="#C0C8DD" stroke="#0D1736" stroke-width="4"/>
+    <polygon points="226,12 130,12 122,32 130,52 226,52" fill="#9AA8C4" stroke="#0D1736" stroke-width="4"/>
+    <!-- Orange hazard lock stripes at door ends -->
+    <rect x="18" y="16" width="24" height="32" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3"/>
+    <rect x="198" y="16" width="24" height="32" rx="4" fill="#FAAC31" stroke="#0D1736" stroke-width="3"/>
+    <line x1="22" y1="24" x2="38" y2="24" stroke="#0D1736" stroke-width="3.5"/>
+    <line x1="22" y1="40" x2="38" y2="40" stroke="#0D1736" stroke-width="3.5"/>
+    <line x1="202" y1="24" x2="218" y2="24" stroke="#0D1736" stroke-width="3.5"/>
+    <line x1="202" y1="40" x2="218" y2="40" stroke="#0D1736" stroke-width="3.5"/>
+    <!-- Center rotary locking clamp -->
+    <circle cx="120" cy="32" r="20" fill="#206876" stroke="#0D1736" stroke-width="5"/>
+    <circle cx="120" cy="32" r="10" fill="#F3832D" stroke="#0D1736" stroke-width="3.5"/>
+    <circle cx="120" cy="32" r="4" fill="#B2D7E8"/>
+  </g>
+</svg>

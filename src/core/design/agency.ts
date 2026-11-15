@@ -16,6 +16,8 @@ export interface AgencyProfile {
   devCostFactor: number;                             // множник вартості власної розробки (організація роботи)
   devSpeedFactor: number;                            // множник тривалості розробки (менше означає швидше)
   blockedModules?: string[];                         // модулі, яких країна не може купити (санкції)
+  defectFactor?: number;                             // множник шансу браку власної розробки (дослідження «стенд»)
+  marketLeadTurns?: number;                          // на скільки ходів раніше агенція бачить новинки ринку
 }
 
 const money = (x: number) => Math.round(x * 100) / 100;

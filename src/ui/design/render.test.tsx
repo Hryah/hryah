@@ -44,8 +44,16 @@ describe("екран частини 1: розмітка", () => {
     expect(html).toContain("disabled");
   });
 
-  it("екран консорціуму починає з лобі: гравець, вибір країни, старт", () => {
+  it("екран консорціуму починає з меню: один екран, створити кімнату, приєднатись", () => {
     const html = renderToStaticMarkup(<ConsortiumScreen />);
+    for (const text of ["Play at one screen", "Create room", "Join", "Your name"]) expect(html, text).toContain(text);
+    expect(html).not.toContain("ui.");
+  });
+
+  it("локальне лобі: гравець, вибір країни, старт", () => {
+    const ids = profiles.map((a) => a.id);
+    const room = newRoom("p1", "Player 1", ids, 1);
+    const html = renderToStaticMarkup(<Lobby room={room} agencies={profiles} local send={() => undefined} onStart={() => undefined} />);
     for (const text of ["Consortium lobby", "Player 1", "Any country", "Borealis Federation", "Monsoon Union", "Meridia Concord", "Add player", "Start the mission"]) expect(html, text).toContain(text);
     expect(html).not.toContain("ui.");
   });

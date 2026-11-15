@@ -1,11 +1,13 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { availableActions, newGame, step, type GameAction, type GameState } from "../../core/game";
+import { newGame, step, type GameAction, type GameState } from "../../core/game";
 import { causeChains } from "../../core/debrief";
 import { launchBlockers } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { DesignScreen } from "../design/DesignScreen";
 import { describeEntry } from "../design/cause";
 import { FlightScreen } from "../flight";
+import { resolveAssetUrl } from "../graphics/registry";
+import { OrbitPanel } from "./OrbitPanel";
 import { fmt, t } from "../text";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
@@ -61,16 +63,17 @@ export function PlayScreen({ game, setGame, active }: Props) {
           {stepper}
           <div>
             <button
-              style={{ ...button, borderColor: blockers.length === 0 ? C.ok : C.line, opacity: blockers.length === 0 ? 1 : 0.5 }}
+              style={{ ...button, borderColor: blockers.length === 0 ? C.ok : C.line, opacity: blockers.length === 0 ? 1 : 0.5, display: "inline-flex", alignItems: "center", gap: 6 }}
               disabled={blockers.length > 0}
               onClick={() => dispatch({ phase: "design", action: { type: "confirm" } })}
             >
-              🚀 {t("ui.launch")}
+              <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={16} height={16} />
+              {t("ui.launch")}
             </button>
           </div>
         </div>
       );
-      body = <DesignScreen state={game.design} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
+      body = <DesignScreen state={game.design} active={active} editable dispatch={(action) => dispatch({ phase: "design", action })} header={header} />;
       break;
     }
     case "flight":
@@ -90,21 +93,15 @@ export function PlayScreen({ game, setGame, active }: Props) {
         </>
       );
       break;
-    case "orbit": {
-      // Остання дія в списку частини завжди «відпрацювати до кінця»: на цьому тримаються боти в game.test.ts.
-      // Решту дебаг-дій справжньої орбіти гравцеві не показуємо.
-      const finish = availableActions(game).at(-1);
+    case "orbit":
       body = (
         <Panel stepper={stepper}>
           <h2 style={{ margin: 0 }}>{t("ui.play.orbitTitle")}</h2>
           <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {finish && <button style={button} onClick={() => dispatch(finish.action)}>{t("ui.play.runOrbit")}</button>}
-          </div>
+          <OrbitPanel state={game.orbit} dispatch={(action) => dispatch({ phase: "orbit", action })} />
         </Panel>
       );
       break;
-    }
     case "debrief": {
       const { outcome, log } = game.record;
       const chains = causeChains(log);
@@ -120,14 +117,22 @@ export function PlayScreen({ game, setGame, active }: Props) {
           <div style={{ color: C.dim }}>
             {t("ui.play.outcome", { mb: fmt(outcome.deliveredMb, 0), orbits: outcome.survivedOrbits, score: fmt(outcome.score, 0) })}
           </div>
-          {chains.map((chain) => (
+          {chains.map((chain) => {
+            // Події приховуємо як шум, але якщо причина лише подія (апарат прибув уже пошкодженим), показуємо її: інакше відмова лишиться без пояснення.
+            const real = chain.causes.filter((c) => c.kind !== "event");
+            const shown = satelliteLost || real.length === 0 ? chain.causes : real;
+            return (
             <div key={chain.failure.id}>
-              <div style={{ color: C.bad }}>🟥 {describeEntry(chain.failure, BASE)}</div>
-              {chain.causes.filter((c) => c.kind !== "event" || satelliteLost).map((cause) => (
+              <div style={{ color: C.bad, display: "flex", alignItems: "center", gap: 6 }}>
+                <img src={resolveAssetUrl("assets/icons/ui/circle-x.svg")} alt="" width={14} height={14} />
+                {describeEntry(chain.failure, BASE)}
+              </div>
+              {shown.map((cause) => (
                 <div key={cause.id} style={{ color: C.dim, fontSize: 13, marginLeft: 16 }}>↳ {describeEntry(cause, BASE)}</div>
               ))}
             </div>
-          ))}
+            );
+          })}
           <div><button style={button} onClick={() => setGame(() => startPlay())}>{t("ui.result.again")}</button></div>
         </Panel>
       );

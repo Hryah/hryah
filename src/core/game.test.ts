@@ -36,13 +36,14 @@ describe("склейка частин", () => {
       const actions = availableActions(state);
       state = step(state, actions[actions.length - 1]!.action);
     }
-    expect(seen).toEqual(["design", "flight", "orbit"]);
+    // Орбіта справжня й іде кілька витків підряд: порядок частин, а не кількість кроків.
+    expect([...new Set(seen)]).toEqual(["design", "flight", "orbit"]);
     expect(state.record.outcome.success).toBe(true);
   });
 
   it("дія для іншої частини ігнорується", () => {
     const state = start();
-    const foreign: GameAction = { phase: "orbit", action: { type: "continue" } };
+    const foreign: GameAction = { phase: "orbit", action: { type: "toggle", id: "camera" } };
     expect(step(state, foreign)).toBe(state);
   });
 
@@ -85,7 +86,10 @@ describe("склейка частин", () => {
     for (const slot of ["engine", "solar", "battery", "antenna", "instrument"]) {
       expect(ids.filter((id) => id === `design:${slot}`)).toHaveLength(1);
     }
-    expect(ids).toContain("orbit:battery-dead");
+    // Мала батарея гине на орбіті; провал має причини з частини 1.
+    const failure = end.record.log.find((e) => e.phase === "orbit" && e.kind === "failure");
+    expect(failure).toBeDefined();
+    expect(failure?.causedBy).toContain("design:battery");
   });
 
   it("проходить до розбору з іншим каталогом і місією", () => {

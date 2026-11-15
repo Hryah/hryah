@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
 import agenciesData from "../data/agencies.json";
 import texts from "../data/texts.en.json";
+import orbitTexts from "./orbit/texts.en.json";
 import { fmt, t } from "./text";
 
-const known = new Set(Object.keys(texts));
+// Екрани #play беруть ключі зі злитого словника (спільний + орбіта), тож відомі ключі — обидва файли.
+const known = new Set([...Object.keys(texts), ...Object.keys(orbitTexts)]);
 // Усі екрани як текст: перевіряємо ключі без файлової системи.
-const sources = import.meta.glob<string>("./design/*.tsx", { query: "?raw", import: "default", eager: true });
+const sources = import.meta.glob<string>(["./design/*.tsx", "./play/*.tsx"], { query: "?raw", import: "default", eager: true });
 
 describe("тексти екранів", () => {
   it("кожен літеральний ключ t(\"...\") є у файлі текстів", () => {
     expect(Object.keys(sources).length).toBeGreaterThan(0);
     for (const [file, source] of Object.entries(sources)) {
-      for (const match of source.matchAll(/\bt\("([^"]+)"/g)) expect(known.has(match[1] ?? ""), `${file}: ${match[1]}`).toBe(true);
+      for (const match of source.matchAll(/\btr?\("([^"]+)"/g)) expect(known.has(match[1] ?? ""), `${file}: ${match[1]}`).toBe(true);
     }
   });
 
@@ -31,4 +33,12 @@ describe("тексти екранів", () => {
   });
 
   it("fmt округлює без шуму", () => expect(fmt(0.1 + 0.2)).toBe("0.3"));
+});
+
+describe("словники: спільний і орбіти", () => {
+  it("за збігу ключів перемагає спільний словник (тексти орбіти не переписують чужі)", async () => {
+    const shared = (await import("../data/texts.en.json")).default as Record<string, string>;
+    const orbit = (await import("./orbit/texts.en.json")).default as Record<string, string>;
+    for (const key of Object.keys(orbit).filter((k) => k in shared)) expect(t(key), key).toBe(shared[key]);
+  });
 });

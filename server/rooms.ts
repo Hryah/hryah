@@ -1,0 +1,256 @@
+// Сервер кімнат консорціуму: тримає RoomState у пам'яті й застосовує дії тим самим stepRoom, що й локальний режим.
+// Транспорт: звичайний HTTP з довгим опитуванням (працює через Caddy, Funnel і gzip без особливих налаштувань).
+// Живе поза src/core, тож тут дозволені Node-API (crypto, таймери).
+
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { Buffer } from "node:buffer";
+import { randomInt, randomUUID } from "node:crypto";
+import { isRoomAction, newRoom, stepRoom, type RoomAction, type RoomSetup, type RoomState } from "../src/core/consortium";
+
+export const POLL_MS = 25_000;
+export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
+export const MAX_ROOMS = 200;
+// Клієнт опитує без пауз (раз на ≤25 с). Якщо гравця нема довше за це й він не тримає опитування, він зник без «Вийти».
+export const PLAYER_IDLE_MS = 90_000;
+const MAX_BODY = 32 * 1024; // звіт про місію з діями орбіти (до 400 дій) займає до ~16 КБ
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // без I та O, щоб не плутати з 1 і 0
+
+interface Room {
+  code: string;
+  state: RoomState;
+  version: number;
+  tokens: Map<string, string>; // playerId → токен
+  touched: number;
+  waiters: Set<() => void>;
+  seen: Map<string, number>;    // playerId → коли востаннє бачили (запит або кінець опитування)
+  polling: Map<string, number>; // playerId → скільки опитувань відкрито зараз
+}
+
+export interface RoomsOptions {
+  setup: RoomSetup;
+  now?: () => number;
+  pollMs?: number;
+  idleMs?: number;
+}
+
+type Json = Record<string, unknown>;
+
+export class Rooms {
+  private rooms = new Map<string, Room>();
+  private now: () => number;
+  private setup: RoomSetup;
+  private idleMs: number;
+  private draining = false;
+  constructor(opts: RoomsOptions) {
+    this.setup = opts.setup;
+    this.idleMs = opts.idleMs ?? PLAYER_IDLE_MS;
+    this.now = opts.now ?? Date.now;
+  }
+
+  size(): number { return this.rooms.size; }
+
+  // Новий реліз уже лежить на диску: нових кімнат не створюємо, бо їх втратить рестарт. Клієнт отримає 503 і повторить.
+  drain(): void { this.draining = true; }
+
+  sweep(): void {
+    for (const [code, room] of this.rooms) {
+      if (this.now() - room.touched > ROOM_TTL_MS && room.waiters.size === 0) { this.rooms.delete(code); continue; }
+      // Гравець, що закрив вкладку, не натиснувши «Вийти», не має блокувати інших: виходимо за нього.
+      for (const player of [...room.tokens.keys()]) {
+        if ((room.polling.get(player) ?? 0) > 0) continue;
+        if (this.now() - (room.seen.get(player) ?? room.touched) <= this.idleMs) continue;
+        this.drop(room, player);
+        if (!this.rooms.has(code)) break;
+      }
+    }
+  }
+
+  // Вихід гравця (власний чи через неактивність): оновлює стан, чистить токен і закриває кімнату, якщо вона нікому не потрібна.
+  private drop(room: Room, player: string): void {
+    const next = stepRoom(room.state, player, { type: "leave" }, this.setup);
+    if (next !== room.state) {
+      this.commit(room, next);
+      room.tokens.delete(player);
+      if (this.abandoned(room.state)) this.close(room);
+    } else if (room.state.phase === "lobby" && room.state.players.filter((p) => !p.bot).length === 1) {
+      // Остання людина виходить із лобі (боти не рахуються): кімнату закриваємо одразу, а не чекаємо TTL.
+      this.close(room);
+    } else if (room.state.phase === "play") {
+      room.tokens.delete(player); // уже вийшов раніше
+    }
+  }
+
+  private close(room: Room): void {
+    this.rooms.delete(room.code);
+    for (const wake of [...room.waiters]) wake();
+  }
+
+  create(name: string): { code: string; player: string; token: string } | { error: string; status: number } {
+    this.sweep();
+    if (this.draining) return { error: "server restarting", status: 503 };
+    if (this.rooms.size >= MAX_ROOMS) return { error: "too many rooms", status: 503 };
+    const cleaned = name.trim().slice(0, 24);
+    if (!cleaned) return { error: "name required", status: 400 };
+    let code = "";
+    do { code = Array.from({ length: 4 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join(""); } while (this.rooms.has(code));
+    const player = randomUUID().slice(0, 8);
+    const token = randomUUID();
+    const ids = this.setup.agencies.map((a) => a.id);
+    const state = newRoom(player, cleaned, ids, randomInt(2 ** 31));
+    this.rooms.set(code, { code, state, version: 1, tokens: new Map([[player, token]]), touched: this.now(), waiters: new Set(), seen: new Map([[player, this.now()]]), polling: new Map() });
+    return { code, player, token };
+  }
+
+  join(code: string, name: string): { player: string; token: string } | { error: string; status: number } {
+    const room = this.rooms.get(code.toUpperCase());
+    if (!room) return { error: "no such room", status: 404 };
+    if (this.draining) return { error: "server restarting", status: 503 };
+    if (!name.trim()) return { error: "name required", status: 400 };
+    const player = randomUUID().slice(0, 8);
+    const next = stepRoom(room.state, player, { type: "join", name }, this.setup);
+    if (next === room.state) return { error: "cannot join", status: 409 };
+    const token = randomUUID();
+    room.tokens.set(player, token);
+    room.seen.set(player, this.now());
+    this.commit(room, next);
+    return { player, token };
+  }
+
+  act(code: string, player: string, token: string, action: RoomAction): { version: number } | { error: string; status: number } {
+    const room = this.auth(code, player, token);
+    if (!room) return { error: "unauthorized", status: 403 };
+    // Сервер публічний: перевіряємо повну форму дії (включно з вкладеними діями гравця), а не лише type.
+    // join сюди не приходить: він має власний шлях, бо тоді у гравця ще нема токена.
+    if (!isRoomAction(action) || action.type === "join") return { error: "bad action", status: 400 };
+    room.seen.set(player, this.now());
+    if (action.type === "leave") { this.drop(room, player); return { version: room.version }; }
+    let next: RoomState;
+    try {
+      next = stepRoom(room.state, player, action, this.setup);
+    } catch {
+      return { error: "bad action", status: 400 };
+    }
+    if (next !== room.state) this.commit(room, next);
+    return { version: room.version };
+  }
+
+  // Довге опитування: відповідає одразу, якщо версія новіша за since, інакше чекає зміни до pollMs.
+  async poll(code: string, player: string, token: string, since: number, pollMs: number, onClose?: (cb: () => void) => void):
+    Promise<{ version: number; state?: RoomState; changed: boolean } | { error: string; status: number }> {
+    const room = this.auth(code, player, token);
+    if (!room) return { error: "unauthorized", status: 403 };
+    room.seen.set(player, this.now());
+    if (room.version <= since) {
+      room.polling.set(player, (room.polling.get(player) ?? 0) + 1);
+      try {
+        await new Promise<void>((resolve) => {
+          const done = () => { clearTimeout(timer); room.waiters.delete(done); resolve(); };
+          const timer = setTimeout(done, pollMs);
+          room.waiters.add(done);
+          onClose?.(done); // клієнт розірвав з'єднання: не тримаємо очікувач до кінця таймауту
+        });
+      } finally {
+        room.polling.set(player, (room.polling.get(player) ?? 1) - 1);
+        room.seen.set(player, this.now());
+      }
+    }
+    const changed = room.version > since;
+    // Стан віддаємо лише коли він змінився: порожнє опитування по таймауту не серіалізує й не шле його даремно.
+    return changed ? { version: room.version, state: room.state, changed } : { version: room.version, changed };
+  }
+
+  hasWaiters(): boolean {
+    for (const room of this.rooms.values()) if (room.waiters.size > 0) return true;
+    return false;
+  }
+
+  private auth(code: string, player: string, token: string): Room | undefined {
+    const room = this.rooms.get(code.toUpperCase());
+    if (!room || !token || room.tokens.get(player) !== token) return undefined;
+    return room;
+  }
+
+  // Усі гравці гри вийшли (зокрема після її завершення, кнопка «Ще раз»): кімнату більше ніхто не тримає.
+  private abandoned(state: RoomState): boolean {
+    return state.phase === "play" && state.assignments.every((a) => state.left.includes(a.playerId) || (state.bots ?? []).includes(a.playerId));
+  }
+
+  private commit(room: Room, state: RoomState): void {
+    room.state = state;
+    room.version += 1;
+    room.touched = this.now();
+    for (const wake of [...room.waiters]) wake();
+  }
+}
+
+function readJson(req: IncomingMessage): Promise<Json> {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks: Uint8Array[] = [];
+    req.on("data", (c: Uint8Array) => {
+      size += c.length;
+      if (size > MAX_BODY) { reject(new Error("too large")); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on("end", () => {
+      try {
+        const v: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+        resolve(v && typeof v === "object" && !Array.isArray(v) ? (v as Json) : {});
+      } catch (e) { reject(e); }
+    });
+    req.on("error", reject);
+  });
+}
+
+const str = (v: unknown): string => (typeof v === "string" ? v : "");
+
+export function createRoomsServer(rooms: Rooms, pollMs = POLL_MS): Server {
+  const closed = new WeakSet<ServerResponse>();
+  const send = (res: ServerResponse, status: number, body: unknown) => {
+    if (closed.has(res)) return; // клієнт уже розірвав з'єднання: відповідати нікому
+    res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(JSON.stringify(body));
+  };
+  const reply = (res: ServerResponse, r: object) => {
+    const failure = r as { error?: string; status?: number };
+    if (failure.error !== undefined) send(res, failure.status ?? 400, { error: failure.error });
+    else send(res, 200, r);
+  };
+
+  return createServer((req, res) => {
+    res.on("close", () => { closed.add(res); });
+    void (async () => {
+      try {
+        const url = new URL(req.url ?? "/", "http://x");
+        // Caddy може лишити префікс /api або зняти його: приймаємо обидва.
+        const path = url.pathname.replace(/^\/api(?=\/)/, "");
+        const parts = path.split("/").filter(Boolean); // rooms, CODE, join|action
+        if (parts[0] !== "rooms") return send(res, 404, { error: "not found" });
+        if (req.method === "POST" && parts.length === 1) {
+          const body = await readJson(req);
+          return reply(res, rooms.create(str(body.name)));
+        }
+        const code = parts[1] ?? "";
+        if (req.method === "POST" && parts[2] === "join" && parts.length === 3) {
+          const body = await readJson(req);
+          return reply(res, rooms.join(code, str(body.name)));
+        }
+        if (req.method === "POST" && parts[2] === "action" && parts.length === 3) {
+          const body = await readJson(req);
+          return reply(res, rooms.act(code, str(body.player), str(body.token), body.action as RoomAction));
+        }
+        if (req.method === "GET" && parts.length === 2) {
+          const since = Number(url.searchParams.get("since") ?? 0);
+          // Токен у заголовку, а не в URL: адреси потрапляють у access-логи Caddy.
+          const auth = String(req.headers["authorization"] ?? "");
+          const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+          return reply(res, await rooms.poll(code, String(req.headers["x-hryah-player"] ?? ""), token,
+            Number.isFinite(since) ? since : 0, pollMs, (cb) => { res.on("close", cb); }));
+        }
+        return send(res, 404, { error: "not found" });
+      } catch {
+        if (!res.headersSent) send(res, 400, { error: "bad request" });
+      }
+    })();
+  });
+}

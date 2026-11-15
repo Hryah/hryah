@@ -39,5 +39,388 @@
         "costMUsd": 30
       }
     ]
+  },
+  "disaster-response": {
+    "id": "disaster-response",
+    "titleKey": "mission.disasterResponse.title",
+    "briefKey": "mission.disasterResponse.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 50,
+    "dvRequiredMs": 250,
+    "altRangeKm": [
+      350,
+      500
+    ],
+    "requiredResolutionM": 1.5,
+    "requiredDataMb": 6000,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "ice-watch": {
+    "id": "ice-watch",
+    "titleKey": "mission.iceWatch.title",
+    "briefKey": "mission.iceWatch.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 70,
+    "dvRequiredMs": 400,
+    "altRangeKm": [
+      600,
+      900
+    ],
+    "requiredResolutionM": 4,
+    "requiredDataMb": 18000,
+    "durationOrbits": 16,
+    "imagingSPerOrbit": 400,
+    "passSPerOrbit": 420,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "big-eye": {
+    "id": "big-eye",
+    "titleKey": "mission.bigEye.title",
+    "briefKey": "mission.bigEye.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 90,
+    "dvRequiredMs": 300,
+    "altRangeKm": [
+      550,
+      600
+    ],
+    "requiredResolutionM": 0.8,
+    "requiredDataMb": 8000,
+    "durationOrbits": 10,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "guest": {
+    "id": "guest",
+    "titleKey": "mission.guest.title",
+    "briefKey": "mission.guest.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 75,
+    "dvRequiredMs": 350,
+    "altRangeKm": [
+      500,
+      700
+    ],
+    "requiredResolutionM": 3,
+    "requiredDataMb": 30000,
+    "durationOrbits": 8,
+    "imagingSPerOrbit": 600,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "selene": {
+    "id": "selene",
+    "titleKey": "mission.selene.title",
+    "briefKey": "mission.selene.brief",
+    "body": {
+      "name": "Moon",
+      "radiusKm": 1737,
+      "muKm3S2": 4902.8
+    },
+    "budgetMUsd": 80,
+    "dvRequiredMs": 900,
+    "altRangeKm": [
+      50,
+      200
+    ],
+    "requiredResolutionM": 2,
+    "requiredDataMb": 8000,
+    "durationOrbits": 10,
+    "imagingSPerOrbit": 600,
+    "passSPerOrbit": 200,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "station-resupply": {
+    "id": "station-resupply",
+    "titleKey": "mission.stationResupply.title",
+    "briefKey": "mission.stationResupply.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 60,
+    "dvRequiredMs": 350,
+    "altRangeKm": [
+      400,
+      420
+    ],
+    "requiredResolutionM": 1000000,
+    "requiredDataMb": 0,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ],
+    "kind": "cargo",
+    "stationNeeds": {
+      "water": 18,
+      "food": 14,
+      "parts": 24,
+      "experiment": 30
+    }
+  },
+  "mars-relay": {
+    "id": "mars-relay",
+    "titleKey": "mission.marsRelay.title",
+    "briefKey": "mission.marsRelay.brief",
+    "body": {
+      "name": "Mars",
+      "radiusKm": 3390,
+      "muKm3S2": 42828
+    },
+    "budgetMUsd": 110,
+    "dvRequiredMs": 1100,
+    "altRangeKm": [
+      300,
+      500
+    ],
+    "requiredResolutionM": 3,
+    "requiredDataMb": 6000,
+    "durationOrbits": 8,
+    "imagingSPerOrbit": 400,
+    "passSPerOrbit": 300,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "cubesat-101": {
+    "id": "cubesat-101",
+    "titleKey": "mission.cubesat101.title",
+    "briefKey": "mission.cubesat101.brief",
+    "body": {
+      "name": "Earth",
+      "radiusKm": 6371,
+      "muKm3S2": 398600
+    },
+    "budgetMUsd": 45,
+    "dvRequiredMs": 200,
+    "altRangeKm": [
+      400,
+      800
+    ],
+    "requiredResolutionM": 4,
+    "requiredDataMb": 3000,
+    "durationOrbits": 5,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ]
+  },
+  "colony-resupply": {
+    "id": "colony-resupply",
+    "titleKey": "mission.colony.title",
+    "briefKey": "mission.colony.brief",
+    "body": {
+      "name": "Mars",
+      "radiusKm": 3390,
+      "muKm3S2": 42828
+    },
+    "budgetMUsd": 120,
+    "dvRequiredMs": 900,
+    "altRangeKm": [
+      350,
+      420
+    ],
+    "requiredResolutionM": 1000000,
+    "requiredDataMb": 0,
+    "durationOrbits": 6,
+    "imagingSPerOrbit": 300,
+    "passSPerOrbit": 480,
+    "launchers": [
+      {
+        "id": "small",
+        "nameKey": "launcher.small",
+        "maxPayloadKg": 120,
+        "costMUsd": 8
+      },
+      {
+        "id": "medium",
+        "nameKey": "launcher.medium",
+        "maxPayloadKg": 200,
+        "costMUsd": 15
+      },
+      {
+        "id": "heavy",
+        "nameKey": "launcher.heavy",
+        "maxPayloadKg": 400,
+        "costMUsd": 30
+      }
+    ],
+    "kind": "cargo",
+    "stationNeeds": {
+      "water": 30,
+      "food": 36,
+      "parts": 40,
+      "experiment": 20
+    }
   }
 }

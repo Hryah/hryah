@@ -1,0 +1,17 @@
+{
+  "note": "Готовність технології NASA TRL 1–9. Модулі без запису мають TRL 9 (перевірені польотами).",
+  "default": 9,
+  "custom": 6,
+  "fabPenalty": 1,
+  "failurePerLevel": 0.06,
+  "qualifyBaseMUsd": 1,
+  "qualifyCostFraction": 0.1,
+  "modules": {
+    "eng-mono": 8, "eng-hall": 5,
+    "sol-gaas": 7, "sol-roll": 5,
+    "bat-nih2": 9, "bat-ss": 4,
+    "ant-ka": 7, "ant-laser": 4,
+    "cam-ms": 6, "cam-swir": 6,
+    "cargo-experiment": 7
+  }
+}

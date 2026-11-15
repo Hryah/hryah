@@ -72,7 +72,7 @@ describe('game runner flight deployment outcome', () => {
     expect(JSON.stringify(initial)).toBe(snapshot);
     expect(availableActions(end)).toEqual([]);
     expect(step(end, { phase: 'flight', action: { type: 'complete_phase' } })).toBe(end);
-    expect(step(end, { phase: 'orbit', action: { type: 'continue' } })).toBe(end);
+    expect(step(end, { phase: 'orbit', action: { type: 'toggle', id: 'camera' } })).toBe(end);
   });
 
   it('preserves the deployed route, passing the exact specification, new flight result and accumulated log to orbit', () => {

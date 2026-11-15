@@ -1,0 +1,14 @@
+{
+  "modules": [
+    { "slot": "engine", "id": "eng-mono", "nameKey": "engine.mono", "massKg": 5, "costMUsd": 1.6, "ispS": 235 },
+    { "slot": "engine", "id": "eng-hall", "nameKey": "engine.hall", "massKg": 24, "costMUsd": 12, "ispS": 1900 },
+    { "slot": "solar", "id": "sol-gaas", "nameKey": "solar.gaas", "massKg": 9, "costMUsd": 5, "powerW": 220 },
+    { "slot": "solar", "id": "sol-roll", "nameKey": "solar.roll", "massKg": 14, "costMUsd": 7, "powerW": 400 },
+    { "slot": "battery", "id": "bat-nih2", "nameKey": "battery.nih2", "massKg": 14, "costMUsd": 1.5, "capacityWh": 90 },
+    { "slot": "battery", "id": "bat-ss", "nameKey": "battery.ss", "massKg": 8, "costMUsd": 7, "capacityWh": 150 },
+    { "slot": "antenna", "id": "ant-ka", "nameKey": "antenna.ka", "massKg": 8, "costMUsd": 5, "downlinkMbps": 30, "powerW": 45 },
+    { "slot": "antenna", "id": "ant-laser", "nameKey": "antenna.laser", "massKg": 10, "costMUsd": 14, "downlinkMbps": 120, "powerW": 60 },
+    { "slot": "instrument", "id": "cam-ms", "nameKey": "camera.multispectral", "massKg": 28, "costMUsd": 14, "apertureM": 0.25, "wavelengthM": 5.5e-7, "dataRateMbps": 14, "powerW": 40 },
+    { "slot": "instrument", "id": "cam-swir", "nameKey": "camera.swir", "massKg": 30, "costMUsd": 12, "apertureM": 0.3, "wavelengthM": 1.6e-6, "dataRateMbps": 22, "powerW": 35 }
+  ]
+}

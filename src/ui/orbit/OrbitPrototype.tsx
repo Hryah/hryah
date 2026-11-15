@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createDemoOrbit, orbitPhase, orbitView, type OrbitState, type ToggleId } from '../../core/orbit';
+import { resolveAssetUrl } from '../graphics/registry';
 import { OrbitScene } from './OrbitScene';
 import messages from './texts.en.json';
 import sharedMessages from '../../data/texts.en.json';
@@ -103,7 +104,7 @@ export function OrbitPrototype() {
           <div className="viewport-header"><span className="panel-kicker"><span className="live-dot" />{done ? t('ui.missionEnded') : t('ui.orbitalView')}</span><span className="orbit-counter">{t('ui.orbit')} <strong>{String(currentTurn).padStart(2, '0')}</strong><span>/ {String(totals).padStart(2, '0')}</span></span></div>
           <div className="scene-context"><span className="scene-coordinate">LEO / {number(state.input.flight.orbit.altKm)} KM</span><span className={`scene-mode ${state.toggles.safeMode ? 'safe' : ''}`}>{t(done ? 'ui.missionEnded' : state.toggles.safeMode ? 'ui.safeModeActive' : view.stormNext ? 'ui.stormApproaching' : 'ui.nominal')}</span></div>
           <OrbitScene turn={state.completedOrbits} totalTurns={totals} storm={view.stormNext && !done} safeMode={state.toggles.safeMode} complete={done} />
-          <div className="viewport-caption"><span className="tracking-icon">⌖</span><div><strong>{t('ui.earthObserver')}</strong><small>{t('ui.telemetryLinked')}</small></div><div className="orbit-dots" aria-label={`${state.completedOrbits} / ${totals}`}>{Array.from({ length: totals }, (_, i) => <span key={i} className={i < state.completedOrbits ? 'filled' : i === state.completedOrbits && !done ? 'next' : ''} />)}</div></div>
+          <div className="viewport-caption"><span className="tracking-icon"><img src={resolveAssetUrl('assets/icons/ui/satellite-dish.svg')} alt="" width={16} height={16} /></span><div><strong>{t('ui.earthObserver')}</strong><small>{t('ui.telemetryLinked')}</small></div><div className="orbit-dots" aria-label={`${state.completedOrbits} / ${totals}`}>{Array.from({ length: totals }, (_, i) => <span key={i} className={i < state.completedOrbits ? 'filled' : i === state.completedOrbits && !done ? 'next' : ''} />)}</div></div>
         </section>
 
         <section className="telemetry-panel panel" aria-label={t('ui.liveTelemetry')}>

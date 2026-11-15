@@ -4,19 +4,30 @@ import { DebugScreen } from "./ui/debug/DebugScreen";
 import { ConsortiumScreen } from "./ui/design/ConsortiumScreen";
 import { PlayScreen, startPlay } from "./ui/play/PlayScreen";
 import type { GameState } from "./core/game";
+import { resolveAssetUrl } from "./ui/graphics/registry";
 import { OrbitPrototype } from "./ui/orbit/OrbitPrototype";
 import orbitText from "./ui/orbit/texts.en.json";
+import { Gallery } from "./scenes/gallery";
 import { t } from "./ui/text";
 
-const RoomScreen = lazy(() => import("./ui/room/RoomScreen").then((module) => ({ default: module.RoomScreen })));
+const RoomScreen = lazy(() =>
+  import("./ui/room/RoomScreen").then((module) => ({
+    default: module.RoomScreen,
+  })),
+);
 
-// Перемикач екранів за #адресою: без адреси наскрізна гра (#play), #design консорціум (частина 1),
-// #orbit прототип орбіти, #debug дебаг-екран, #room окрема 3D-каюта.
-// Каюта завантажується при першому відкритті; змонтовані екрани зберігають прогрес.
-type View = "play" | "orbit" | "design" | "debug" | "room";
+// #play — гра (кампанія агенції, docs/EXPANSION.md), #mission — одна місія без економіки, #orbit — прототип орбіти,
+// #debug — дебаг, #room — 3D-каюта, #gallery — галерея сцен.
+// Каюта завантажується при першому відкритті та зберігає стан.
+type View = "play" | "mission" | "orbit" | "debug" | "room" | "gallery";
 
 const viewFromHash = (hash: string): View =>
-  hash === "#debug" ? "debug" : hash === "#design" ? "design" : hash === "#orbit" ? "orbit" : hash === "#room" ? "room" : "play";
+  hash === "#debug" ? "debug" :
+  hash === "#gallery" ? "gallery" :
+  hash === "#mission" ? "mission" :
+  hash === "#orbit" ? "orbit" :
+  hash === "#room" ? "room" :
+  "play";
 
 const useView = (): View => {
   const [view, setView] = useState<View>(() => viewFromHash(window.location.hash));
@@ -50,22 +61,30 @@ export function App() {
           {label} · збірка {commit}
         </div>
         <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
-          <h1 style={{ margin: "0 0 8px" }}>🚀 hryah</h1>
+          <h1 style={{ margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}>
+            <img src={resolveAssetUrl("assets/icons/ui/rocket.svg")} alt="" width={26} height={26} />
+            hryah
+          </h1>
           <nav style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <a href="#play" style={{ color: view === "play" ? color : "#8a90a8" }}>Гра</a>
             <a href="#room" style={{ color: view === "room" ? color : "#8a90a8" }}>{t("room.nav")}</a>
             <a href="#orbit" style={{ color: "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
-            <a href="#design" style={{ color: view === "design" ? color : "#8a90a8" }}>Консорціум</a>
+            <a href="#mission" style={{ color: view === "mission" ? color : "#8a90a8" }}>{t("ui.nav.mission")}</a>
             <a href="#debug" style={{ color: view === "debug" ? color : "#8a90a8" }}>Дебаг</a>
+            <a href="#gallery" style={{ color: view === "gallery" ? color : "#8a90a8" }}>Галерея</a>
           </nav>
-          <div style={{ display: view === "play" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "play"} /></div>
-          <div style={{ display: view === "design" ? "block" : "none" }}><ConsortiumScreen /></div>
+          <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
+          <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>
           <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
-          {(roomVisited || view === "room") && <div hidden={view !== "room"}>
-            <Suspense fallback={<p role="status">{t("room.loading")}</p>}>
-              <RoomScreen active={view === "room"} />
-            </Suspense>
-          </div>}
+          {view === "gallery" && <Gallery active />}
+
+          {(roomVisited || view === "room") && (
+            <div hidden={view !== "room"}>
+              <Suspense fallback={<p role="status">{t("room.loading")}</p>}>
+                <RoomScreen active={view === "room"} />
+              </Suspense>
+            </div>
+          )}
         </main>
       </div>
     </>

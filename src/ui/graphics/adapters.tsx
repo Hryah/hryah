@@ -1,12 +1,10 @@
-// adapters.tsx — Візуальні адаптери для рендерингу темплейтів у режимах:
-// 1. '3d'        — інтерактивний 3D GLB рендер (NASA 3D Resources / Kenney Space Kit)
-// 2. 'sprite'    — 2D спрайти або текстури з public/assets/
-// 3. 'blueprint' — векторні інженерні схеми NASA-стилю (працюють без зовнішніх файлів)
-// 4. 'auto'      — автоматичний вибір доступного представлення з плавним фолбеком
+// adapters.tsx — Візуальні адаптери для рендерингу 2D SVG темплейтів:
+// 1. 'sprite'    — 2D SVG спрайти з public/assets/templates/ та bodies/
+// 2. 'blueprint' — векторні інженерні схеми NASA-стилю (фолбек без зовнішніх файлів)
+// 3. 'auto'      — автоматичний вибір доступного 2D SVG представлення з фолбеком на схему
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { SlotId } from '../../core/contracts';
-import { GlbModelCanvas } from './glb-viewer';
 import { templateRegistry } from './registry';
 import type {
   BlueprintSpec,
@@ -224,7 +222,7 @@ export interface TemplateUnitViewProps {
 
 /**
  * Універсальний адаптер одиниці темплейту:
- * Перемикає між 3D GLB моделлю, 2D текстурою/спрайтом та інженерним SVG-кресленням.
+ * Перемикає між 2D SVG-спрайтом (або текстурою тіла) та інженерним SVG-кресленням.
  */
 export function TemplateUnitView({
   template,
@@ -233,39 +231,19 @@ export function TemplateUnitView({
   height = 160,
   damaged = false,
 }: TemplateUnitViewProps) {
-  const [glbFailed, setGlbFailed] = useState(false);
   const [spriteFailed, setSpriteFailed] = useState(false);
 
-  const modelUrl = template.model3d?.url;
-  const imgUrl = template.planetTextures?.dayMapUrl ?? template.sprite2d?.url;
+  const imgUrl = template.sprite2d?.url ?? template.planetTextures?.dayMapUrl;
 
   // Скидаємо стан фолбеку при зміні темплейту, URL асетів або режиму відображення
   useEffect(() => {
-    setGlbFailed(false);
     setSpriteFailed(false);
-  }, [template.id, modelUrl, imgUrl, mode]);
+  }, [template.id, imgUrl, mode]);
 
-  const handleGlbFallback = useCallback(() => {
-    setGlbFailed(true);
-  }, []);
-
-  const canTry3D = (mode === 'auto' || mode === '3d') && !!modelUrl && !glbFailed;
   const canTrySprite =
-    (mode === 'sprite' || (mode === 'auto' && !canTry3D)) &&
+    mode !== 'blueprint' &&
     !!imgUrl &&
     !spriteFailed;
-
-  if (canTry3D && modelUrl) {
-    return (
-      <GlbModelCanvas
-        url={modelUrl}
-        width={width}
-        height={height}
-        accentColor={damaged ? '#ff5c7a' : template.blueprint.accentColor}
-        onFallback={handleGlbFallback}
-      />
-    );
-  }
 
   if (canTrySprite && imgUrl) {
     return (
@@ -279,13 +257,15 @@ export function TemplateUnitView({
           background: '#090c15',
           borderRadius: 8,
           overflow: 'hidden',
-          border: `1px solid ${template.blueprint.accentColor}33`,
+          border: `1px solid ${damaged ? '#ff5c7a' : template.blueprint.accentColor}33`,
         }}
       >
         <img
           src={imgUrl}
           alt={template.displayName}
           onError={() => setSpriteFailed(true)}
+          loading="lazy"
+          decoding="async"
           style={{
             maxWidth: '90%',
             maxHeight: '90%',
@@ -339,6 +319,7 @@ export interface CompositeSpacecraftSvgProps {
   readonly fuelKg: number;
   readonly selectedSlot?: SlotId | null;
   readonly onSelectSlot?: (slot: SlotId) => void;
+  readonly preferSprites?: boolean;
 }
 
 /**
@@ -352,9 +333,14 @@ export function CompositeSpacecraftSvg({
   fuelKg,
   selectedSlot,
   onSelectSlot,
+  preferSprites = true,
 }: CompositeSpacecraftSvgProps) {
   const { attachedModules, launcherTemplate, bodyTemplate, busTemplate } = assembly;
   const busCenter = attachedModules.solar.socket.pos2d;
+  // Кілька збірок на сторінці (зокрема в прихованих екранах) не мають ділити id у <defs>.
+  const uid = useId().replace(/:/g, '');
+  const gridId = `bp-grid-${uid}`;
+  const clipId = `planet-corner-clip-${uid}`;
 
   // Сортуємо слоти за порядком шарів (socket.layerOrder) із visual-templates.json
   const sortedSlots = (Object.keys(attachedModules) as SlotId[]).sort(
@@ -364,10 +350,102 @@ export function CompositeSpacecraftSvg({
   const renderSlotModule = (slot: SlotId) => {
     const mod = attachedModules[slot];
     const { pos2d, rotationDeg } = mod.socket;
-    const { blueprint } = mod.template;
+    const { blueprint, sprite2d } = mod.template;
     const isSelected = selectedSlot === slot;
     const strokeColor = mod.damageSeverity > 0 ? '#ff5c7a' : isSelected ? '#ffffff' : blueprint.accentColor;
     const transform = `translate(${pos2d.x}, ${pos2d.y})${rotationDeg ? ` rotate(${rotationDeg})` : ''}`;
+    const spriteUrl = preferSprites ? sprite2d?.url : undefined;
+
+    if (spriteUrl) {
+      const s = blueprint.scaleFactor;
+      if (slot === 'solar') {
+        const wingW = Math.round(78 * s);
+        const wingH = Math.round(48 * s);
+        return (
+          <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+            <g transform="scale(-1, 1)">
+              <image href={spriteUrl} x={24} y={-wingH / 2} width={wingW} height={wingH} preserveAspectRatio="xMinYMid meet" />
+            </g>
+            <image href={spriteUrl} x={24} y={-wingH / 2} width={wingW} height={wingH} preserveAspectRatio="xMinYMid meet" />
+            {(isSelected || mod.damageSeverity > 0) &&
+              [-(26 + wingW), 22].map((rectX) => (
+                <rect
+                  key={rectX}
+                  x={rectX}
+                  y={-wingH / 2 - 2}
+                  width={wingW + 4}
+                  height={wingH + 4}
+                  rx="4"
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                />
+              ))}
+            <text x={24 + wingW * 0.55} y={-wingH / 2 - 5} textAnchor="middle" fill="#93c5fd" fontSize="9" fontFamily="monospace">
+              {blueprint.label}
+            </text>
+          </g>
+        );
+      }
+
+      if (slot === 'engine') {
+        const w = Math.round(56 * s);
+        const h = Math.round(56 * s);
+        return (
+          <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+            <image href={spriteUrl} x={-w / 2} y={-6} width={w} height={h} preserveAspectRatio="xMidYMin meet" />
+            {(isSelected || mod.damageSeverity > 0) && (
+              <circle cx={0} cy={h * 0.42} r={w * 0.48} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            )}
+            <text x={0} y={h + 4} textAnchor="middle" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
+              {blueprint.label}
+            </text>
+          </g>
+        );
+      }
+
+      if (slot === 'battery') {
+        return (
+          <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+            <image href={spriteUrl} x={-20} y={-24} width={40} height={46} preserveAspectRatio="xMidYMid meet" />
+            {(isSelected || mod.damageSeverity > 0) && (
+              <rect x={-22} y={-25} width={44} height={48} rx="4" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            )}
+          </g>
+        );
+      }
+
+      if (slot === 'instrument') {
+        const w = Math.round(82 * s);
+        const h = Math.round(42 * s);
+        return (
+          <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+            <image href={spriteUrl} x={-w / 2} y={-h + 4} width={w} height={h} preserveAspectRatio="xMidYMax meet" />
+            {(isSelected || mod.damageSeverity > 0) && (
+              <rect x={-w / 2 - 2} y={-h + 2} width={w + 4} height={h + 2} rx="4" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            )}
+            <text x={0} y={-h - 2} textAnchor="middle" fill="#e9d5ff" fontSize="9" fontFamily="monospace">
+              {blueprint.label}
+            </text>
+          </g>
+        );
+      }
+
+      const w = Math.round(48 * s);
+      const h = Math.round(48 * s);
+      return (
+        <g key={slot} transform={transform} onClick={() => onSelectSlot?.(slot)} style={{ cursor: 'pointer' }}>
+          <image href={spriteUrl} x={-4} y={-h + 8} width={w} height={h} preserveAspectRatio="xMinYMax meet" />
+          {(isSelected || mod.damageSeverity > 0) && (
+            <circle cx={w * 0.42} cy={-h * 0.38} r={w * 0.52} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+          )}
+          <text x={w + 2} y={-h * 0.45} fill="#fdba74" fontSize="9" fontFamily="monospace">
+            {blueprint.label}
+          </text>
+        </g>
+      );
+    }
 
     if (slot === 'solar') {
       const wingSpan = Math.round(62 * blueprint.scaleFactor);
@@ -523,14 +601,14 @@ export function CompositeSpacecraftSvg({
     >
       {/* Фонова сітка креслення */}
       <defs>
-        <pattern id="bp-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <pattern id={gridId} width="20" height="20" patternUnits="userSpaceOnUse">
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(92,168,255,0.06)" strokeWidth="1" />
         </pattern>
-        <clipPath id="planet-corner-clip">
+        <clipPath id={clipId}>
           <circle cx="420" cy="230" r="95" />
         </clipPath>
       </defs>
-      <rect width="460" height="250" fill="url(#bp-grid)" />
+      <rect width="460" height="250" fill={`url(#${gridId})`} />
 
       {/* Кривизна планети та орбіти справа знизу */}
       <circle
@@ -542,15 +620,15 @@ export function CompositeSpacecraftSvg({
         stroke={bodyTemplate.blueprint.accentColor}
         strokeWidth="1.5"
       />
-      {bodyTemplate.planetTextures?.dayMapUrl && (
+      {(preferSprites ? (bodyTemplate.sprite2d?.url ?? bodyTemplate.planetTextures?.dayMapUrl) : bodyTemplate.planetTextures?.dayMapUrl) && (
         <image
-          href={bodyTemplate.planetTextures.dayMapUrl}
+          href={preferSprites ? (bodyTemplate.sprite2d?.url ?? bodyTemplate.planetTextures?.dayMapUrl) : bodyTemplate.planetTextures?.dayMapUrl}
           x="325"
           y="135"
           width="190"
           height="190"
-          clipPath="url(#planet-corner-clip)"
-          opacity="0.55"
+          clipPath={`url(#${clipId})`}
+          opacity="0.72"
           preserveAspectRatio="xMidYMid slice"
         />
       )}
@@ -565,57 +643,68 @@ export function CompositeSpacecraftSvg({
         opacity="0.5"
       />
       <text x="345" y="102" fill="#7dd3fc" fontSize="10" fontFamily="monospace">
-        ОРБІТА: {altKm} км ({bodyTemplate.id})
+        ORBIT: {altKm} km ({bodyTemplate.id})
       </text>
 
       {/* Ліва колонка: Ракета-носій */}
       <g transform="translate(52, 128)">
         <text x="0" y="-98" textAnchor="middle" fill="#8a90a8" fontSize="10" fontFamily="monospace">
-          НОСІЙ: {launcherTemplate.id.toUpperCase()}
+          LAUNCHER: {launcherTemplate.id.toUpperCase()}
         </text>
-        <g transform={`scale(${launcherTemplate.blueprint.scaleFactor * 0.9})`}>
-          <polygon
-            points="0,-82 18,-48 -18,-48"
-            fill={launcherTemplate.blueprint.accentColor}
-            stroke="#e2e8f0"
-            strokeWidth="1.5"
+        {preferSprites && launcherTemplate.sprite2d?.url ? (
+          <image
+            href={launcherTemplate.sprite2d.url}
+            x={-54}
+            y={-88}
+            width={108}
+            height={166}
+            preserveAspectRatio="xMidYMid meet"
           />
-          <rect
-            x="-18"
-            y="-48"
-            width="36"
-            height="96"
-            rx="3"
-            fill={launcherTemplate.blueprint.secondaryColor}
-            stroke={launcherTemplate.blueprint.primaryColor}
-            strokeWidth="2"
-          />
-          {launcherTemplate.id !== 'small' && (
-            <>
-              <rect
-                x="-30"
-                y="-15"
-                width="10"
-                height="62"
-                rx="3"
-                fill={launcherTemplate.blueprint.secondaryColor}
-                stroke={launcherTemplate.blueprint.accentColor}
-                strokeWidth="1.2"
-              />
-              <rect
-                x="20"
-                y="-15"
-                width="10"
-                height="62"
-                rx="3"
-                fill={launcherTemplate.blueprint.secondaryColor}
-                stroke={launcherTemplate.blueprint.accentColor}
-                strokeWidth="1.2"
-              />
-            </>
-          )}
-          <polygon points="-14,48 14,48 20,62 -20,62" fill="#475569" />
-        </g>
+        ) : (
+          <g transform={`scale(${launcherTemplate.blueprint.scaleFactor * 0.9})`}>
+            <polygon
+              points="0,-82 18,-48 -18,-48"
+              fill={launcherTemplate.blueprint.accentColor}
+              stroke="#e2e8f0"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="-18"
+              y="-48"
+              width="36"
+              height="96"
+              rx="3"
+              fill={launcherTemplate.blueprint.secondaryColor}
+              stroke={launcherTemplate.blueprint.primaryColor}
+              strokeWidth="2"
+            />
+            {launcherTemplate.id !== 'small' && (
+              <>
+                <rect
+                  x="-30"
+                  y="-15"
+                  width="10"
+                  height="62"
+                  rx="3"
+                  fill={launcherTemplate.blueprint.secondaryColor}
+                  stroke={launcherTemplate.blueprint.accentColor}
+                  strokeWidth="1.2"
+                />
+                <rect
+                  x="20"
+                  y="-15"
+                  width="10"
+                  height="62"
+                  rx="3"
+                  fill={launcherTemplate.blueprint.secondaryColor}
+                  stroke={launcherTemplate.blueprint.accentColor}
+                  strokeWidth="1.2"
+                />
+              </>
+            )}
+            <polygon points="-14,48 14,48 20,62 -20,62" fill="#475569" />
+          </g>
+        )}
       </g>
 
       {/* Задні шари модулів (layerOrder <= 1) */}
@@ -623,36 +712,47 @@ export function CompositeSpacecraftSvg({
 
       {/* Базовий корпус супутника + паливний бак */}
       <g transform={`translate(${busCenter.x}, ${busCenter.y})`}>
-        <rect
-          x="-36"
-          y="-42"
-          width="72"
-          height="84"
-          rx="8"
-          fill={busTemplate.blueprint.primaryColor}
-          stroke={busTemplate.blueprint.accentColor}
-          strokeWidth="2"
-        />
+        {preferSprites && busTemplate.sprite2d?.url ? (
+          <image
+            href={busTemplate.sprite2d.url}
+            x={-48}
+            y={-48}
+            width={96}
+            height={96}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : (
+          <rect
+            x="-36"
+            y="-42"
+            width="72"
+            height="84"
+            rx="8"
+            fill={busTemplate.blueprint.primaryColor}
+            stroke={busTemplate.blueprint.accentColor}
+            strokeWidth="2"
+          />
+        )}
         <rect
           x="-28"
-          y="12"
+          y="26"
           width="56"
-          height="22"
+          height="16"
           rx="3"
           fill="#0f172a"
           stroke="#334155"
         />
         <rect
           x="-26"
-          y="14"
+          y="28"
           width={Math.min(52, Math.max(4, (fuelKg / 40) * 52))}
-          height="18"
+          height="12"
           rx="2"
           fill="#38bdf8"
-          opacity="0.45"
+          opacity="0.55"
         />
-        <text x="0" y="26" textAnchor="middle" fill="#e2e8f0" fontSize="9" fontFamily="monospace">
-          ПАЛИВО: {fuelKg} кг
+        <text x="0" y="37" textAnchor="middle" fill="#e2e8f0" fontSize="8" fontFamily="monospace">
+          FUEL: {fuelKg} kg
         </text>
       </g>
 
