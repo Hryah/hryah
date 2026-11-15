@@ -118,7 +118,7 @@ function missionScore(state: OrbitState, caps: ReturnType<typeof capabilities>, 
   const extraMb = Math.max(0, state.deliveredMb - softTargetMb);
   const dataPoints = baseMb / 100 + extraMb / EXTRA_DATA_DIVISOR;
   const wastePenalty = state.lostMb / OVERFLOW_PENALTY_DIVISOR;
-  const resolutionPoints = caps.resolutionM > 0 && caps.resolutionOk
+  const resolutionPoints = mission.kind !== 'cargo' && caps.resolutionM > 0 && caps.resolutionOk
     ? (mission.requiredResolutionM / Math.max(0.25, caps.resolutionM)) * RESOLUTION_SCORE_WEIGHT
     : 0;
   const budgetPoints = Math.max(0, mission.budgetMUsd - spec.costMUsd) * BUDGET_SCORE_WEIGHT;

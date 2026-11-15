@@ -8,6 +8,54 @@ import {
   type ScenarioId,
 } from './balance';
 import { SAMPLE_MISSION } from '../stubs';
+import type { Mission, OrbitInput } from '../contracts';
+import missionsData from '../../data/missions.json';
+import { orbitInfo } from '../model';
+import { createDemoOrbit } from './demo';
+import { orbitPhase } from './phase';
+
+function finishOrbit(input: OrbitInput) {
+  let state = orbitPhase.init(input, 42);
+  for (let turn = 0; turn < input.mission.durationOrbits && !orbitPhase.isDone(state); turn++) {
+    state = orbitPhase.step(state, { type: 'tick', dtS: input.flight.orbit.periodS });
+  }
+  expect(orbitPhase.isDone(state)).toBe(true);
+  return orbitPhase.finish(state).result;
+}
+
+describe('mission-specific orbit scoring', () => {
+  it.each(['station-resupply', 'colony-resupply'] as const)('ignores the optical placeholder when scoring %s cargo', (id) => {
+    const mission = missionsData[id] as Mission;
+    const { input } = createDemoOrbit();
+    const cargoInput: OrbitInput = {
+      ...input,
+      mission,
+      spec: { ...input.spec, batteryWh: 10_000 },
+      flight: { ...input.flight, orbit: orbitInfo(mission.body, 400) },
+    };
+    const result = finishOrbit(cargoInput);
+    const changedPlaceholder = finishOrbit({
+      ...cargoInput, mission: { ...mission, requiredResolutionM: mission.requiredResolutionM * 2 },
+    });
+    expect(result.success).toBe(true);
+    expect(result.score).toBeLessThan(10_000);
+    expect(changedPlaceholder).toEqual(result);
+  });
+
+  it('preserves optical scoring for both legacy and explicit imaging missions', () => {
+    const { input } = createDemoOrbit();
+    const legacy = finishOrbit(input);
+    const imaging = finishOrbit({ ...input, mission: { ...input.mission, kind: 'imaging' } });
+    const higherQualityBonus = finishOrbit({
+      ...input, mission: { ...input.mission, requiredResolutionM: input.mission.requiredResolutionM * 2 },
+    });
+    expect(legacy.success).toBe(true);
+    expect(imaging).toEqual(legacy);
+    expect(higherQualityBonus.success).toBe(true);
+    expect(higherQualityBonus.deliveredMb).toBe(legacy.deliveredMb);
+    expect(higherQualityBonus.score).toBeGreaterThan(legacy.score);
+  });
+});
 
 describe('orbit balance and multi-strategy progression', () => {
   it('passes the mission deterministically across fixed seeds for three distinct build strategies', () => {
