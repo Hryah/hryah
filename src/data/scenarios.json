@@ -182,5 +182,23 @@
       "victory": "race",
       "victoryTarget": 80
     }
+  },
+  "colony": {
+    "titleKey": "scenario.colony.title",
+    "briefKey": "scenario.colony.brief",
+    "missionId": "colony-resupply",
+    "catalog": "cargo",
+    "analogKey": "scenario.colony.analog",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 300,
+      "grantMUsd": 50,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "gapTurns": 6
+    }
   }
 }

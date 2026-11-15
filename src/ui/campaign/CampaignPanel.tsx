@@ -137,6 +137,9 @@ export function CampaignStandings({ state }: { state: ConsortiumState }) {
         }
         return top ? <div style={{ color: C.gold }}>🏆 {t("ui.campaign.leader", { agency: t(top.agency.nameKey), points: fmt(top.account?.programPts ?? 0, 1) })}</div> : null;
       })()}
+      {state.campaign.scenarioId === "colony" && (
+        <div style={{ color: progress >= 1 ? C.ok : C.bad, fontWeight: 700 }}>{t(progress >= 1 ? "ui.campaign.colonySaved" : "ui.campaign.colonyLost")}</div>
+      )}
       {(() => {
         const key = state.campaign.scenarioId ? SCENARIOS[state.campaign.scenarioId]?.def.analogKey : undefined;
         return key ? <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.brief.analog", { analog: t(key) })}</div> : null;
