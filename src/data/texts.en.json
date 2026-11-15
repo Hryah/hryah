@@ -249,5 +249,6 @@
   "ui.research.hint": "Points come from delivered data and from windows you skip. Research does not use up turn actions.",
   "ui.research.buy": "{cost} pts",
   "ui.research.done": "done",
-  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit."
+  "campaign.lostInFlight": "The spacecraft was lost during the flight and never reached its orbit.",
+  "ui.campaign.actionsFull": "You have used all {n} commands this report can carry. Send the report: the remaining orbits run on autopilot."
 }
