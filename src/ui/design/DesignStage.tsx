@@ -9,7 +9,8 @@ import { useRetro } from "../style/RetroStyle";
 
 // Сцена апарата на стенді для екрана частини 1. Лише показує стан: кнопки лишаються звичайним HTML нижче.
 
-const STAGE = { viewHeightUnits: 8 };
+// Апарат займає більшу частину кадру: 6 одиниць по висоті вміщують антену, корпус, двигун і стенд.
+const STAGE = { viewHeightUnits: 6 };
 const NO_FILTERS: readonly Filter[] = [];
 
 export function DesignStage({ state, active = true }: { state: DesignState; active?: boolean }) {

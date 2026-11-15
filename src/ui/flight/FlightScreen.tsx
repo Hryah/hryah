@@ -490,7 +490,6 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     >
       <canvas
         ref={canvasRef}
-        className="retro-colors"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

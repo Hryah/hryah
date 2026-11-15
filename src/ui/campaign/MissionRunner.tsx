@@ -5,7 +5,6 @@ import { flightPhase } from "../../core/flight";
 import { orbitPhase, type OrbitAction } from "../../core/orbit";
 import { FlightScreen } from "../flight";
 import { OrbitPanel } from "../play/OrbitPanel";
-import { RetroToggle } from "../style/RetroStyle";
 import { fmt, t } from "../text";
 import { cardsEnabled, PhaseCard, useCardsEnabled, type SummaryRow } from "./PhaseCard";
 
@@ -119,8 +118,6 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
               {t(lost ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
             </button>
           </div>
-          {/* Політ перекриває шапку, тож перемикач стилю дублюємо тут. */}
-          <div><RetroToggle /></div>
         </div>
       </>
     );
