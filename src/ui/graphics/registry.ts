@@ -289,10 +289,26 @@ export class TemplateRegistry implements ITemplateRegistry {
   getLauncherTemplate(launcherId: string): VisualTemplate {
     const match = this.findTemplateWithAlias(launcherId);
     if (match) {
-      return match.viaAlias ? { ...match.template, id: launcherId } : match.template;
+      return match.viaAlias
+        ? {
+            ...match.template,
+            id: launcherId,
+            blueprint: { ...match.template.blueprint, label: launcherId.toUpperCase() },
+          }
+        : match.template;
     }
     const medium = this.byId.get('medium');
-    if (medium) return medium;
+    if (medium) {
+      return {
+        ...medium,
+        id: launcherId,
+        displayName: launcherId,
+        blueprint: {
+          ...medium.blueprint,
+          label: launcherId.toUpperCase(),
+        },
+      };
+    }
     return {
       id: launcherId,
       category: 'launcher',

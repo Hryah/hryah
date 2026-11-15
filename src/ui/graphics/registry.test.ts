@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SAMPLE_CATALOG, SAMPLE_DESIGN, SAMPLE_MISSION } from '../../core/stubs';
 import {
   BlueprintShapeSvg,
@@ -195,6 +195,12 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     const mars = templateRegistry.getBodyTemplate('Mars');
     expect(mars.id).toBe('Mars');
     expect(mars.blueprint.shape).toBe('body-mars');
+
+    // Невідомий launcherId у непорожньому реєстрі зберігає переданий id і лейбл
+    const unknownLauncher = templateRegistry.getLauncherTemplate('super-heavy-x');
+    expect(unknownLauncher.id).toBe('super-heavy-x');
+    expect(unknownLauncher.blueprint.label).toBe('SUPER-HEAVY-X');
+    expect(unknownLauncher.blueprint.shape).toBe('launcher-medium');
   });
 
   it('GraphicsRendererRegistry дозволяє підключати нові форми, режими і кнопки у SpacecraftViewport', () => {
@@ -231,5 +237,37 @@ describe('TemplateRegistry (Графічний адаптер)', () => {
     );
     expect(viewportHtml).toContain('Thermal');
     expect(viewportHtml).toContain('data-thermal-unit=');
+    const buttonTags = viewportHtml.match(/<button\b[^>]*>/g) ?? [];
+    expect(buttonTags.length).toBeGreaterThan(0);
+    for (const tag of buttonTags) {
+      expect(tag).toContain('type="button"');
+    }
+  });
+
+  it('CompositeSpacecraftSvg огортає слоти у Fragment key={slot}, тому сторонній SlotCompositeRenderer без key не дає React-попереджень', () => {
+    const assembly = templateRegistry.buildAssembly({
+      phase: 'design',
+      mission: SAMPLE_MISSION,
+      design: SAMPLE_DESIGN,
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const html = renderToStaticMarkup(
+        createElement(CompositeSpacecraftSvg, {
+          assembly,
+          altKm: SAMPLE_DESIGN.altKm,
+          fuelKg: SAMPLE_DESIGN.fuelKg,
+          slotRenderers: {
+            engine: () => createElement('g', { 'data-custom-slot': 'engine-no-key' }),
+            antenna: () => createElement('g', { 'data-custom-slot': 'antenna-no-key' }),
+          },
+        }),
+      );
+      expect(html).toContain('data-custom-slot="engine-no-key"');
+      expect(html).toContain('data-custom-slot="antenna-no-key"');
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });

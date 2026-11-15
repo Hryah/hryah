@@ -103,6 +103,7 @@ export function SpacecraftViewport({
           {modeOptions.map((opt) => (
             <button
               key={opt.id}
+              type="button"
               onClick={() => setRenderMode(opt.id)}
               style={{
                 padding: '4px 9px',
@@ -153,6 +154,7 @@ export function SpacecraftViewport({
               return (
                 <button
                   key={slot}
+                  type="button"
                   onClick={() => {
                     setInspectTarget('slot');
                     setSelectedSlot(slot);
@@ -172,6 +174,7 @@ export function SpacecraftViewport({
               );
             })}
             <button
+              type="button"
               onClick={() => setInspectTarget('bus')}
               style={{
                 padding: '4px 8px',
@@ -186,6 +189,7 @@ export function SpacecraftViewport({
               Корпус
             </button>
             <button
+              type="button"
               onClick={() => setInspectTarget('launcher')}
               style={{
                 padding: '4px 8px',
@@ -200,6 +204,7 @@ export function SpacecraftViewport({
               Носій: <strong>{context.design.launcherId}</strong>
             </button>
             <button
+              type="button"
               onClick={() => setInspectTarget('body')}
               style={{
                 padding: '4px 8px',
@@ -214,6 +219,7 @@ export function SpacecraftViewport({
               Планета: <strong>{context.mission.body.name}</strong>
             </button>
             <button
+              type="button"
               onClick={() => setInspectTarget('astronaut')}
               style={{
                 padding: '4px 8px',

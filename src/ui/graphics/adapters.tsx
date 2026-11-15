@@ -3,7 +3,7 @@
 // 2. 'blueprint' — векторні інженерні схеми NASA-стилю (без зовнішніх растрових чи SVG-зображень)
 // 3. 'auto'      — автоматичний вибір доступного 2D SVG представлення з фолбеком на схему
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useState, type ReactNode } from 'react';
 import type { SlotId } from '../../core/contracts';
 import { rendererRegistry } from './renderer-registry';
 import { templateRegistry } from './registry';
@@ -875,18 +875,22 @@ export function CompositeSpacecraftSvg({
     const spriteUrl = useSprites ? mod.template.sprite2d?.url : undefined;
     const renderer = slotRenderers?.[slot] ?? registry.getSlotRenderer(slot) ?? BUILTIN_SLOT_RENDERERS[slot];
 
-    return renderer({
-      slot,
-      template: mod.template,
-      socket: mod.socket,
-      damageSeverity: mod.damageSeverity,
-      useSprites,
-      spriteUrl,
-      spriteMissing: useSprites && !mod.template.sprite2d?.url,
-      isSelected: selectedSlot === slot,
-      isDamaged: mod.damageSeverity > 0,
-      onSelectSlot,
-    });
+    return (
+      <Fragment key={slot}>
+        {renderer({
+          slot,
+          template: mod.template,
+          socket: mod.socket,
+          damageSeverity: mod.damageSeverity,
+          useSprites,
+          spriteUrl,
+          spriteMissing: useSprites && !mod.template.sprite2d?.url,
+          isSelected: selectedSlot === slot,
+          isDamaged: mod.damageSeverity > 0,
+          onSelectSlot,
+        })}
+      </Fragment>
+    );
   };
 
   const backSlots = sortedSlots.filter((s) => attachedModules[s].socket.layerOrder <= 1);

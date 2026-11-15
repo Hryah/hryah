@@ -42,6 +42,14 @@ export function DesignPreview({
   extraViews,
 }: DesignPreviewProps) {
   const [mode, setMode] = useState<DesignPreviewMode>(defaultMode);
+  // Ліниво монтуємо 3D-стенд при першому показі й надалі призупиняємо через active={false},
+  // щоб перемикання у 2D SVG/Blueprint не перестворювало WebGL-контекст при поверненні.
+  const [stageMounted, setStageMounted] = useState(defaultMode === "stage");
+
+  const selectMode = (nextMode: DesignPreviewMode) => {
+    if (nextMode === "stage") setStageMounted(true);
+    setMode(nextMode);
+  };
 
   const builtinViews: readonly DesignPreviewView[] = [
     {
@@ -83,6 +91,8 @@ export function DesignPreview({
     : builtinViews;
 
   const activeView = views.find((v) => v.id === mode) ?? views[0]!;
+  const stageView = views.find((v) => v.id === "stage");
+  const isStageActive = activeView.id === "stage";
 
   return (
     <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 12 }}>
@@ -96,7 +106,7 @@ export function DesignPreview({
                 key={view.id}
                 type="button"
                 aria-pressed={selected}
-                onClick={() => setMode(view.id)}
+                onClick={() => selectMode(view.id)}
                 style={{
                   padding: "4px 10px",
                   borderRadius: 6,
@@ -114,7 +124,12 @@ export function DesignPreview({
           })}
         </div>
       </div>
-      {activeView.render({ state, active })}
+      {stageMounted && stageView && (
+        <div style={{ display: isStageActive ? "block" : "none" }}>
+          {stageView.render({ state, active: active && isStageActive })}
+        </div>
+      )}
+      {!isStageActive && activeView.render({ state, active })}
     </div>
   );
 }
