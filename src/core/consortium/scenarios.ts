@@ -19,6 +19,7 @@ export interface ScenarioDef {
   briefKey: string;
   missionId: string;
   catalog?: 'cargo';        // вантажний сценарій: замість камер — контейнери
+  analogKey?: string;       // схожа реальна місія (для брифінгу й підсумку)
   campaign: CampaignConfig;
 }
 

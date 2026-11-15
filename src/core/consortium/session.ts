@@ -22,6 +22,7 @@ import { defectDamage, developmentLog, isReady, startDevelopment, type DevOrder,
 import { applyMarket, checkMarket, type Market } from './market';
 import { applyResearch, RESEARCH } from './research';
 import { qualifyCostMUsd, rollTrlFailures, trlOf } from './trl';
+import { optimalValue } from './planner';
 import {
   depositsOf, emptyFactory, glassDefectFactor, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
 } from '../factory';
@@ -70,6 +71,8 @@ export interface AgencyRoundResult {
   payoutMUsd: number;
   grantMUsd: number;
   researchPts: number;
+  optimalPts: number;      // скільки дав би найкращий доступний проєкт зі знанням справжніх умов (для розбору)
+  optimalDesign?: Design;
 }
 
 export interface RoundSummary {
@@ -85,6 +88,7 @@ export interface CampaignState {
   windowStartTurn: number;
   trueMission: Mission;    // справжні умови; агенція бачить їх у проєктуванні лише після першого запуску
   rounds: RoundSummary[];  // підсумки закритих вікон
+  scenarioId?: string;     // сценарій кімнати (для брифінгу, назви й реальної місії-аналога)
 }
 
 export interface ConsortiumState {
@@ -113,6 +117,7 @@ export type ConsortiumAction =
 
 export interface ConsortiumOptions {
   campaign?: CampaignConfig;
+  scenarioId?: string;
   reportsFrom?: string[];
 }
 
@@ -162,7 +167,7 @@ export function newConsortium(
   const config = options.campaign;
   if (config) checkCampaign(config);
   const campaign: CampaignState | undefined = config
-    ? { config, round: 0, windowStartTurn: 0, trueMission: hiddenMission(base.mission, seed), rounds: [] }
+    ? { config, round: 0, windowStartTurn: 0, trueMission: hiddenMission(base.mission, seed), rounds: [], ...(options.scenarioId ? { scenarioId: options.scenarioId } : {}) }
     : undefined;
   const head = { base, market, ...(campaign ? { campaign } : {}) };
   const entries: AgencyEntry[] = agencies.map((agency) => {
@@ -311,7 +316,11 @@ function closeRound(state: ConsortiumState): ConsortiumState {
     const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
     const grantMUsd = money(config.grantMUsd * grantFactor);
     const researchPts = (run ? Math.floor(run.outcome.deliveredMb / config.mbPerResearchPt) : 0) + (launched ? 0 : config.missedResearchPts);
-    results.push({ agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts });
+    const optimal = optimalValue(e.design.input, mission);
+    results.push({
+      agencyId: e.agency.id, launched, valuePts: money(valuePts), payoutMUsd, grantMUsd, researchPts,
+      optimalPts: optimal.value, ...(optimal.design ? { optimalDesign: optimal.design } : {}),
+    });
     const next: Account = {
       fundsMUsd: money(account.fundsMUsd + payoutMUsd + grantMUsd),
       researchPts: account.researchPts + researchPts,

@@ -10,6 +10,7 @@ import { MissionRunner } from "../campaign/MissionRunner";
 import { ResearchPanel } from "../campaign/ResearchPanel";
 import { FactoryPanel } from "../campaign/FactoryPanel";
 import { TrlPanel } from "../campaign/TrlPanel";
+import { BriefingPanel } from "../campaign/BriefingPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -235,6 +236,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
   const mine = local || owner?.playerId === meId;
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      {mine && entry && <BriefingPanel state={consortium} agencyId={entry.agency.id} />}
       <CampaignPanel state={consortium} myAgencyIds={myAgencyIds} />
       <div style={{ color: mine ? C.gold : C.dim }}>{t(mine ? "ui.lobby.playerTurn" : "ui.lobby.waitingFor", { player: name })}</div>
       <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>

@@ -12,7 +12,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.living-planet.analog"
   },
   "disaster": {
     "titleKey": "scenario.disaster.title",
@@ -27,7 +28,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.disaster.analog"
   },
   "ice-watch": {
     "titleKey": "scenario.iceWatch.title",
@@ -42,7 +44,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.ice-watch.analog"
   },
   "big-eye": {
     "titleKey": "scenario.bigEye.title",
@@ -57,7 +60,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.big-eye.analog"
   },
   "guest": {
     "titleKey": "scenario.guest.title",
@@ -72,7 +76,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.guest.analog"
   },
   "selene": {
     "titleKey": "scenario.selene.title",
@@ -87,7 +92,8 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.selene.analog"
   },
   "lifeline": {
     "titleKey": "scenario.lifeline.title",
@@ -103,6 +109,7 @@
       "missedTwiceGrantFactor": 0.25,
       "missedResearchPts": 3,
       "mbPerResearchPt": 2000
-    }
+    },
+    "analogKey": "scenario.lifeline.analog"
   }
 }
