@@ -127,3 +127,21 @@ describe('завантаження спрайтів', () => {
     sprite.dispose();
   });
 });
+
+describe('спрайт модуля власного виробництва', () => {
+  it('fab-<id>-<агенція>-<n> бере спрайт базового модуля', () => {
+    const manifest = { 'cam-m': { file: 'modules/cam-m.png', widthUnits: 1, anchor: [0, 0.5] as [number, number] } };
+    expect(resolveSprite('fab-cam-m-borealis-2', manifest).file).toBe('modules/cam-m.png');
+    expect(resolveSprite('fab-unknown-borealis-1', manifest).file).toBeNull();
+  });
+});
+
+describe('спрайт fab-модуля з дефісом в id агенції', () => {
+  it('бере найдовший відомий базовий id', () => {
+    const manifest = {
+      'ant-l': { file: 'modules/ant-l.png', widthUnits: 1, anchor: [0, 0.5] as [number, number] },
+      'ant-laser': { file: 'modules/ant-s.png', widthUnits: 1, anchor: [0, 0.5] as [number, number] },
+    };
+    expect(resolveSprite('fab-ant-laser-new-agency-3', manifest).file).toBe('modules/ant-s.png');
+  });
+});

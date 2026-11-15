@@ -77,6 +77,12 @@ function isConsortiumAction(a: unknown): a is ConsortiumAction {
   switch (a.type) {
     case 'launch': case 'wait': return true;
     case 'research': return isStr(a.nodeId);
+    case 'analyze': return isStr(a.line) && isStr(a.depositId);
+    case 'factory': {
+      const o = a.order;
+      return isObj(o) && isStr(o.line) && isStr(o.depositId) && isStr(o.baseModuleId)
+        && Array.isArray(o.steps) && o.steps.length === 2 && o.steps.every(isStr);
+    }
     case 'develop': {
       const o = a.order;
       return isObj(o) && o.slot === 'instrument' && isNum(o.apertureM) && typeof o.inspect === 'boolean';

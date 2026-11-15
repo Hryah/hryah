@@ -45,7 +45,14 @@ const PLACEHOLDER_COLORS: PaletteColor[] = ['panel', 'metal', 'accent', 'storm',
 
 /** Запис маніфесту для id або типові розміри без файла. Чиста функція, тестується без браузера. */
 export function resolveSprite(id: string, manifest: SpriteManifest): SpriteDef | (Omit<SpriteDef, 'file'> & { file: null }) {
-  const def = manifest[id];
+  // Модуль власного виробництва (fab-<базовий id>-<агенція>-<n>) малюється спрайтом базового модуля:
+  // найдовший id маніфесту, з якого починається решта (дефіси в id агенції не заважають).
+  let def = manifest[id];
+  if (!def && id.startsWith('fab-')) {
+    const rest = id.slice(4);
+    const base = Object.keys(manifest).filter((k) => rest.startsWith(`${k}-`)).sort((a, b) => b.length - a.length)[0];
+    if (base) def = manifest[base];
+  }
   return def ?? { ...DEFAULT_DEF, file: null };
 }
 

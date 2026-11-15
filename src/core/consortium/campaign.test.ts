@@ -254,6 +254,25 @@ describe("звіт: межі й зайві поля", () => {
   });
 });
 
+describe("фабрика в кімнаті", () => {
+  const me = (s: RoomState) => (s as PlayState).consortium.agencies.find((e) => e.agency.id === "borealis")!;
+  it("партія списує гроші й дію, модуль з'являється в каталозі, коли готовий; аналіз відкриває ваду", () => {
+    const s = soloRoom();
+    const funds = me(s).account!.fundsMUsd;
+    const order = { line: "glass", depositId: "import", steps: ["quick", "polish"] as [string, string], baseModuleId: "cam-m" };
+    const next = send(s, "me", { type: "play", action: { type: "factory", order } });
+    const batch = me(next).factory!.batches[0]!;
+    expect(batch).toBeDefined();
+    expect(me(next).account!.fundsMUsd).toBeCloseTo(funds - batch.costMUsd, 2);
+    expect(me(next).actionsLeft).toBe(me(s).actionsLeft - 1);
+    expect(me(next).design.input.catalog.modules.some((m) => m.id === batch.id)).toBe(false);
+    expect(isRoomAction({ type: "play", action: { type: "factory", order: { ...order, steps: ["quick"] } } })).toBe(false);
+    const analyzed = send(next, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } });
+    expect(me(analyzed).factory!.analyzed).toContain("glass:import");
+    expect(send(analyzed, "me", { type: "play", action: { type: "analyze", line: "glass", depositId: "import" } })).toBe(analyzed);
+  });
+});
+
 describe("рев'ю: лобі з ботами, втрата в польоті, фінальний стан", () => {
   it("бот лишається готовим після зміни країни; онлайн-кімната стартує", () => {
     let s: RoomState = newRoom("me", "Me", ids, 1);
@@ -281,5 +300,17 @@ describe("рев'ю: лобі з ботами, втрата в польоті, �
     }
     expect(s.consortium.result).not.toBeNull();
     expect(s.consortium.agencies.every((e) => e.report === undefined)).toBe(true);
+  });
+});
+
+describe("фабрика: санкції й ринок", () => {
+  it("агенція не може робити на фабриці модуль, якого не бачить (санкції, ще не на ринку)", () => {
+    let s: RoomState = newRoom("me", "Me", ids, 3);
+    s = send(s, "me", { type: "wish", agencyId: "kestrel" });
+    s = send(s, "me", { type: "start" });
+    const order = { line: "glass", depositId: "import", steps: ["quick", "polish"] as [string, string], baseModuleId: "cam-l" };
+    expect(send(s, "me", { type: "play", action: { type: "factory", order } })).toBe(s); // cam-l під санкціями для Kestrel
+    const late = { line: "rf", depositId: "import", steps: ["roast", "plain"] as [string, string], baseModuleId: "ant-l" };
+    expect(send(s, "me", { type: "play", action: { type: "factory", order: late } })).toBe(s); // ant-l ще не на ринку на ході 0
   });
 });

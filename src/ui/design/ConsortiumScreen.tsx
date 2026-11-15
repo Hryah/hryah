@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
 import {
-  activeAgency, campaignRoomSetup, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  activeAgency, campaignRoomSetup, developerProfile, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
   type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
 import { MissionRunner } from "../campaign/MissionRunner";
 import { ResearchPanel } from "../campaign/ResearchPanel";
+import { FactoryPanel } from "../campaign/FactoryPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -239,7 +240,10 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
         <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
       {mine && entry && entry.account && (
-        <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+        <>
+          <FactoryPanel key={entry.agency.id} entry={entry} turn={consortium.turn} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+          <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+        </>
       )}
     </div>
   );
@@ -271,7 +275,7 @@ function DevelopPanel({ state, dispatch }: { state: ConsortiumState; dispatch: (
   const order: DevOrder = { slot: "instrument", apertureM, inspect };
   const cost = developmentCostMUsd(entry.agency, order);
   const turns = developmentTurns(entry.agency, order);
-  const chance = defectChance(entry.agency, order);
+  const chance = defectChance(developerProfile(entry, state.turn), order);
   const affordable = cost < entry.design.input.mission.budgetMUsd;
   const canOrder = entry.actionsLeft > 0 && affordable;
   return (
