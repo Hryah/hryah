@@ -171,18 +171,27 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       }
     };
 
+    const resetMinigameInputs = () => {
+      const loop = loopRef.current;
+      const send = dispatchRef.current;
+      if (loop) {
+        loop.dockingGame.resetInput();
+        loop.solarGame.resetInput();
+        loop.lifeSupportGame.resetInput();
+      }
+      send({ type: "docking_input", thrustX: 0, thrustY: 0 });
+      send({ type: "ls_hold_o2", held: false });
+    };
+
     const onWindowPointerUp = (e: PointerEvent) => {
       const s = stateRef.current;
-      const loop = loopRef.current;
       const send = dispatchRef.current;
 
       if (e.target !== canvasRef.current || s.gameMode === "MINIGAME_ACTIVE") {
         resetSlingshotDrag();
-        if (e.target !== canvasRef.current && loop) {
+        if (e.target !== canvasRef.current) {
           if (s.gameMode === "MINIGAME_ACTIVE") {
-            loop.dockingGame.handlePointerUp(send);
-            loop.solarGame.handlePointerUp();
-            loop.lifeSupportGame.resetInput();
+            resetMinigameInputs();
           }
           if (s.astronaut.activeGrabHeld) {
             send({ type: "set_active_grab", held: false });
@@ -193,13 +202,8 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
 
     const onWindowBlur = () => {
       resetSlingshotDrag();
-      const loop = loopRef.current;
-      if (loop) {
-        loop.resetRoamKeys();
-        loop.dockingGame.resetInput();
-        loop.solarGame.resetInput();
-        loop.lifeSupportGame.resetInput();
-      }
+      loopRef.current?.resetRoamKeys();
+      resetMinigameInputs();
       if (stateRef.current.astronaut.activeGrabHeld) {
         dispatchRef.current({ type: "set_active_grab", held: false });
       }
