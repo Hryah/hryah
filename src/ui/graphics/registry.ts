@@ -69,15 +69,70 @@ const BUS_FALLBACK: VisualTemplate = {
   },
 };
 
+const BODY_FALLBACKS: Readonly<Record<string, VisualTemplate>> = {
+  Earth: {
+    id: 'Earth',
+    category: 'body',
+    displayName: 'Earth',
+    packName: 'Fallback',
+    blueprint: {
+      shape: 'body-earth',
+      primaryColor: '#0284c7',
+      secondaryColor: '#15803d',
+      accentColor: '#7dd3fc',
+      scaleFactor: 1.0,
+      label: 'EARTH',
+    },
+  },
+  Moon: {
+    id: 'Moon',
+    category: 'body',
+    displayName: 'Moon',
+    packName: 'Fallback',
+    blueprint: {
+      shape: 'body-moon',
+      primaryColor: '#64748b',
+      secondaryColor: '#94a3b8',
+      accentColor: '#e2e8f0',
+      scaleFactor: 1.0,
+      label: 'MOON',
+    },
+  },
+  Mars: {
+    id: 'Mars',
+    category: 'body',
+    displayName: 'Mars',
+    packName: 'Fallback',
+    blueprint: {
+      shape: 'body-mars',
+      primaryColor: '#9a3412',
+      secondaryColor: '#ea580c',
+      accentColor: '#fdba74',
+      scaleFactor: 1.0,
+      label: 'MARS',
+    },
+  },
+};
+
+export const DEFAULT_ALIASES: Readonly<Record<string, string>> =
+  (rawManifest as { aliases?: Readonly<Record<string, string>> }).aliases ?? {};
+
 export const DEFAULT_TEMPLATES: readonly VisualTemplate[] = (
   rawManifest.templates as readonly VisualTemplate[]
 ).map(normalizeTemplateUrls);
 
 export class TemplateRegistry implements ITemplateRegistry {
   private readonly byId = new Map<string, VisualTemplate>();
+  private readonly aliases = new Map<string, string>();
 
-  constructor(initial: readonly VisualTemplate[] = DEFAULT_TEMPLATES) {
+  constructor(
+    initial: readonly VisualTemplate[] = DEFAULT_TEMPLATES,
+    aliases: Readonly<Record<string, string>> = initial === DEFAULT_TEMPLATES ? DEFAULT_ALIASES : {},
+  ) {
     this.registerBatch(initial);
+    for (const [aliasId, targetId] of Object.entries(aliases)) {
+      this.aliases.set(aliasId, targetId);
+    }
   }
 
   register(template: VisualTemplate): void {
@@ -90,9 +145,58 @@ export class TemplateRegistry implements ITemplateRegistry {
     }
   }
 
-  getTemplate(id: string): VisualTemplate {
+  /** Реєструє аліас ID (наприклад, для ринкових чи кампанійних варіантів модулів) */
+  registerAlias(aliasId: string, targetId: string): void {
+    this.aliases.set(aliasId, targetId);
+  }
+
+  /** Розв'язує ланцюжок аліасів до базового ID темплейта */
+  resolveTemplateId(id: string): string {
+    let current = id;
+    const visited = new Set<string>();
+    while (!visited.has(current)) {
+      const next = this.aliases.get(current);
+      if (!next) break;
+      visited.add(current);
+      current = next;
+    }
+    return current;
+  }
+
+  private findTemplateWithAlias(id: string): { template: VisualTemplate; viaAlias: boolean } | undefined {
     const exact = this.byId.get(id);
-    if (exact) return exact;
+    if (exact) return { template: exact, viaAlias: false };
+
+    const resolvedId = this.resolveTemplateId(id);
+    if (resolvedId !== id) {
+      const aliased = this.byId.get(resolvedId);
+      if (aliased) return { template: aliased, viaAlias: true };
+    }
+    return undefined;
+  }
+
+  private findFabricatedBase(moduleId: string): VisualTemplate | undefined {
+    if (!moduleId.startsWith('fab-')) return undefined;
+    const parts = moduleId.slice(4).split('-').filter(Boolean);
+    for (let len = parts.length; len >= 1; len--) {
+      const candidate = parts.slice(0, len).join('-');
+      const match = this.findTemplateWithAlias(candidate);
+      if (match) return match.template;
+    }
+    return undefined;
+  }
+
+  getTemplate(id: string): VisualTemplate {
+    const match = this.findTemplateWithAlias(id);
+    if (match) {
+      return match.viaAlias
+        ? {
+            ...match.template,
+            id,
+            blueprint: { ...match.template.blueprint, label: id.toUpperCase() },
+          }
+        : match.template;
+    }
     return {
       id,
       category: 'prop',
@@ -110,8 +214,49 @@ export class TemplateRegistry implements ITemplateRegistry {
   }
 
   getModuleTemplate(slot: SlotId, moduleId: string): VisualTemplate {
-    const exact = this.byId.get(moduleId);
-    if (exact) return exact;
+    const direct = this.findTemplateWithAlias(moduleId);
+    if (direct) {
+      return direct.viaAlias
+        ? {
+            ...direct.template,
+            id: moduleId,
+            blueprint: { ...direct.template.blueprint, label: moduleId.toUpperCase() },
+          }
+        : direct.template;
+    }
+
+    const fabBase = this.findFabricatedBase(moduleId);
+    if (fabBase) {
+      return {
+        ...fabBase,
+        id: moduleId,
+        displayName: `${fabBase.displayName} (${moduleId})`,
+        blueprint: { ...fabBase.blueprint, label: fabBase.blueprint.label },
+      };
+    }
+
+    const slotDefault = SLOT_DEFAULT_SHAPES[slot];
+    const normalizedCargoId = moduleId.startsWith('fab-') ? moduleId.slice(4) : moduleId;
+    if (normalizedCargoId.startsWith('cargo-')) {
+      const cargoKind = normalizedCargoId.replace(/^cargo-/, '').split('-')[0] ?? 'cargo';
+      return {
+        id: moduleId,
+        category: 'module',
+        slot,
+        system: slotDefault.system,
+        displayName: moduleId,
+        packName: 'Fallback',
+        blueprint: {
+          shape: 'cargo-container',
+          primaryColor: '#78350f',
+          secondaryColor: '#d97706',
+          accentColor: '#fcd34d',
+          scaleFactor: 1.0,
+          label: cargoKind.toUpperCase(),
+        },
+      };
+    }
+
     const fallbackId = SLOT_FALLBACK_IDS[slot];
     const fallback = this.byId.get(fallbackId);
     if (fallback) {
@@ -122,7 +267,7 @@ export class TemplateRegistry implements ITemplateRegistry {
         blueprint: { ...fallback.blueprint, label: moduleId.toUpperCase() },
       };
     }
-    const slotDefault = SLOT_DEFAULT_SHAPES[slot];
+
     return {
       id: moduleId,
       category: 'module',
@@ -142,8 +287,12 @@ export class TemplateRegistry implements ITemplateRegistry {
   }
 
   getLauncherTemplate(launcherId: string): VisualTemplate {
-    const exact = this.byId.get(launcherId) ?? this.byId.get('medium');
-    if (exact) return exact;
+    const match = this.findTemplateWithAlias(launcherId);
+    if (match) {
+      return match.viaAlias ? { ...match.template, id: launcherId } : match.template;
+    }
+    const medium = this.byId.get('medium');
+    if (medium) return medium;
     return {
       id: launcherId,
       category: 'launcher',
@@ -161,19 +310,22 @@ export class TemplateRegistry implements ITemplateRegistry {
   }
 
   getBodyTemplate(bodyName: string): VisualTemplate {
-    const exact = this.byId.get(bodyName) ?? this.byId.get('Earth');
-    if (exact) return exact;
+    const match = this.findTemplateWithAlias(bodyName);
+    if (match) {
+      return match.viaAlias ? { ...match.template, id: bodyName } : match.template;
+    }
+    const resolvedId = this.resolveTemplateId(bodyName);
+    const knownBody = BODY_FALLBACKS[bodyName] ?? BODY_FALLBACKS[resolvedId];
+    if (knownBody) return knownBody;
+
+    const earth = this.byId.get('Earth');
+    if (earth) return earth;
     return {
+      ...BODY_FALLBACKS.Earth!,
       id: bodyName,
-      category: 'body',
       displayName: bodyName,
-      packName: 'Fallback',
       blueprint: {
-        shape: 'body-earth',
-        primaryColor: '#0284c7',
-        secondaryColor: '#15803d',
-        accentColor: '#7dd3fc',
-        scaleFactor: 1.0,
+        ...BODY_FALLBACKS.Earth!.blueprint,
         label: bodyName.toUpperCase(),
       },
     };
@@ -211,6 +363,10 @@ export class TemplateRegistry implements ITemplateRegistry {
 
   listAll(): readonly VisualTemplate[] {
     return Array.from(this.byId.values());
+  }
+
+  listAliases(): Readonly<Record<string, string>> {
+    return Object.fromEntries(this.aliases.entries());
   }
 }
 

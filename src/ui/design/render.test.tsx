@@ -4,8 +4,10 @@ import { designPhase } from "../../core/design";
 import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { newConsortium, newRoom, stepConsortium, stepRoom, type ConsortiumAction, type Market, type RoomState } from "../../core/consortium";
 import agenciesData from "../../data/agencies.json";
+import cargoCatalogData from "../../data/catalog-cargo.json";
 import marketData from "../../data/market.json";
 import type { AgencyProfile } from "../../core/design/agency";
+import type { Catalog, ModuleDef } from "../../core/contracts";
 import { describeEntry } from "./cause";
 import { Lobby } from "./Lobby";
 import { ConsortiumScreen, Results, Turn } from "./ConsortiumScreen";
@@ -129,5 +131,48 @@ describe("розбір причин: власна розробка", () => {
     );
     expect(text).toContain("Custom camera");
     expect(text).not.toContain("custom-instrument");
+  });
+});
+
+describe("перегляд апарата на екрані проєктування: без дублювання", () => {
+  it("типово показує 3D-стенд без дублюючої 2D-схеми та має перемикачі режимів", () => {
+    const html = renderToStaticMarkup(<DesignScreen state={state} dispatch={() => undefined} editable />);
+    expect(html).toContain("Spacecraft preview");
+    expect(html).toContain("3D stand");
+    expect(html).toContain("2D schematic");
+    expect(html).toContain("Blueprint");
+    expect(html).not.toContain("ORBIT:");
+    expect(html).not.toContain("ui.");
+  });
+
+  it("у режимі svg показує єдину 2D-схему без дублюючого 3D-стенду", () => {
+    const html = renderToStaticMarkup(
+      <DesignScreen state={state} dispatch={() => undefined} editable defaultPreviewMode="svg" />,
+    );
+    expect(html).toContain("ORBIT:");
+    expect(html).toContain("FUEL:");
+    expect(html).not.toContain("Spacecraft on the test stand");
+    expect(html).toContain("<image");
+  });
+
+  it("у режимі blueprint показує суто векторне креслення без SVG <image> текстури планети", () => {
+    const html = renderToStaticMarkup(
+      <DesignScreen state={state} dispatch={() => undefined} editable defaultPreviewMode="blueprint" />,
+    );
+    expect(html).toContain("ORBIT:");
+    expect(html).not.toContain("Spacecraft on the test stand");
+    expect(html).not.toContain("<image");
+  });
+
+  it("відображає векторну іконку-контейнер для cargo-* модулів без зовнішнього спрайту", () => {
+    const cargoCatalog: Catalog = {
+      ...SAMPLE_CATALOG,
+      modules: [...SAMPLE_CATALOG.modules, ...(cargoCatalogData.modules as ModuleDef[])],
+    };
+    const cargoState = designPhase.init({ mission: SAMPLE_MISSION, catalog: cargoCatalog }, 1);
+    const html = renderToStaticMarkup(<DesignScreen state={cargoState} dispatch={() => undefined} editable />);
+    expect(html).toContain("Water container");
+    expect(html).toContain('fill="#78350f"');
+    expect(html).not.toContain("ui.");
   });
 });

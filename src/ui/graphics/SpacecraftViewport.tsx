@@ -4,21 +4,55 @@
 import { useState } from 'react';
 import type { SlotId } from '../../core/contracts';
 import { CompositeSpacecraftSvg, TemplateUnitView } from './adapters';
+import { rendererRegistry } from './renderer-registry';
 import { resolveAssetUrl, templateRegistry } from './registry';
-import type { RenderMode, ViewportContext, VisualTemplate } from './types';
+import type {
+  BlueprintShapeRenderer,
+  IGraphicsRendererRegistry,
+  RenderMode,
+  SlotCompositeRenderer,
+  UnitRenderMode,
+  UnitRenderer,
+  ViewportContext,
+  ViewportModeOption,
+  VisualTemplate,
+} from './types';
 
 const SLOT_ORDER: readonly SlotId[] = ['instrument', 'solar', 'battery', 'antenna', 'engine'];
 
 export interface SpacecraftViewportProps {
   readonly context: ViewportContext;
+  readonly defaultMode?: UnitRenderMode;
+  readonly extraModes?: readonly ViewportModeOption[];
+  readonly customRenderers?: Readonly<Record<string, UnitRenderer>>;
+  readonly shapeRenderers?: Readonly<Record<string, BlueprintShapeRenderer>>;
+  readonly slotRenderers?: Partial<Record<SlotId, SlotCompositeRenderer>>;
+  readonly registry?: IGraphicsRendererRegistry;
 }
 
-export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
-  const [renderMode, setRenderMode] = useState<RenderMode>('auto');
+export function SpacecraftViewport({
+  context,
+  defaultMode = 'auto',
+  extraModes,
+  customRenderers,
+  shapeRenderers,
+  slotRenderers,
+  registry = rendererRegistry,
+}: SpacecraftViewportProps) {
+  const [renderMode, setRenderMode] = useState<UnitRenderMode>(defaultMode);
   const [selectedSlot, setSelectedSlot] = useState<SlotId>('instrument');
   const [inspectTarget, setInspectTarget] = useState<'slot' | 'bus' | 'launcher' | 'body' | 'astronaut'>('slot');
 
   const assembly = templateRegistry.buildAssembly(context);
+  const baseModes = registry.listModeOptions();
+  const modeOptions: readonly ViewportModeOption[] = extraModes
+    ? [
+        ...baseModes,
+        ...extraModes.filter((ext) => !baseModes.some((base) => base.id === ext.id)),
+      ]
+    : baseModes;
+  const compositeMode: RenderMode =
+    renderMode === 'blueprint' ? 'blueprint' : renderMode === 'sprite' ? 'sprite' : 'auto';
 
   let activeTemplate: VisualTemplate;
   let activeDamaged = false;
@@ -66,22 +100,22 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          {(['auto', 'sprite', 'blueprint'] as const).map((m) => (
+          {modeOptions.map((opt) => (
             <button
-              key={m}
-              onClick={() => setRenderMode(m)}
+              key={opt.id}
+              onClick={() => setRenderMode(opt.id)}
               style={{
                 padding: '4px 9px',
                 borderRadius: 6,
-                border: `1px solid ${renderMode === m ? '#5ca8ff' : '#2a2f4a'}`,
-                background: renderMode === m ? '#1b2644' : 'transparent',
-                color: renderMode === m ? '#5ca8ff' : '#8a90a8',
+                border: `1px solid ${renderMode === opt.id ? '#5ca8ff' : '#2a2f4a'}`,
+                background: renderMode === opt.id ? '#1b2644' : 'transparent',
+                color: renderMode === opt.id ? '#5ca8ff' : '#8a90a8',
                 cursor: 'pointer',
                 fontSize: 11,
-                fontWeight: renderMode === m ? 700 : 400,
+                fontWeight: renderMode === opt.id ? 700 : 400,
               }}
             >
-              {m === 'auto' ? 'Auto' : m === 'sprite' ? '2D SVG' : 'Blueprint'}
+              {opt.label}
             </button>
           ))}
         </div>
@@ -101,7 +135,9 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
             assembly={assembly}
             altKm={context.flight?.orbit.altKm ?? context.design.altKm}
             fuelKg={context.flight?.fuelLeftKg ?? context.design.fuelKg}
-            preferSprites={renderMode !== 'blueprint'}
+            mode={compositeMode}
+            slotRenderers={slotRenderers}
+            registry={registry}
             selectedSlot={inspectTarget === 'slot' ? selectedSlot : null}
             onSelectSlot={(slot) => {
               setInspectTarget('slot');
@@ -221,6 +257,9 @@ export function SpacecraftViewport({ context }: SpacecraftViewportProps) {
             width={240}
             height={175}
             damaged={activeDamaged}
+            customRenderers={customRenderers}
+            shapeRenderers={shapeRenderers}
+            registry={registry}
           />
 
           <div style={{ marginTop: 8, fontSize: 10, color: '#8a90a8', lineHeight: 1.45 }}>
