@@ -80,14 +80,15 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
     if (card === "launch") {
       return active ? <PhaseCard id="launch" step={{ n: 2, total: 4 }} summary={launchSummary(mission, spec)} onContinue={() => setCard(null)} /> : null;
     }
-    if (lost && flightPhase.isDone(flight) && cardsEnabled()) {
+    // Поки звіт летить, вікно лишається, навіть якщо гравець щойно вимкнув вікна галочкою.
+    if (lost && flightPhase.isDone(flight) && (cardsEnabled() || sending)) {
       const result = flightPhase.finish(flight).result;
       return active ? (
         <PhaseCard
           id="lost" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.card.sendReport")} onContinue={sendLost}
           summary={[
             { label: t("ui.card.row.status"), value: t("ui.card.lostStatus"), tone: "bad" },
-            { label: t("ui.card.row.damage"), value: String(result.damage.length), tone: result.damage.length > 0 ? "bad" : undefined },
+            { label: t("ui.card.row.damageFlight"), value: String(result.damage.length), tone: result.damage.length > 0 ? "bad" : undefined },
           ]}
         />
       ) : null;
@@ -123,7 +124,8 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
   if (!orbit || !flightResult) return null;
   const done = orbitPhase.isDone(orbit);
   const send = () => { setSending(true); onReport({ flight: flightResult, orbitActions }); };
-  if (card === "orbit" && active) {
+  if (card === "orbit") {
+    if (!active) return null;
     const target = spec.design.altKm;
     return (
       <PhaseCard
@@ -138,7 +140,8 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
     );
   }
   // Місію завершено: підсумок і звіт з одного вікна. Числа лише тоді, коли орбіта дограна (рання відправка дограє автопілотом).
-  if (done && active && cardsEnabled()) {
+  if (done && (cardsEnabled() || sending)) {
+    if (!active) return null;
     const outcome = orbitPhase.finish(orbit).result;
     const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
     return (

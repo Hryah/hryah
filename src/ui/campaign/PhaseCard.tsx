@@ -5,17 +5,36 @@ import { t } from "../text";
 
 // Інформаційне вікно між фазами кампанії: що щойно сталося, що робити далі і навіщо так роблять справжні місії.
 // Один шаблон на всі переходи: текст бере з ключів `ui.card.<id>.*`, підсумок (рядки «назва — значення») передає виклик.
-// Місце під ілюстрацію 3:2 (`assets/cards/<id>.png`): поки художники її не намалювали, блок просто ховається.
+// Місце під ілюстрацію 3:2. Готові файли вписуємо в ART (так немає 404 і стрибка висоти, поки ілюстрацій немає).
 
 const C = { bg: "#0b0d17", panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", accent: "#5ca8ff", gold: "#ffd166", ok: "#3ddc84", bad: "#ff5c7a" };
 const KEY = "phaseCards";
 
 export type PhaseCardId = "window" | "launch" | "orbit" | "orbitCargo" | "report" | "lost";
+// Ілюстрації, що вже лежать у public/: додай рядок, коли художники здадуть файл (наприклад, window: "assets/cards/window.png").
+const ART: Partial<Record<PhaseCardId, string>> = {};
+// Варіанти без власної ілюстрації беруть найближчу.
+const ART_FALLBACK: Partial<Record<PhaseCardId, PhaseCardId>> = { orbitCargo: "orbit", lost: "report" };
+const artFor = (id: PhaseCardId) => ART[id] ?? ART[ART_FALLBACK[id] ?? id];
+
 export interface SummaryRow { label: string; value: string; tone?: "ok" | "bad" | "gold" }
 
 // Чи показувати вікна взагалі (гравець може вимкнути, вибір зберігається).
 export function cardsEnabled(): boolean {
-  return load<boolean>(KEY) ?? true;
+  return load<unknown>(KEY) !== false;
+}
+
+// Повернути вікна після «не показувати» (або вимкнути їх наперед).
+export function CardsToggle() {
+  const [on, setOn] = useState(cardsEnabled);
+  return (
+    <button
+      type="button" aria-pressed={on} onClick={() => { save(KEY, !on); setOn(!on); }}
+      style={{ justifySelf: "start", padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.line}`, background: "transparent", color: on ? C.accent : C.dim, cursor: "pointer", fontSize: 13 }}
+    >
+      {t(on ? "ui.card.toggleOn" : "ui.card.toggleOff")}
+    </button>
+  );
 }
 
 interface Props {
@@ -31,6 +50,7 @@ interface Props {
 }
 
 export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, busy = false, onContinue }: Props) {
+  const art = artFor(id);
   const [artOk, setArtOk] = useState(true);
   const [hide, setHide] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -51,9 +71,9 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
         width: "min(560px, 100%)", maxHeight: "calc(100vh - 32px)", overflowY: "auto", background: C.panel, color: "#e8eaf3",
         border: `1px solid ${C.line}`, borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.6)", fontFamily: "system-ui, sans-serif",
       }}>
-        {artOk && (
+        {art && artOk && (
           <img
-            src={resolveAssetUrl(`assets/cards/${id}.png`)} alt="" onError={() => setArtOk(false)}
+            src={resolveAssetUrl(art)} alt="" onError={() => setArtOk(false)}
             style={{ display: "block", width: "100%", aspectRatio: "3 / 2", objectFit: "cover", borderRadius: "14px 14px 0 0" }}
           />
         )}

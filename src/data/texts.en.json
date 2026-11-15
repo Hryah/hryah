@@ -549,5 +549,8 @@
   "ui.card.lost.kicker": "Debrief",
   "ui.card.lost.title": "Spacecraft lost",
   "ui.card.lost.next": "The spacecraft will not reach orbit. Send the report: the debrief shows what caused the loss, and you can launch again in the next window.",
-  "ui.card.lost.why": "Losing a spacecraft is part of spaceflight. SpaceX's first three Falcon 1 launches failed; the fourth reached orbit in 2008 because the team studied every failure. Failure review boards exist for exactly this."
+  "ui.card.lost.why": "Losing a spacecraft is part of spaceflight. SpaceX's first three Falcon 1 launches failed; the fourth reached orbit in 2008 because the team studied every failure. Failure review boards exist for exactly this.",
+  "ui.card.row.damageFlight": "Damage in flight",
+  "ui.card.toggleOn": "ℹ Phase windows: on",
+  "ui.card.toggleOff": "ℹ Phase windows: off"
 }
