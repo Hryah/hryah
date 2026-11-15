@@ -12,6 +12,9 @@ export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 export const MAX_ROOMS = 200;
 // Клієнт опитує без пауз (раз на ≤25 с). Якщо гравця нема довше за це й він не тримає опитування, він зник без «Вийти».
 export const PLAYER_IDLE_MS = 90_000;
+// Господар сам у лобі чекає друзів: часто перемикається в месенджер, щоб надіслати код, а мобільний браузер у фоні
+// зупиняє опитування. За 90 с кімната закривалась би раніше, ніж друг устигне ввести код.
+export const LOBBY_ALONE_IDLE_MS = 10 * 60 * 1000;
 const MAX_BODY = 32 * 1024; // звіт про місію з діями орбіти (до 400 дій) займає до ~16 КБ
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // без I та O, щоб не плутати з 1 і 0
 
@@ -31,6 +34,7 @@ export interface RoomsOptions {
   now?: () => number;
   pollMs?: number;
   idleMs?: number;
+  lobbyAloneIdleMs?: number;
 }
 
 type Json = Record<string, unknown>;
@@ -40,10 +44,12 @@ export class Rooms {
   private now: () => number;
   private setup: RoomSetup;
   private idleMs: number;
+  private lobbyAloneIdleMs: number;
   private draining = false;
   constructor(opts: RoomsOptions) {
     this.setup = opts.setup;
     this.idleMs = opts.idleMs ?? PLAYER_IDLE_MS;
+    this.lobbyAloneIdleMs = opts.lobbyAloneIdleMs ?? LOBBY_ALONE_IDLE_MS;
     this.now = opts.now ?? Date.now;
   }
 
@@ -58,7 +64,9 @@ export class Rooms {
       // Гравець, що закрив вкладку, не натиснувши «Вийти», не має блокувати інших: виходимо за нього.
       for (const player of [...room.tokens.keys()]) {
         if ((room.polling.get(player) ?? 0) > 0) continue;
-        if (this.now() - (room.seen.get(player) ?? room.touched) <= this.idleMs) continue;
+        const aloneInLobby = room.state.phase === "lobby" && room.state.players.filter((p) => !p.bot).length === 1;
+        const limit = aloneInLobby ? Math.max(this.idleMs, this.lobbyAloneIdleMs) : this.idleMs;
+        if (this.now() - (room.seen.get(player) ?? room.touched) <= limit) continue;
         this.drop(room, player);
         if (!this.rooms.has(code)) break;
       }
