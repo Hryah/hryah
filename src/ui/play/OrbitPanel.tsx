@@ -1,6 +1,6 @@
 // Екран орбіти всередині наскрізної гри: читає OrbitState із GameState і шле дії частини 3.
 // Повний прототип Нікіти (#orbit) лишається окремо; тут компактна версія на тих самих даних.
-import { orbitView, type OrbitAction, type OrbitState, type ToggleId } from "../../core/orbit";
+import { orbitView, type OrbitAction, type OrbitState } from "../../core/orbit";
 import { OrbitScene } from "../orbit/OrbitScene";
 import { fmt, t } from "../text";
 import { describeEntry } from "../design/cause";
@@ -8,28 +8,34 @@ import { describeEntry } from "../design/cause";
 const tr = t;
 const num = (n: number, d = 0) => fmt(n, d);
 
-const TOGGLES: ToggleId[] = ["camera", "transmitter", "heater", "safeMode"];
-
 export function OrbitPanel({ state, dispatch }: { state: OrbitState; dispatch: (a: OrbitAction) => void }) {
   const view = orbitView(state);
+  const goalParams = { ...view.goalParams, ...(view.cargoNameKey ? { cargo: tr(view.cargoNameKey) } : {}) };
   const total = state.input.mission.durationOrbits;
   const done = state.status !== "active";
   return (
     <div style={{ display: "grid", gap: 12 }} data-testid="orbit-panel">
       <div style={{ color: "#8a90a8" }}>
-        {tr("ui.orbit")} {view.nextOrbit} / {total} · {num(state.deliveredMb)} / {num(state.input.mission.requiredDataMb)} Mb · {num(state.chargeWh, 1)} / {num(view.capacityWh, 1)} Wh
+        {tr("ui.orbit")} {view.nextOrbit} / {total} · {num(state.deliveredMb)}{view.dataTargetMb !== null && <> / {num(view.dataTargetMb)}</>} Mb · {num(state.chargeWh, 1)} / {num(view.capacityWh, 1)} Wh
+      </div>
+      <div data-testid="orbit-objective" style={{ color: "#8a90a8", fontSize: 13 }}>
+        <p>{tr("orbit.objective.body", { mission: tr(state.input.mission.titleKey), body: state.input.mission.body.name })}</p>
+        <p>{tr(view.goalKey, goalParams)}</p>
+        <p>{tr("orbit.objective.altitude", goalParams)}</p>
+        {view.cargoNameKey && <p>{tr("orbit.telemetry.progress", { sent: view.telemetryReportsSent,
+          expected: view.telemetryReportsExpected })} · {tr("orbit.telemetry.optional")}</p>}
       </div>
       <OrbitScene turn={state.completedOrbits} totalTurns={total} storm={view.stormNext && !done}
-        safeMode={state.toggles.safeMode} complete={done} />
+        safeMode={state.toggles.safeMode} complete={done} bodyName={state.input.mission.body.name} />
       <div style={{ color: "#8a90a8", fontSize: 13 }} data-testid="orbit-status">
         {tr("ui.onboardStorage")}: {num(state.bufferMb)} / {num(view.bufferCapacityMb)} Mb · {tr("ui.thermalStatus")}:{" "}
-        {tr(state.coldStress >= 2 ? "ui.cold" : state.coldStress > 0 ? "ui.cooling" : "ui.stable")}
+        {tr(`ui.${view.thermalState}`)}
         {!done && <> · {tr("ui.endingCharge")}: {num(view.forecast.chargeWh, 1)} Wh · +{num(view.forecast.deliveredMb)} Mb</>}
         {!done && view.forecast.lostMb > 0 && <span style={{ color: "#f4b46a" }}> · {tr("ui.dataLoss")}: {num(view.forecast.lostMb)} Mb</span>}
       </div>
       {!done && view.forecast.powerFailure && <div style={{ color: "#f4b46a" }}>{tr("ui.powerRisk")}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {TOGGLES.map((id) => {
+        {view.controls.map((id) => {
           // Безпечний режим перевизначає решту перемикачів: показуємо, що реально працює.
           const overridden = state.toggles.safeMode && id !== "safeMode";
           const on = overridden ? view.activeSystems[id] : state.toggles[id];

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FlightResult, Mission, SpacecraftSpec } from "../../core/contracts";
+import type { FlightResult, Mission, MissionOutcome, SpacecraftSpec } from "../../core/contracts";
 import { MAX_ORBIT_ACTIONS, sanitizeFlight, type MissionReport } from "../../core/consortium";
 import { flightPhase } from "../../core/flight";
 import { orbitPhase, type OrbitAction } from "../../core/orbit";
@@ -145,18 +145,10 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
   if (done && ((cardsOn && !sending) || viaCard)) {
     if (!active) return null;
     const outcome = orbitPhase.finish(orbit).result;
-    const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
     return (
       <PhaseCard
         id="report" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.campaign.sendReport")} onContinue={() => { setViaCard(true); send(); }}
-        summary={[
-          { label: t("ui.card.row.status"), value: t(outcome.success ? "ui.card.success" : "ui.card.failure"), tone: outcome.success ? "ok" : "bad" },
-          cargo
-            ? { label: t("ui.card.row.supplied"), value: `${fmt(share, 0)}%` }
-            : { label: t("ui.card.row.delivered"), value: `${fmt(outcome.deliveredMb, 0)} / ${fmt(mission.requiredDataMb, 0)} Mb` },
-          { label: t("ui.card.row.survived"), value: `${outcome.survivedOrbits} / ${mission.durationOrbits}` },
-          { label: t("ui.card.row.score"), value: fmt(outcome.score, 0) },
-        ]}
+        summary={orbitReportSummary(mission, outcome)}
       />
     );
   }
@@ -181,6 +173,20 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
       </div>
     </div>
   );
+}
+
+export function orbitReportSummary(mission: Mission, outcome: MissionOutcome): SummaryRow[] {
+  const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
+  const deliveryPercent = outcome.orbitSummary ? outcome.orbitSummary.cargoDelivered ? 100 : 0 : share;
+  return [
+    { label: t("ui.card.row.status"), value: t(outcome.success ? "ui.card.success" : "ui.card.failure"), tone: outcome.success ? "ok" : "bad" },
+    mission.kind === "cargo"
+      ? { label: t("ui.card.row.supplied"), value: `${fmt(deliveryPercent, 0)}%` }
+      : { label: t("ui.card.row.delivered"), value: outcome.orbitSummary?.objectiveType === "flyby"
+        ? `${fmt(outcome.deliveredMb, 0)} Mb` : `${fmt(outcome.deliveredMb, 0)} / ${fmt(mission.requiredDataMb, 0)} Mb` },
+    { label: t("ui.card.row.survived"), value: `${outcome.survivedOrbits} / ${mission.durationOrbits}` },
+    { label: t("ui.card.row.score"), value: fmt(outcome.score, 0) },
+  ];
 }
 
 function launchSummary(mission: Mission, spec: SpacecraftSpec): SummaryRow[] {
