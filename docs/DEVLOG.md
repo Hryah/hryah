@@ -25,6 +25,40 @@
 
 **Перевірки:** `npm run typecheck` (0 помилок), `npm run assets:check` (усі перевірки пройшли), Vitest (508/508 тестів успішно), `npm run build` (клієнтська та серверна збірки успішні).
 
+## 2026-11-15 — PR #74: вантажні тексти орбіти за рев'ю
+
+**Гілка: `feature/nikita-orbit-activation`. Злиття не підтверджене.**
+
+Три 🟡 з рев'ю #74:
+- Ризики переповнення й замерзання для вантажного рейсу мають власні тексти без камери й знімків: `clarity.risk.overflowCargo`, `clarity.risk.coldCargo`.
+- Банер успіху в `#orbit` для вантажу каже про передачу вантажу, а не «0 Mb of imagery» (`ui.successDescriptionCargo`).
+- Подія доставки має ключ на кожен тип контейнера (`orbit.cargo.delivered.<kind>`), тож у журналі назва, а не сирий `parts`.
+
+Тест `cargo-texts.test.ts` перевіряє, що ці ключі є і що в них немає згадок про камеру чи знімки. **Перевірки:** `tsc`, 579 Vitest.
+
+## 2026-11-15 — P0: місійна орбіта, активація даних і UI
+
+**Локально: feature/nikita-orbit-activation, батьківський коміт ed525a2 (ядро). Активація/UI входять до коміту з цим записом; commit/push/PR погоджені окремо. PR #66 злито людиною як 1f54ef5. Для прискорення погоджено один PR ядра й активації з наявної гілки; новий worktree/гілка не створюються.**
+
+Ядро використовує спільні профілі та orbit-rules.json. Imaging потребує квоти/якості/висоти/виживання; flyby знімає лише у включному діапазоні та перемагає з додатною передачею; cargo перевіряє потрібний cargoKind та доставляється після повного виживання. Камера cargo не керується, payload споживає W у SAFE; повний звіт рахується з epsilon, залишок прострочується після pass. 0/4/6 звітів дають 100/107/110, невдала доставка — 0. Нові події мають унікальні id та causedBy до команд/модулів. Legacy без objective зберігає старий результат без OrbitSummary.
+
+У missions.json додано лише orbitObjective: сім imaging, Guest flyby 3–5, два cargo з 8-Mb звітом і telemetryBonusMaxFraction 0.1. Решта полів не змінена. UI показує ціль, висоту/тіло, місійні controls, телеметрію та фактичний cargoDelivered. Flyby не показує 30000 як квоту; cargo без звітів показує 100% доставки. SVG-геометрія не змінена; метадані та короткі інструкції виправлено для Moon/Mars і cargo.
+
+**Файли PR (15):**
+- src/core/orbit/phase.ts, clarity.ts, objectives.test.ts, balance.test.ts;
+- src/data/missions.json, texts.en.json;
+- src/ui/campaign/MissionRunner.tsx;
+- src/ui/orbit/OrbitPrototype.tsx, OrbitScene.tsx, texts.en.json, objectives.test.tsx;
+- src/ui/play/OrbitPanel.tsx;
+- AGENTS.md, docs/ROADMAP.md, docs/DEVLOG.md.
+
+**Перевірки:** npm run typecheck, npm test (47 файлів / 571 Vitest + 3 Node через assets:check), npm run build пройшли на гілці. Окремо експортовано experimental e01ad9f, додано тільки наші орбітальні файли та чотири текстові override зі збереженням нових planning/menu ключів: typecheck, 47 файлів / 577 Vitest + 3 Node, build пройшли. Новий assets:check перевірив також 15 SVG/PNG модулів. Core purity, git diff --check, незмінність решти місійних полів і SVG-геометрії пройшли. Lockfile однаковий; npm ci тут повторно не запускався. Build має попередження про великий чанк.
+
+**Браузер:** на гілковому коді #orbit — успіх 24000 Mb/score 343 і провал без камери з причинним ланцюжком; #play — cargo без звітів (доставка 100%, score 100), природна втрата з обходом орбіти; Guest — лише витки 3–5, передача з 6-го, успіх 4000 Mb/8 витків/score 202; Selene — перевірка назви Moon і висоти 50 km, не повний місячний прохід. В інтеграції e01ad9f повторено новий планувальник → cargo → шість ручних витків без передавача → 100% доставки/score 100, помилок console немає. Для успішних запусків використано наявну кнопку Finish the flight; польотні задачі вручну не розв’язувалися. Усі 10 місій вручну, ширини 1280/760 і повний keyboard-прохід не перевірялися.
+
+**Межі:** contracts/game/physics/stubs/чужі фази/CI/deploy не змінені. Нові планувальник і картки з experimental збережені. Виплати ще не читають телеметрію та можуть платити legacy-частку за незавершену доставку; OrbitFeedback, повний compact clarity UI і solo story лишаються окремими пакетами. Старі ARCHITECTURE/ORBIT_TASK містять історичний опис заглушки; фактичні #play/#mission вже використовують справжню орбіту. Merge/auto-merge/manual workflows не виконувалися; новий сайт не опубліковано.
+
+**Наступне одне завдання:** OrbitFeedback і виплати для наступного проєктування.
 ## 2026-11-15 — пульт консорціуму v2 за макетом 1 Нікіти
 
 **Гілка: `feature/illia-console-v2` поверх `feature/illia-boss-menu` (#70). Злиття не підтверджене.**

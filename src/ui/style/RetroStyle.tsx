@@ -4,10 +4,9 @@ import { load, save } from "../../storage";
 import { t } from "../text";
 import "./retro.css";
 
-// Ретро-стиль на всю гру. WebGL-сцени беруть шейдери з render/style.ts, а canvas і SVG інших частин
-// (політ, каюта, орбіта, превʼю апарата) — SVG-фільтр #hryah-retro з тим самим виглядом.
-// HTML-текст інтерфейсу фільтр не чіпає. Поверхні з власним дрібним текстом (canvas польоту з HUD, SVG-превʼю з підписами)
-// отримують лише палітру (#hryah-retro-colors), щоб текст лишався читабельним. Вибір зберігається (src/storage.ts).
+// Ретро-стиль. Пікселізацію й палітру (SVG-фільтр #hryah-retro) мають великі сцени: орбіта й каюта.
+// Превʼю апарата (3D-стенд через render/style.ts і SVG-схема з підписами) — лише палітру (#hryah-retro-colors).
+// Політ фільтра не має: палітра псувала його кольори. HTML-текст інтерфейсу фільтр не чіпає. Вибір зберігається (src/storage.ts).
 
 const KEY = "retroStyle";
 const RetroContext = createContext<{ on: boolean; toggle: () => void }>({ on: true, toggle: () => {} });
