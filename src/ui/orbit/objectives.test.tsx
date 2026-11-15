@@ -79,7 +79,7 @@ describe('campaign report reads the canonical orbit summary', () => {
   it('shows 0% for cargo on the wrong orbit even when all reports reached the ground', () => {
     const original = stateFor('lifeline');
     let state = orbitPhase.init({ ...original.input, flight: { ...original.input.flight,
-      orbit: { ...original.input.flight.orbit, altKm: 399 } } }, 42);
+      orbit: { ...original.input.flight.orbit, altKm: Math.floor(original.input.mission.altRangeKm[0] * 0.95) - 1 } } }, 42);
     while (!orbitPhase.isDone(state)) state = orbitPhase.step(state, { type: 'tick', dtS: state.input.flight.orbit.periodS });
     const outcome = orbitPhase.finish(state).result;
     expect(outcome.deliveredMb).toBe(48);

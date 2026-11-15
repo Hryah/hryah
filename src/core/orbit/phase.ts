@@ -1,5 +1,5 @@
 import type { CauseEntry, OrbitInput, OrbitPhase, MissionOutcome, SystemId } from '../contracts';
-import { downlinkMb, orbitGeneratedMb, orbitProfile, orbitTiming, segmentLoadW, stepCharge,
+import { downlinkMb, orbitAccepted, orbitGeneratedMb, orbitLowBand, orbitProfile, orbitTiming, segmentLoadW, stepCharge,
   transmitSeconds, validateOrbitMission } from '../model';
 import { nextRandom } from '../physics';
 import rules from '../../data/orbit-rules.json';
@@ -81,7 +81,10 @@ function capabilities(state: OrbitState) {
     idleSunS,
     resolutionM,
     resolutionOk: mission.orbitObjective?.type === 'cargo' || resolutionM <= mission.requiredResolutionM,
-    orbitOk: flight.orbit.altKm >= mission.altRangeKm[0] && flight.orbit.altKm <= mission.altRangeKm[1],
+    // Трохи нижче мінімуму (до lowToleranceFraction) — не провал, а нижча якість: штраф польоту на кілька кілометрів
+    // не повинен зводити нанівець місію з усіма даними. Сильний недолiт і вихід за верх діапазону лишаються провалом.
+    orbitOk: orbitAccepted(mission, flight.orbit.altKm),
+    orbitLow: orbitLowBand(mission, flight.orbit.altKm),
   };
 }
 
@@ -125,6 +128,11 @@ function addEntry(state: OrbitState, messageKey: string, kind: CauseEntry['kind'
 }
 
 function missionScore(state: OrbitState, caps: ReturnType<typeof capabilities>, success: boolean): number {
+  const raw = rawMissionScore(state, caps, success);
+  return caps.orbitLow ? Math.round(raw * rules.orbit.lowScoreFactor) : raw;
+}
+
+function rawMissionScore(state: OrbitState, caps: ReturnType<typeof capabilities>, success: boolean): number {
   const { mission, spec } = state.input;
   const objective = mission.orbitObjective;
   if (objective?.type === 'cargo') {
@@ -198,6 +206,10 @@ function completeMission(state: OrbitState): void {
   }
   if (!caps.orbitOk) {
     addEntry(state, 'orbit.proto.orbitFailure', 'failure', 'propulsion', { altKm: state.input.flight.orbit.altKm },
+      causes(state, ['design:engine', 'design:fuel', 'design:altitude']));
+  } else if (caps.orbitLow) {
+    addEntry(state, 'orbit.proto.orbitLow', 'warning', 'propulsion',
+      { altKm: state.input.flight.orbit.altKm, minKm: mission.altRangeKm[0] },
       causes(state, ['design:engine', 'design:fuel', 'design:altitude']));
   }
   const cargoKind = state.input.spec.cargoKind;

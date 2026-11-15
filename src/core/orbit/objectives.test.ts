@@ -110,7 +110,8 @@ describe('mission objectives on real mission data', () => {
 
   it.each(['living-planet', 'guest', 'lifeline'])('%s rejects bad altitude and complete power damage causally', id => {
     const input = inputFor(id);
-    const wrongOrbit = { ...input.flight, orbit: orbitInfo(input.mission.body, input.mission.altRangeKm[0] - 1) };
+    // Нижче допуску (5% від мінімуму): провал; у смузі допуску місія лише втрачає частину оцінки.
+    const wrongOrbit = { ...input.flight, orbit: orbitInfo(input.mission.body, Math.floor(input.mission.altRangeKm[0] * 0.95) - 1) };
     const failed = play(orbitPhase.init({ ...input, flight: wrongOrbit }, 42));
     expect(orbitPhase.finish(failed).result.success).toBe(false);
     expect(failed.log.some(entry => entry.messageKey === 'orbit.proto.orbitFailure')).toBe(true);

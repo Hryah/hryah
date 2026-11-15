@@ -54,6 +54,7 @@ export function orbitClarity(state: OrbitState) {
     if (forecast.storm) risks.push('ui.stormWarning');
     else if (view.stormInOrbits !== null && view.stormInOrbits <= 2) risks.push('ui.stormSoon');
     if (!view.orbitOk) risks.push('clarity.risk.orbit');
+    else if (view.orbitLow) risks.push('clarity.risk.orbitLow');
     if (!view.resolutionOk) risks.push('clarity.risk.resolution');
   }
   return { view, systems, risks };
