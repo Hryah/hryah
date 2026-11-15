@@ -18,7 +18,7 @@ export const BALANCE_SEEDS = [4, 7, 12, 42] as const;
 export const STRATEGY_BUILDS: Record<BuildId, Design> = {
   economy: {
     launcherId: 'small',
-    modules: { engine: 'eng-cold', solar: 'sol-s', battery: 'bat-m', antenna: 'ant-m', instrument: 'cam-m' },
+    modules: { engine: 'eng-chem', solar: 'sol-s', battery: 'bat-m', antenna: 'ant-m', instrument: 'cam-m' },
     fuelKg: 14,
     altKm: 400,
   },
@@ -36,7 +36,7 @@ export const STRATEGY_BUILDS: Record<BuildId, Design> = {
   },
   downlink: {
     launcherId: 'small',
-    modules: { engine: 'eng-cold', solar: 'sol-m', battery: 'bat-m', antenna: 'ant-l', instrument: 'cam-m' },
+    modules: { engine: 'eng-chem', solar: 'sol-m', battery: 'bat-m', antenna: 'ant-l', instrument: 'cam-m' },
     fuelKg: 16,
     altKm: 400,
   },
