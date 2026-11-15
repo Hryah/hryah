@@ -54,7 +54,14 @@ export interface Mission {
   imagingSPerOrbit: number;        // тривалість вікна зйомки за виток
   passSPerOrbit: number;           // тривалість прольоту над станцією за виток
   launchers: LauncherDef[];
+  // Необов'язкові поля (зворотно сумісні): відсутній kind означає 'imaging', тобто все як раніше.
+  // 'cargo': вантажний рейс до станції. Частини 2 і 3 працюють без змін: орбіта — це підхід і стикування,
+  // а цінність рейсу рахує нагорода консорціуму з stationNeeds і типу вантажу.
+  kind?: 'imaging' | 'cargo';
+  stationNeeds?: Partial<Record<CargoKind, number>>; // цінність одного контейнера кожного типу, M$
 }
+
+export type CargoKind = 'water' | 'food' | 'parts' | 'experiment';
 
 // ───────────────────────── 4. Каталог модулів (дані) ─────────────────────────
 
@@ -75,6 +82,7 @@ export interface InstrumentDef extends ModuleBase {
   wavelengthM: number;
   dataRateMbps: number;
   powerW: number;
+  cargoKind?: CargoKind;           // є: це не камера, а вантажний контейнер (місія kind: 'cargo')
 }
 
 export type ModuleDef = EngineDef | SolarDef | BatteryDef | AntennaDef | InstrumentDef;
