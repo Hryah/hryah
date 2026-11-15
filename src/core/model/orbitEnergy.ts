@@ -11,6 +11,7 @@
 // Обігрів споживає лише в тіні: на сонці його тумблер нічого не коштує.
 
 import type { Mission, OrbitInfo, SpacecraftSpec } from '../contracts';
+import rules from '../../data/orbit-rules.json';
 import { downlinkMb } from './power';
 
 export type SegmentKind = 'sunIdle' | 'imaging' | 'transmit' | 'passRest' | 'shadow';
@@ -32,6 +33,32 @@ export interface OrbitTiming {
   idleSunS: number;
 }
 
+export interface OrbitProfile {
+  cameraWindow: boolean;
+  continuousPayload: boolean;
+  reportLimitMb: number | null;
+  expireAfterPass: boolean;
+}
+
+// Індекс витка починається з 1. Профіль не змінює тривалість жодного відрізка.
+export function orbitProfile(mission: Pick<Mission, 'orbitObjective'>, orbitIndex: number): OrbitProfile {
+  const objective = mission.orbitObjective;
+  if (objective?.type === 'cargo') {
+    return { cameraWindow: false, continuousPayload: true,
+      reportLimitMb: objective.telemetryReportMb, expireAfterPass: true };
+  }
+  const cameraWindow = objective?.type !== 'flyby'
+    || (orbitIndex >= objective.imagingOrbits[0] && orbitIndex <= objective.imagingOrbits[1]);
+  return { cameraWindow, continuousPayload: false, reportLimitMb: null, expireAfterPass: false };
+}
+
+// Швидкість уже враховує доступність/пошкодження приладу. Звіт не залежить від команди камери.
+export function orbitGeneratedMb(profile: OrbitProfile, rateMbps: number, elapsedS: number, cameraOn: boolean): number {
+  if (rateMbps <= 0 || elapsedS <= 0) return 0;
+  if (profile.reportLimitMb !== null) return Math.min(profile.reportLimitMb, rateMbps * elapsedS);
+  return cameraOn && profile.cameraWindow ? rateMbps * elapsedS : 0;
+}
+
 // Тривалість відрізків. Зйомка й зв'язок стискаються до наявного сонця.
 export function orbitTiming(orbit: OrbitInfo, mission: Pick<Mission, 'imagingSPerOrbit' | 'passSPerOrbit'>): OrbitTiming {
   const shadowS = orbit.periodS * Math.min(1, Math.max(0, orbit.eclipseFraction));
@@ -42,12 +69,16 @@ export function orbitTiming(orbit: OrbitInfo, mission: Pick<Mission, 'imagingSPe
 }
 
 // Споживання відрізка, Вт.
-export function segmentLoadW(spec: Pick<EnergySpec, 'baseLoadW' | 'instrumentW' | 'transmitterW' | 'heaterW'>, kind: SegmentKind, on: ActiveSystems): number {
+export function segmentLoadW(
+  spec: Pick<EnergySpec, 'baseLoadW' | 'instrumentW' | 'transmitterW' | 'heaterW'>,
+  kind: SegmentKind, on: ActiveSystems, profile?: OrbitProfile,
+): number {
+  const baseW = spec.baseLoadW + (profile?.continuousPayload ? spec.instrumentW : 0);
   switch (kind) {
-    case 'imaging': return spec.baseLoadW + (on.camera ? spec.instrumentW : 0);
-    case 'transmit': return spec.baseLoadW + (on.transmitter ? spec.transmitterW : 0);
-    case 'shadow': return spec.baseLoadW + (on.heater ? spec.heaterW : 0);
-    default: return spec.baseLoadW;
+    case 'imaging': return baseW + (on.camera && !profile?.continuousPayload && (profile?.cameraWindow ?? true) ? spec.instrumentW : 0);
+    case 'transmit': return baseW + (on.transmitter ? spec.transmitterW : 0);
+    case 'shadow': return baseW + (on.heater ? spec.heaterW : 0);
+    default: return baseW;
   }
 }
 
@@ -60,7 +91,8 @@ export function transmitSeconds(passS: number, bufferMb: number, linkMbps: numbe
 // Апарат стартує з повною батареєю, тож це і є потрібна ємність. Тумблери за замовчуванням: усе ввімкнено.
 // Бурі й пошкодження сюди не входять: це випадкові події, їх накладає орбітальна фаза.
 export function orbitEnergyNeedWh(
-  spec: EnergySpec, orbit: OrbitInfo, mission: Pick<Mission, 'imagingSPerOrbit' | 'passSPerOrbit' | 'durationOrbits'>,
+  spec: EnergySpec, orbit: OrbitInfo,
+  mission: Pick<Mission, 'imagingSPerOrbit' | 'passSPerOrbit' | 'durationOrbits' | 'orbitObjective'>,
   on: ActiveSystems = { camera: true, transmitter: true, heater: true },
 ): number {
   const t = orbitTiming(orbit, mission);
@@ -68,6 +100,7 @@ export function orbitEnergyNeedWh(
   let peakWh = 0;
   let worstWh = 0;
   let bufferMb = 0;
+  let coldStress = 0;
 
   const run = (durationS: number, generationW: number, loadW: number) => {
     cumWh += ((generationW - loadW) * durationS) / 3600;
@@ -76,14 +109,25 @@ export function orbitEnergyNeedWh(
   };
 
   for (let i = 0; i < Math.max(0, mission.durationOrbits); i++) {
-    run(t.idleSunS, spec.panelPowerW, segmentLoadW(spec, 'sunIdle', on));
-    run(t.imagingS, spec.panelPowerW, segmentLoadW(spec, 'imaging', on));
-    if (on.camera) bufferMb = Math.min(spec.bufferMb, bufferMb + spec.instrumentRateMbps * t.imagingS);
-    const transmitS = transmitSeconds(t.passS, bufferMb, spec.downlinkMbps, on.transmitter);
+    const profile = orbitProfile(mission, i + 1);
+    const available = !mission.orbitObjective || coldStress < rules.cold.lockStress;
+    const active = mission.orbitObjective
+      ? { ...on, camera: on.camera && available && spec.instrumentRateMbps > 0 && profile.cameraWindow }
+      : on;
+    run(t.idleSunS, spec.panelPowerW, segmentLoadW(spec, 'sunIdle', active, profile));
+    run(t.imagingS, spec.panelPowerW, segmentLoadW(spec, 'imaging', active, profile));
+    const producedMb = orbitGeneratedMb(profile, available ? spec.instrumentRateMbps : 0, t.imagingS, active.camera);
+    bufferMb = Math.min(spec.bufferMb, bufferMb + producedMb);
+    const transmitS = transmitSeconds(t.passS, bufferMb, spec.downlinkMbps, active.transmitter);
     bufferMb -= downlinkMb(bufferMb, spec.downlinkMbps, 0, transmitS, true);
-    run(transmitS, spec.panelPowerW, segmentLoadW(spec, 'transmit', on));
-    run(t.passS - transmitS, spec.panelPowerW, segmentLoadW(spec, 'passRest', on));
-    run(t.shadowS, 0, segmentLoadW(spec, 'shadow', on));
+    run(transmitS, spec.panelPowerW, segmentLoadW(spec, 'transmit', active, profile));
+    run(t.passS - transmitS, spec.panelPowerW, segmentLoadW(spec, 'passRest', active, profile));
+    if (profile.expireAfterPass) bufferMb = 0;
+    run(t.shadowS, 0, segmentLoadW(spec, 'shadow', active, profile));
+    if (mission.orbitObjective && t.shadowS > 0) {
+      coldStress = Math.min(rules.cold.maximumStress,
+        Math.max(0, coldStress + (active.heater ? -1 : rules.cold.unheatedGain)));
+    }
   }
   return worstWh;
 }

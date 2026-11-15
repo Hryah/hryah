@@ -6,7 +6,7 @@ import type {
 } from '../contracts';
 import { deltaVMs, groundResolutionM } from '../physics';
 import { orbitInfo } from './orbit';
-import { orbitEnergyNeedWh, type EnergySpec } from './orbitEnergy';
+import { orbitEnergyNeedWh, orbitGeneratedMb, orbitProfile, orbitTiming, type EnergySpec } from './orbitEnergy';
 
 // Константи апарата, яких гравець не обирає.
 export const STRUCTURE_MASS_KG = 40;
@@ -50,8 +50,13 @@ export function buildSpec(input: DesignInput, design: Design): PhaseOutput<Space
   };
   const needWh = orbitEnergyNeedWh(energy, orbit, mission);
   // Зв'язок: за проліт треба скинути все, що камера зняла за вікно зйомки.
-  const dataPerOrbitMb = instrument.dataRateMbps * mission.imagingSPerOrbit;
-  const downlinkPerOrbitMb = antenna.downlinkMbps * mission.passSPerOrbit;
+  const objective = mission.orbitObjective;
+  const profile = orbitProfile(mission, objective?.type === 'flyby' ? objective.imagingOrbits[0] : 1);
+  const timing = orbitTiming(orbit, mission);
+  const dataPerOrbitMb = objective?.type === 'cargo' ? objective.telemetryReportMb
+    : objective ? orbitGeneratedMb(profile, instrument.dataRateMbps, timing.imagingS, true)
+      : instrument.dataRateMbps * mission.imagingSPerOrbit;
+  const downlinkPerOrbitMb = antenna.downlinkMbps * (objective ? timing.passS : mission.passSPerOrbit);
 
   const margins: Margin[] = [
     { id: 'dv', have: dvMs, need: mission.dvRequiredMs, unit: 'm/s', ok: dvMs >= mission.dvRequiredMs },
@@ -67,6 +72,7 @@ export function buildSpec(input: DesignInput, design: Design): PhaseOutput<Space
     panelPowerW: solar.powerW, batteryWh: battery.capacityWh, baseLoadW: BASE_LOAD_W, heaterW: HEATER_W,
     downlinkMbps: antenna.downlinkMbps, transmitterW: antenna.powerW, bufferMb: BUFFER_MB,
     instrumentRateMbps: instrument.dataRateMbps, instrumentW: instrument.powerW, resolutionM,
+    ...(instrument.cargoKind ? { cargoKind: instrument.cargoKind } : {}),
     costMUsd, margins,
   };
 
