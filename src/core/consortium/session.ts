@@ -23,6 +23,7 @@ import { applyMarket, checkMarket, type Market } from './market';
 import { applyResearch, RESEARCH } from './research';
 import { qualifyCostMUsd, rollTrlFailures, trlOf } from './trl';
 import { optimalValue } from './planner';
+import { agencyAfterEvents, catalogAfterEvents, rollEvent, type CampaignEvent } from './events';
 import {
   depositsOf, emptyFactory, glassDefectFactor, MATERIALS, planBatch, readyModules, type FactoryOrder, type FactoryState,
 } from '../factory';
@@ -90,6 +91,7 @@ export interface CampaignState {
   rounds: RoundSummary[];  // підсумки закритих вікон
   scenarioId?: string;     // сценарій кімнати (для брифінгу, назви й реальної місії-аналога)
   winner?: { agencyId: string; reason: 'program' | 'commercial' | 'race' }; // хто переміг і чим (після підсумку)
+  events?: CampaignEvent[];  // події між вікнами (прорив, зрив постачальника, санкції, урядова програма)
 }
 
 export interface ConsortiumState {
@@ -151,11 +153,14 @@ function entryInput(
 ): DesignInput {
   if (!state.campaign || !account) return inputFor(state.base, state.market, agency, turn, projects);
   const mission = knownMission(state, { account });
-  const input = applyAgency(applyMarket({ mission, catalog: state.base.catalog }, state.market, turn + (agency.marketLeadTurns ?? 0)), agency);
+  const events = state.campaign.events ?? [];
+  const profile = agencyAfterEvents(agency, events);
+  const input = applyAgency(applyMarket({ mission, catalog: state.base.catalog }, state.market, turn + (agency.marketLeadTurns ?? 0)), profile);
   const ready = projects.filter((p) => isReady(p, turn)).map((p) => p.module);
+  const modules = catalogAfterEvents(input.catalog.modules, applyAgency(state.base, profile).catalog.modules, events, state.campaign.round);
   return {
     mission: { ...input.mission, budgetMUsd: money(account.fundsMUsd) },
-    catalog: { modules: [...input.catalog.modules, ...ready, ...readyModules(factory, turn)] },
+    catalog: { modules: [...modules, ...ready, ...readyModules(factory, turn)] },
   };
 }
 
@@ -310,7 +315,7 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   const settlement = settleRewards(mission, runs, undefined, state.base.catalog);
 
   const results: AgencyRoundResult[] = [];
-  const agencies = state.agencies.map((e) => {
+  let agencies = state.agencies.map((e) => {
     const run = runs.find((r) => r.agencyId === e.agency.id);
     const account = e.account!;
     const launched = run !== undefined;
@@ -358,8 +363,15 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   // Нове вікно: календар іде далі, проєкт агенції лишається (друге коло коротше), звіти скидаються.
   // Між вікнами може бути пауза (gapTurns): ринок дешевшає, розробки й партії дозрівають, але запуску немає.
   const turn = state.turn + 1 + (config.gapTurns ?? 0);
-  const opened: CampaignState = { ...nextCampaign, round: campaign.round + 1, windowStartTurn: turn };
+  const event = rollEvent(state.seed, campaign.round + 1, state.base.catalog, state.market, agencies.map((e) => e.agency));
+  const opened: CampaignState = {
+    ...nextCampaign, round: campaign.round + 1, windowStartTurn: turn,
+    ...(event ? { events: [...(campaign.events ?? []), event] } : {}),
+  };
   const head = { ...state, campaign: opened };
+  // Урядова програма: додатковий грант усім на початку вікна.
+  const bonus = event?.kind === 'grant' ? event.grantMUsd ?? 0 : 0;
+  if (bonus > 0) agencies = agencies.map((e) => (e.account ? { ...e, account: { ...e.account, fundsMUsd: money(e.account.fundsMUsd + bonus) } } : e));
   return {
     ...head,
     turn,

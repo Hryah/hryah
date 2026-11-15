@@ -15,6 +15,18 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   const scenario = campaign.scenarioId ? SCENARIOS[campaign.scenarioId] : undefined;
   const lines: { text: string; color?: string }[] = [];
 
+  const event = (campaign.events ?? []).find((e) => e.round === campaign.round);
+  if (event) {
+    const moduleName = (id?: string) => { const m = state.base.catalog.modules.find((x) => x.id === id); return m ? t(m.nameKey) : id ?? ""; };
+    const agencyName = (id?: string) => { const a = state.agencies.find((x) => x.agency.id === id); return a ? t(a.agency.nameKey) : id ?? ""; };
+    lines.push({
+      text: t(`ui.event.${event.kind}`, {
+        module: moduleName(event.moduleId), agency: agencyName(event.agencyId),
+        percent: Math.round((1 - (event.priceFactor ?? 1)) * 100), grant: event.grantMUsd ?? 0,
+      }),
+      color: C.accent,
+    });
+  }
   if (campaign.round === 0 && scenario) {
     lines.push({ text: t("ui.brief.intro", { scenario: t(scenario.def.titleKey), brief: t(scenario.def.briefKey) }) });
   }

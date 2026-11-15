@@ -6,3 +6,4 @@ export * from './campaign';
 export * from './scenarios';
 export * from './research';
 export * from './trl';
+export * from './events';

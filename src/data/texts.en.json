@@ -459,5 +459,9 @@
   "ui.cargoKind.water": "water",
   "ui.cargoKind.food": "food",
   "ui.cargoKind.parts": "spare parts",
-  "ui.cargoKind.experiment": "experiment"
+  "ui.cargoKind.experiment": "experiment",
+  "ui.event.breakthrough": "News: a technology breakthrough. The {module} is {percent}% cheaper this window — even if it was not on sale yet.",
+  "ui.event.disruption": "News: a supplier failed. The {module} is off the market for this window.",
+  "ui.event.sanctionsLifted": "News: sanctions on {agency} are lifted. It can buy every module from now on.",
+  "ui.event.grant": "News: a government programme adds {grant} M$ to every agency's funds."
 }
