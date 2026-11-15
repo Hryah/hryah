@@ -59,7 +59,7 @@ function modulesOf(input: DesignInput, slot: SlotId): ModuleDef[] {
   return input.catalog.modules.filter((m) => m.slot === slot);
 }
 
-// Стартовий проєкт: середній модуль у кожному слоті, найменший носій, найнижча орбіта.
+// Стартовий проєкт: середній модуль у кожному слоті, найменший носій, орбіта на крок вище нижньої межі.
 // «Середній» дає робочий, але не найкращий апарат: є що покращувати й де зекономити.
 export function startDesign(input: DesignInput): Design {
   const modules = {} as Record<SlotId, string>;
@@ -74,7 +74,8 @@ export function startDesign(input: DesignInput): Design {
   return {
     modules,
     fuelKg: START_FUEL_KG,
-    altKm: input.mission.altRangeKm[0],
+    // На крок вище нижньої межі (якщо діапазон дозволяє): невеликий недолiт у польоті не виводить апарат за межі місії.
+    altKm: Math.min(input.mission.altRangeKm[1], input.mission.altRangeKm[0] + ALT_STEP_KM),
     launcherId: launcher.id,
   };
 }

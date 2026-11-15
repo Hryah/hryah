@@ -19,13 +19,14 @@ function deepFreeze<T>(value: T): T {
 }
 
 describe("частина 1: старт", () => {
-  it("стартовий проєкт — середні модулі, найменший носій, найнижча орбіта", () => {
+  it("стартовий проєкт — середні модулі, найменший носій, орбіта на крок вище нижньої межі", () => {
     const { design } = start();
     expect(design.modules).toEqual({
       engine: "eng-chem", solar: "sol-m", battery: "bat-m", antenna: "ant-m", instrument: "cam-m",
     });
     expect(design.launcherId).toBe("small");
-    expect(design.altKm).toBe(SAMPLE_MISSION.altRangeKm[0]);
+    // Запас 50 км: невеликий недолiт у польоті не виводить апарат за межі місії.
+    expect(design.altKm).toBe(Math.min(SAMPLE_MISSION.altRangeKm[1], SAMPLE_MISSION.altRangeKm[0] + 50));
   });
 
   it("зі стартового проєкту можна запускатись", () => {
@@ -230,7 +231,8 @@ describe("частина 1: дії без ефекту", () => {
     const [lo] = SAMPLE_MISSION.altRangeKm;
     const atZero = run(start(), { type: "setFuel", fuelKg: 0 });
     expect(run(atZero, { type: "setFuel", fuelKg: -2 })).toBe(atZero);
-    const s = start();
+    const s = run(start(), { type: "setAlt", altKm: lo });
+    expect(s.design.altKm).toBe(lo);
     expect(run(s, { type: "setAlt", altKm: lo - 50 })).toBe(s);
   });
 });

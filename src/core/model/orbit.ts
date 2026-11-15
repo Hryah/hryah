@@ -1,7 +1,24 @@
 // Орбіта: період, тінь, час життя. Чисті функції без стану.
 
-import type { Body, OrbitInfo } from '../contracts';
+import type { Body, Mission, OrbitInfo } from '../contracts';
 import { eclipseFraction, orbitalPeriodS } from '../physics';
+import orbitRules from '../../data/orbit-rules.json';
+
+// Найнижча висота, яку місія ще зараховує: нижня межа діапазону мінус допуск (orbit-rules.json → orbit).
+// Одна функція для орбіти Нікіти, заглушки орбіти й звіту кампанії, щоб правила не розходились.
+export function minOrbitAltKm(mission: Pick<Mission, 'altRangeKm'>): number {
+  return mission.altRangeKm[0] * (1 - orbitRules.orbit.lowToleranceFraction);
+}
+
+// Чи апарат на орбіті, яку місія зараховує (у смузі допуску — так, але з нижчою оцінкою на орбіті).
+export function orbitAccepted(mission: Pick<Mission, 'altRangeKm'>, altKm: number): boolean {
+  return altKm >= minOrbitAltKm(mission) && altKm <= mission.altRangeKm[1];
+}
+
+// Смуга допуску: трохи нижче мінімуму місії, але ще зараховано.
+export function orbitLowBand(mission: Pick<Mission, 'altRangeKm'>, altKm: number): boolean {
+  return altKm < mission.altRangeKm[0] && altKm >= minOrbitAltKm(mission);
+}
 
 export function orbitInfo(body: Body, altKm: number): OrbitInfo {
   return { altKm, periodS: orbitalPeriodS(body, altKm), eclipseFraction: eclipseFraction(body, altKm) };

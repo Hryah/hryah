@@ -999,13 +999,13 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
     if (isFlightTerminal(state)) return [];
     const actions: DebugAction<FlightAction>[] = [
       {
-        label: "+1с",
-        group: "Час",
+        label: "+1s",
+        group: "Time",
         action: { type: "tick", dtS: 1 },
       },
       {
-        label: "+10с",
-        group: "Час",
+        label: "+10s",
+        group: "Time",
         action: { type: "tick", dtS: 10 },
       },
     ];
@@ -1013,8 +1013,8 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
     for (const t of state.terminals) {
       if (state.unlockedModuleIds.includes(t.moduleId)) {
         actions.push({
-          label: `Термінал: ${t.id} (${t.state})`,
-          group: "Мініігри",
+          label: `Terminal: ${t.id} (${t.state})`,
+          group: "Minigames",
           action: { type: "open_terminal", terminalId: t.id },
         });
       }
@@ -1025,15 +1025,15 @@ export const flightPhase: FlightPhase<FlightState, FlightAction> = {
       state.terminals.some((t) => t.state === "WARNING" || t.state === "CRITICAL")
     ) {
       actions.push({
-        label: "Полагодити активний термінал",
-        group: "Мініігри",
+        label: "Repair active terminal",
+        group: "Minigames",
         action: { type: "complete_minigame_debug" },
       });
     }
 
     actions.push({
-      label: "Завершити політ і розгорнути супутник →",
-      group: "Відділення",
+      label: "Finish flight and deploy satellite →",
+      group: "Separation",
       action: { type: "complete_phase" },
     });
 

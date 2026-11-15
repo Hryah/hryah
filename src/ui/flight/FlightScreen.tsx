@@ -1,10 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ALL_GRAB_HANDLES,
   type FlightAction,
   type FlightState,
 } from "../../core/flight";
 import { GameLoop } from "./GameLoop";
+import { getTerminalBadgeAnchor } from "./render/StationRenderer";
+
+const SLINGSHOT_DRAG_THRESHOLD_PX = 8;
 
 export interface FlightScreenProps {
   state: FlightState;
@@ -17,9 +20,38 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
   const stateRef = useRef<FlightState>(state);
   const dispatchRef = useRef<(action: FlightAction) => void>(dispatch);
   const pointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pointerDragRef = useRef<{
+    active: boolean;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    maxDragDist: number;
+    startedAnchored: boolean;
+  }>({
+    active: false,
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    maxDragDist: 0,
+    startedAnchored: false,
+  });
 
   stateRef.current = state;
   dispatchRef.current = dispatch;
+
+  const resetSlingshotDrag = useCallback(() => {
+    pointerDragRef.current = {
+      active: false,
+      pointerId: -1,
+      startX: 0,
+      startY: 0,
+      maxDragDist: 0,
+      startedAnchored: false,
+    };
+    if (stateRef.current.astronaut.slingshot.isDragging) {
+      dispatchRef.current({ type: "slingshot_cancel" });
+    }
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -63,6 +95,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       if (s.gameMode === "MINIGAME_ACTIVE") {
         if (e.code === "Escape") {
           e.preventDefault();
+          resetSlingshotDrag();
           loop?.dockingGame.resetInput();
           loop?.solarGame.resetInput();
           loop?.lifeSupportGame.resetInput();
@@ -92,6 +125,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
         }
         if (e.code === "KeyE" || e.code === "Enter") {
           e.preventDefault();
+          resetSlingshotDrag();
           send({ type: "open_terminal" });
           return;
         }
@@ -137,13 +171,55 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       }
     };
 
+    const resetMinigameInputs = () => {
+      const loop = loopRef.current;
+      const send = dispatchRef.current;
+      if (loop) {
+        loop.dockingGame.resetInput();
+        loop.solarGame.resetInput();
+        loop.lifeSupportGame.resetInput();
+      }
+      send({ type: "docking_input", thrustX: 0, thrustY: 0 });
+      send({ type: "ls_hold_o2", held: false });
+    };
+
+    const onWindowPointerUp = (e: PointerEvent) => {
+      const s = stateRef.current;
+      const send = dispatchRef.current;
+
+      if (e.target !== canvasRef.current || s.gameMode === "MINIGAME_ACTIVE") {
+        resetSlingshotDrag();
+        if (e.target !== canvasRef.current) {
+          if (s.gameMode === "MINIGAME_ACTIVE") {
+            resetMinigameInputs();
+          }
+          if (s.astronaut.activeGrabHeld) {
+            send({ type: "set_active_grab", held: false });
+          }
+        }
+      }
+    };
+
+    const onWindowBlur = () => {
+      resetSlingshotDrag();
+      loopRef.current?.resetRoamKeys();
+      resetMinigameInputs();
+      if (stateRef.current.astronaut.activeGrabHeld) {
+        dispatchRef.current({ type: "set_active_grab", held: false });
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("blur", onWindowBlur);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("blur", onWindowBlur);
     };
-  }, []);
+  }, [resetSlingshotDrag]);
 
   const getRelativeScreenPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -199,6 +275,7 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     if (s.gameMode === "STATION_ROAM") {
       // ПКМ у польоті — аварійний мікро-двигун (thrusterCharges), або скасування натягу рогатки
       if (e.button === 2) {
+        pointerDragRef.current.active = false;
         if (s.astronaut.state === "ANCHORED") {
           send({ type: "slingshot_cancel" });
         } else {
@@ -217,41 +294,31 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
         return;
       }
 
+      if (e.button !== 0) {
+        return;
+      }
+
       if (s.astronaut.state === "ANCHORED") {
-        // Якщо клікнули по іконці [E / КЛІК] над персонажем або по самій консолі поруч — відкриваємо термінал
-        if (s.astronaut.anchoredHandleId) {
-          const handle = ALL_GRAB_HANDLES.find(
-            (h) => h.id === s.astronaut.anchoredHandleId,
-          );
-          if (handle && handle.terminalId) {
-            const badgePos = loop.camera.worldToScreen(
-              s.astronaut.pos.x,
-              s.astronaut.pos.y - 40,
-              w,
-              h,
-            );
-            const term = s.terminals.find((t) => t.id === handle.terminalId);
-            const termScreen = term
-              ? loop.camera.worldToScreen(term.pos.x, term.pos.y, w, h)
-              : null;
-
-            const clickedBadge =
-              Math.abs(sx - badgePos.x) <= 98 &&
-              Math.abs(sy - badgePos.y) <= 24;
-            const clickedConsole =
-              termScreen !== null &&
-              Math.hypot(sx - termScreen.x, sy - termScreen.y) <= 58;
-
-            if (clickedBadge || clickedConsole) {
-              send({ type: "open_terminal" });
-              return;
-            }
-          }
-        }
-
-        // Початок натягу рогатки (SlingshotController)
+        // Хітбокс термінала НЕ перехоплює pointerdown: рогатка завжди стартує першою,
+        // а відкриття термінала можливе лише на чистий клік (pointerup при dragDistance <= 8px) або клавішею E.
+        pointerDragRef.current = {
+          active: true,
+          pointerId: e.pointerId,
+          startX: sx,
+          startY: sy,
+          maxDragDist: 0,
+          startedAnchored: true,
+        };
         send({ type: "slingshot_start", screenX: sx, screenY: sy });
       } else {
+        pointerDragRef.current = {
+          active: false,
+          pointerId: e.pointerId,
+          startX: sx,
+          startY: sy,
+          maxDragDist: 0,
+          startedAnchored: false,
+        };
         // У польоті затиснута ЛКМ вмикає активний захват ручок (GrabController)
         send({ type: "set_active_grab", held: true });
       }
@@ -266,6 +333,19 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     const send = dispatchRef.current;
     const loop = loopRef.current;
     if (!loop) return;
+
+    if (
+      pointerDragRef.current.active &&
+      e.pointerId === pointerDragRef.current.pointerId
+    ) {
+      const dist = Math.hypot(
+        sx - pointerDragRef.current.startX,
+        sy - pointerDragRef.current.startY,
+      );
+      if (dist > pointerDragRef.current.maxDragDist) {
+        pointerDragRef.current.maxDragDist = dist;
+      }
+    }
 
     if (s.gameMode === "MINIGAME_ACTIVE") {
       if (s.activeMinigame.type === "DOCKING") {
@@ -283,7 +363,15 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
       s.astronaut.state === "ANCHORED" &&
       s.astronaut.slingshot.isDragging
     ) {
-      send({ type: "slingshot_move", screenX: sx, screenY: sy });
+      const dragDist = pointerDragRef.current.active
+        ? pointerDragRef.current.maxDragDist
+        : Math.hypot(
+            sx - s.astronaut.slingshot.dragStartScreen.x,
+            sy - s.astronaut.slingshot.dragStartScreen.y,
+          );
+      if (dragDist > SLINGSHOT_DRAG_THRESHOLD_PX) {
+        send({ type: "slingshot_move", screenX: sx, screenY: sy });
+      }
     }
   };
 
@@ -295,9 +383,14 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     const s = stateRef.current;
     const send = dispatchRef.current;
     const loop = loopRef.current;
+    const drag = { ...pointerDragRef.current };
+    if (e.pointerId === drag.pointerId) {
+      pointerDragRef.current.active = false;
+    }
     if (!loop) return;
 
     if (s.gameMode === "MINIGAME_ACTIVE") {
+      resetSlingshotDrag();
       if (s.activeMinigame.type === "DOCKING") {
         loop.dockingGame.handlePointerUp(send);
       } else if (s.activeMinigame.type === "SOLAR") {
@@ -309,12 +402,74 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     }
 
     if (s.gameMode === "STATION_ROAM") {
-      if (s.astronaut.state === "ANCHORED" && s.astronaut.slingshot.isDragging) {
+      if (
+        e.button === 0 &&
+        drag.active &&
+        drag.startedAnchored &&
+        s.astronaut.state === "ANCHORED"
+      ) {
+        const dragDistance = Math.max(
+          drag.maxDragDist,
+          Math.hypot(sx - drag.startX, sy - drag.startY),
+        );
+
+        if (dragDistance > SLINGSHOT_DRAG_THRESHOLD_PX) {
+          send({ type: "slingshot_release" });
+        } else {
+          if (s.astronaut.slingshot.isDragging) {
+            send({ type: "slingshot_cancel" });
+          }
+          if (s.astronaut.anchoredHandleId) {
+            const handle = ALL_GRAB_HANDLES.find(
+              (h) => h.id === s.astronaut.anchoredHandleId,
+            );
+            if (handle && handle.terminalId) {
+              const worldPt = loop.camera.screenToWorld(sx, sy, w, h);
+              const term = s.terminals.find((t) => t.id === handle.terminalId);
+              let clickedConsole = false;
+              let clickedTermBadge = false;
+              if (term) {
+                const rad = -(term.mountAngle * Math.PI) / 180;
+                const dx = worldPt.x - term.pos.x;
+                const dy = worldPt.y - term.pos.y;
+                const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+                clickedConsole =
+                  Math.abs(lx) <= term.visualPreset.chassisWidth * 0.62 &&
+                  Math.abs(ly) <= term.visualPreset.chassisHeight * 0.65;
+
+                const badge = getTerminalBadgeAnchor(term);
+                clickedTermBadge =
+                  Math.abs(worldPt.x - badge.cx) <= badge.maxWidth * 0.55 &&
+                  Math.abs(worldPt.y - badge.cy) <= 15;
+              }
+
+              if (clickedConsole || clickedTermBadge) {
+                send({ type: "open_terminal" });
+              }
+            }
+          }
+        }
+      } else if (
+        s.astronaut.state === "ANCHORED" &&
+        s.astronaut.slingshot.isDragging
+      ) {
         send({ type: "slingshot_release" });
       }
       if (s.astronaut.activeGrabHeld) {
         send({ type: "set_active_grab", held: false });
       }
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    resetSlingshotDrag();
+    const s = stateRef.current;
+    if (s.gameMode === "STATION_ROAM" && s.astronaut.activeGrabHeld) {
+      dispatchRef.current({ type: "set_active_grab", held: false });
     }
   };
 
@@ -335,10 +490,10 @@ export function FlightScreen({ state, dispatch }: FlightScreenProps) {
     >
       <canvas
         ref={canvasRef}
-        className="retro-colors"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         style={{
           display: "block",
           width: "100%",

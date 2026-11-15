@@ -43,7 +43,10 @@ const useView = (): View => {
 
 export function App() {
   const { label, color } = channelStyle[channel];
-  const view = useView();
+  // На стабільному каналі (main) службових екранів немає взагалі: будь-яка #адреса відкриває основну гру.
+  const isMain = channel === "main";
+  const hashView = useView();
+  const view: View = isMain ? "play" : hashView;
   const [game, setGame] = useState<GameState>(startPlay);
   const [roomVisited, setRoomVisited] = useState(view === "room");
 
@@ -56,14 +59,18 @@ export function App() {
   }, [view]);
 
   const isConsoleView = view === "play";
+  // Службові елементи (смуга каналу, навігація, тестові екрани) бачать лише experimental і local: на main дивиться журі.
+  const devLinks = !isMain;
 
   return (
     <RetroProvider>
-      <div hidden={view !== "orbit"}>
-        <OrbitPrototype />
-        {/* На #orbit навігації немає, а сцена теж під фільтром: перемикач окремо в куті, під довідковим вікном (z-index 10). */}
-        {view === "orbit" && <div style={{ position: "fixed", right: 16, bottom: 12, zIndex: 5 }}><RetroToggle /></div>}
-      </div>
+      {devLinks && (
+        <div hidden={view !== "orbit"}>
+          <OrbitPrototype />
+          {/* На #orbit навігації немає, а сцена теж під фільтром: перемикач окремо в куті, під довідковим вікном (z-index 10). */}
+          {view === "orbit" && <div style={{ position: "fixed", right: 16, bottom: 12, zIndex: 5 }}><RetroToggle /></div>}
+        </div>
+      )}
       <div
         hidden={view === "orbit"}
         lang="uk"
@@ -74,9 +81,11 @@ export function App() {
             : { fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b0d17", color: "#e8eaf3" }
         }
       >
-        <div style={{ background: color, color: isConsoleView ? "#001524" : "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
-          {label} · збірка {commit}
-        </div>
+        {devLinks && (
+          <div data-testid="channel-bar" style={{ background: color, color: isConsoleView ? "#001524" : "#0b0d17", padding: "6px 16px", fontWeight: 700, fontSize: 14 }}>
+            {label} · збірка {commit}
+          </div>
+        )}
         <main style={{ padding: isConsoleView ? "18px 20px 28px" : 24, maxWidth: isConsoleView ? 1760 : 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: isConsoleView ? 14 : 16 }}>
             <h1 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, color: isConsoleView ? "var(--c-cream, #ffecd1)" : "#e8eaf3", fontSize: isConsoleView ? 22 : undefined }}>
@@ -84,21 +93,21 @@ export function App() {
               hryah
             </h1>
             <nav style={{ display: "flex", flexWrap: "wrap", gap: isConsoleView ? 14 : 12, fontSize: isConsoleView ? 14 : undefined }}>
-              <a href="#play" style={{ color: view === "play" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Гра</a>
-              <a href="#room" style={{ color: view === "room" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("room.nav")}</a>
-              <a href="#orbit" style={{ color: isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>
-              <a href="#mission" style={{ color: view === "mission" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("ui.nav.mission")}</a>
-              <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>
-              <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>
+              {devLinks && <a href="#play" style={{ color: view === "play" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Гра</a>}
+              {devLinks && <a href="#room" style={{ color: view === "room" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("room.nav")}</a>}
+              {devLinks && <a href="#orbit" style={{ color: isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{orbitText["ui.orbitOperations"]}</a>}
+              {devLinks && <a href="#mission" style={{ color: view === "mission" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>{t("ui.nav.mission")}</a>}
+              {devLinks && <a href="#debug" style={{ color: view === "debug" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Дебаг</a>}
+              {devLinks && <a href="#gallery" style={{ color: view === "gallery" ? (isConsoleView ? "var(--c-orange, #ff7d00)" : color) : isConsoleView ? "var(--c-text-muted, #ffecd1)" : "#8a90a8" }}>Галерея</a>}
               <RetroToggle />
             </nav>
           </div>
           <div style={{ display: view === "play" ? "block" : "none" }}><ConsortiumScreen active={view === "play"} /></div>
-          <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>
-          <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>
-          {view === "gallery" && <Gallery active />}
+          {devLinks && <div style={{ display: view === "mission" ? "block" : "none" }}><PlayScreen game={game} setGame={setGame} active={view === "mission"} /></div>}
+          {devLinks && <div style={{ display: view === "debug" ? "block" : "none" }}><DebugScreen /></div>}
+          {devLinks && view === "gallery" && <Gallery active />}
 
-          {(roomVisited || view === "room") && (
+          {devLinks && (roomVisited || view === "room") && (
             <div hidden={view !== "room"}>
               <Suspense fallback={<p role="status">{t("room.loading")}</p>}>
                 <RoomScreen active={view === "room"} />

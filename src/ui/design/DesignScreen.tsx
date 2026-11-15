@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { MarginId, ModuleDef, SlotId } from "../../core/contracts";
+import type { MarginId, ModuleDef, SlotId, SpacecraftSpec } from "../../core/contracts";
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from "../../core/design";
 import spritesManifest from "../../data/sprites.json";
 import { resolveAssetUrl } from "../graphics";
@@ -195,18 +195,31 @@ function keyStat(m: ModuleDef): string {
 export function DesignCheckPanel({
   state,
   actionsFooter,
+  twoColumns = false,
+  spec: specProp,
 }: {
   readonly state: DesignState;
   readonly actionsFooter?: ReactNode;
+  // Пульт консорціуму: широка картка з заголовком і запасами у дві колонки.
+  readonly twoColumns?: boolean;
+  // Уже порахована специфікація (пульт рахує її один раз і для нижньої панелі); без неї рахуємо тут.
+  readonly spec?: SpacecraftSpec;
 }) {
-  const spec = designPhase.finish(state).result;
+  const spec = specProp ?? designPhase.finish(state).result;
   const { mission } = state.input;
   const blockers = launchBlockers(state);
 
   return (
-    <div className="mc-panel" data-testid="design-check-panel" style={{ display: "grid", gap: 12 }}>
+    <div className={`mc-panel ${twoColumns ? "mc-card" : ""}`} data-testid="design-check-panel" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <span className="mc-label">{t("ui.margins")}</span>
+        {twoColumns ? (
+          <div style={{ display: "grid", gap: 2 }}>
+            <span className="mc-label">{t("ui.console.marginsLabel")}</span>
+            <strong className="mc-card-title">{t("ui.margins")}</strong>
+          </div>
+        ) : (
+          <span className="mc-label">{t("ui.margins")}</span>
+        )}
         <span
           className="mc-tabular"
           style={{
@@ -220,7 +233,7 @@ export function DesignCheckPanel({
         </span>
       </div>
 
-      <div className="mc-margins">
+      <div className={`mc-margins ${twoColumns ? "is-2col" : ""}`}>
         {MARGIN_ORDER.map((id) => {
           const m = spec.margins.find((x) => x.id === id);
           if (!m) return null;
@@ -288,6 +301,238 @@ export function DesignCheckPanel({
   );
 }
 
+// Хто що може змінити й як надіслати дію: спільне для окремого екрана й пульта консорціуму.
+type Editable = DesignScreenProps["editable"];
+export function designControls(editable: Editable, dispatch: (action: DesignAction) => void) {
+  const can = (control: string) => (typeof editable === "function" ? editable(control) : editable);
+  const act = (action: DesignAction) => {
+    const control = controlOf(action);
+    if (control !== null && can(control)) dispatch(action);
+  };
+  return { can, act };
+}
+type Controls = ReturnType<typeof designControls>;
+
+const slotLabelOf = (state: DesignState, slot: SlotId) =>
+  t(slot === "instrument" && state.input.mission.kind === "cargo" ? "ui.slot.cargo" : `ui.slot.${slot}`);
+
+// Назва місії, бюджет, лишок керувань і короткий опис.
+export function MissionHeader({ state, actionsLeft, compact = false }: { state: DesignState; actionsLeft?: number; compact?: boolean }) {
+  const { mission } = state.input;
+  return (
+    <div className={compact ? undefined : "mc-panel mc-panel-tight"} style={{ display: "grid", gap: 6 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "baseline" }}>
+          <strong style={{ fontSize: 18, color: "var(--c-cream)" }}>{t(mission.titleKey)}</strong>
+          <span className="mc-stat-pill">
+            <span className="mc-label">{t("ui.budget")}</span>
+            <strong className="mc-tabular">{fmt(mission.budgetMUsd)} M$</strong>
+          </span>
+        </div>
+        {actionsLeft !== undefined && (
+          <span className={`mc-stat-pill ${actionsLeft > 0 ? "is-accent" : "is-warn"}`}>
+            {t("ui.actionsLeft", { n: actionsLeft })}
+          </span>
+        )}
+      </div>
+      <p style={{ color: "var(--c-text-muted)", margin: 0, fontSize: 13 }}>{t(mission.briefKey)}</p>
+    </div>
+  );
+}
+
+// Картки модулів одного слота (разом із тими, що з'являться пізніше).
+export function ModuleSlotSection({
+  state, slot, controls, upcoming = [], footer, bare = false,
+}: { state: DesignState; slot: SlotId; controls: Controls; upcoming?: Upcoming[]; footer?: ReactNode; bare?: boolean }) {
+  const { catalog } = state.input;
+  const { design } = state;
+  const { can, act } = controls;
+  const options = catalog.modules.filter((m) => m.slot === slot);
+  const later = upcoming.filter((u) => u.slot === slot);
+  return (
+    <section className={bare ? undefined : "mc-panel"} style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span className="mc-label">{slotLabelOf(state, slot)}</span>
+        <span style={{ color: "var(--c-text-dim)", fontSize: 12 }}>
+          {options.length} {t("ui.console.stateAvailable").toLowerCase()}
+        </span>
+      </div>
+
+      <div className="mc-module-row">
+        {options.map((m) => {
+          const selected = design.modules[slot] === m.id;
+          const slotEnabled = can(`slot:${slot}`);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              disabled={!slotEnabled}
+              aria-pressed={selected}
+              onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
+              className={`mc-module-card ${selected ? "is-selected" : ""}`}
+            >
+              <ModuleVisualSlot slot={slot} moduleId={m.id} />
+              <div style={{ minWidth: 0, display: "grid", gap: 3, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-cream)" }}>{t(m.nameKey)}</span>
+                </div>
+                <div className="mc-tabular" style={{ color: "var(--c-status-ok)", fontSize: 12, fontWeight: 600 }}>
+                  {keyStat(m)}
+                </div>
+                <div className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>
+                  {fmt(m.massKg)} kg · {fmt(m.costMUsd)} M$
+                </div>
+                {selected && (
+                  <div>
+                    <span className="mc-state-badge is-selected">✓ {t("ui.console.stateSelected")}</span>
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+
+        {later.map((u) => (
+          <div
+            key={u.id}
+            className="mc-module-card is-locked"
+            aria-disabled="true"
+          >
+            <ModuleVisualSlot slot={slot} moduleId={u.id} dimmed />
+            <div style={{ minWidth: 0, display: "grid", gap: 4, flex: 1 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-text-muted)" }}>{t(u.nameKey)}</span>
+              <span className="mc-state-badge is-locked">
+                <LockIcon />
+                {t("ui.availableFrom", { turn: u.fromTurn })}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {footer}
+    </section>
+  );
+}
+
+// Носії (і, в окремому екрані, кроки пального й висоти під ними).
+export function LauncherSection({
+  state, controls, children, bare = false,
+}: { state: DesignState; controls: Controls; children?: ReactNode; bare?: boolean }) {
+  const { mission } = state.input;
+  const { design } = state;
+  const { can, act } = controls;
+  return (
+    <section className={bare ? undefined : "mc-panel"} style={{ display: "grid", gap: 12 }}>
+      <span className="mc-label">{t("ui.launcher")}</span>
+      <div className="mc-module-row">
+        {mission.launchers.map((l) => {
+          const selected = design.launcherId === l.id;
+          const launcherEnabled = can("launcher");
+          return (
+            <button
+              key={l.id}
+              type="button"
+              disabled={!launcherEnabled}
+              aria-pressed={selected}
+              onClick={() => act({ type: "setLauncher", launcherId: l.id })}
+              className={`mc-module-card ${selected ? "is-selected" : ""}`}
+            >
+              <div className="mc-sprite-slot">
+                <LauncherPlaceholderIcon id={l.id} />
+              </div>
+              <div style={{ minWidth: 0, display: "grid", gap: 3, flex: 1 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-cream)" }}>{t(l.nameKey)}</span>
+                <span className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>
+                  ≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$
+                </span>
+                {selected && (
+                  <div>
+                    <span className="mc-state-badge is-selected">✓ {t("ui.console.stateSelected")}</span>
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// Кроки пального й висоти орбіти.
+export function DesignSteppers({ state, controls }: { state: DesignState; controls: Controls }) {
+  const { design } = state;
+  const { can, act } = controls;
+  return (
+    <div className="mc-steppers-grid">
+      <Stepper
+        label={t("ui.fuel")}
+        value={`${fmt(design.fuelKg)} kg`}
+        disabled={!can("fuel")}
+        onMinus={() => act({ type: "setFuel", fuelKg: design.fuelKg - FUEL_STEP_KG })}
+        onPlus={() => act({ type: "setFuel", fuelKg: design.fuelKg + FUEL_STEP_KG })}
+      />
+      <Stepper
+        label={t("ui.altitude")}
+        value={`${fmt(design.altKm)} km`}
+        disabled={!can("alt")}
+        onMinus={() => act({ type: "setAlt", altKm: design.altKm - ALT_STEP_KM })}
+        onPlus={() => act({ type: "setAlt", altKm: design.altKm + ALT_STEP_KM })}
+      />
+    </div>
+  );
+}
+
+// Модулі за категоріями: вкладка на кожен слот і носій, видно одну категорію (пульт консорціуму).
+export function ModulePicker({
+  state, controls, upcoming = [], customSlotFooter, resetKey,
+}: { state: DesignState; controls: Controls; upcoming?: Upcoming[]; customSlotFooter?: ReactNode; resetKey?: string }) {
+  const [category, setCategory] = useState<SlotId | "launcher">(SLOTS[0]!);
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
+    setCategory(SLOTS[0]!);
+  }
+  return (
+    <div className="mc-panel" style={{ display: "grid", gap: 12 }} data-testid="module-picker">
+      <div style={{ display: "grid", gap: 2 }}>
+        <span className="mc-label">{t("ui.console.subsystems")}</span>
+        <strong className="mc-card-title">{t("ui.console.modulesTitle")}</strong>
+      </div>
+      <div className="mc-filter-bar" role="group" aria-label={t("ui.console.filterLabel")}>
+        {SLOTS.map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            aria-pressed={category === slot}
+            onClick={() => setCategory(slot)}
+            className={`mc-filter-pill ${category === slot ? "is-active" : ""}`}
+          >
+            {slotLabelOf(state, slot)}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={category === "launcher"}
+          onClick={() => setCategory("launcher")}
+          className={`mc-filter-pill ${category === "launcher" ? "is-active" : ""}`}
+        >
+          {t("ui.launcher")}
+        </button>
+      </div>
+      {category === "launcher" ? (
+        <LauncherSection state={state} controls={controls} bare />
+      ) : (
+        <ModuleSlotSection state={state} slot={category} controls={controls} upcoming={upcoming} bare />
+      )}
+      {/* Власна розробка приладу видна з будь-якої категорії: інакше її не знайти (Big Eye без неї не пройти). */}
+      {customSlotFooter}
+    </div>
+  );
+}
+
 export function DesignScreen({
   state,
   dispatch,
@@ -303,44 +548,19 @@ export function DesignScreen({
   defaultPreviewMode,
   extraPreviewViews,
 }: DesignScreenProps) {
-  const { mission, catalog } = state.input;
-  const { design } = state;
   const [category, setCategory] = useState<"all" | SlotId | "launcher">("all");
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (resetKey !== prevResetKey) {
     setPrevResetKey(resetKey);
     setCategory("all");
   }
-  const can = (control: string) => (typeof editable === "function" ? editable(control) : editable);
-  const act = (action: DesignAction) => {
-    const control = controlOf(action);
-    if (control !== null && can(control)) dispatch(action);
-  };
-
-  const slotLabel = (slot: SlotId) =>
-    t(slot === "instrument" && mission.kind === "cargo" ? "ui.slot.cargo" : `ui.slot.${slot}`);
+  const controls = designControls(editable, dispatch);
 
   return (
     <div className="mc-shell" style={{ gap: 12 }}>
       {header}
 
-      <div className="mc-panel mc-panel-tight" style={{ display: "grid", gap: 6 }}>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "baseline" }}>
-            <strong style={{ fontSize: 18, color: "var(--c-cream)" }}>{t(mission.titleKey)}</strong>
-            <span className="mc-stat-pill">
-              <span className="mc-label">{t("ui.budget")}</span>
-              <strong className="mc-tabular">{fmt(mission.budgetMUsd)} M$</strong>
-            </span>
-          </div>
-          {actionsLeft !== undefined && (
-            <span className={`mc-stat-pill ${actionsLeft > 0 ? "is-accent" : "is-warn"}`}>
-              {t("ui.actionsLeft", { n: actionsLeft })}
-            </span>
-          )}
-        </div>
-        <p style={{ color: "var(--c-text-muted)", margin: 0, fontSize: 13 }}>{t(mission.briefKey)}</p>
-      </div>
+      <MissionHeader state={state} actionsLeft={actionsLeft} />
 
       <DesignPreview state={state} active={active} defaultMode={defaultPreviewMode} extraViews={extraPreviewViews} />
 
@@ -364,7 +584,7 @@ export function DesignScreen({
                 onClick={() => setCategory(slot)}
                 className={`mc-filter-pill ${category === slot ? "is-active" : ""}`}
               >
-                {slotLabel(slot)}
+                {slotLabelOf(state, slot)}
               </button>
             ))}
             <button
@@ -378,128 +598,19 @@ export function DesignScreen({
         </div>
       </div>
 
-      {SLOTS.map((slot) => {
-        if (category !== "all" && category !== slot) return null;
-        const options = catalog.modules.filter((m) => m.slot === slot);
-        const later = upcoming.filter((u) => u.slot === slot);
-        return (
-          <section key={slot} className="mc-panel" style={{ display: "grid", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-              <span className="mc-label">{slotLabel(slot)}</span>
-              <span style={{ color: "var(--c-text-dim)", fontSize: 12 }}>
-                {options.length} {t("ui.console.stateAvailable").toLowerCase()}
-              </span>
-            </div>
-
-            <div className="mc-module-row">
-              {options.map((m) => {
-                const selected = design.modules[slot] === m.id;
-                const slotEnabled = can(`slot:${slot}`);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    disabled={!slotEnabled}
-                    aria-pressed={selected}
-                    onClick={() => act({ type: "setModule", slot, moduleId: m.id })}
-                    className={`mc-module-card ${selected ? "is-selected" : ""}`}
-                  >
-                    <ModuleVisualSlot slot={slot} moduleId={m.id} />
-                    <div style={{ minWidth: 0, display: "grid", gap: 3, flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-cream)" }}>{t(m.nameKey)}</span>
-                      </div>
-                      <div className="mc-tabular" style={{ color: "var(--c-status-ok)", fontSize: 12, fontWeight: 600 }}>
-                        {keyStat(m)}
-                      </div>
-                      <div className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>
-                        {fmt(m.massKg)} kg · {fmt(m.costMUsd)} M$
-                      </div>
-                      {selected && (
-                        <div>
-                          <span className="mc-state-badge is-selected">✓ {t("ui.console.stateSelected")}</span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-
-              {later.map((u) => (
-                <div
-                  key={u.id}
-                  className="mc-module-card is-locked"
-                  aria-disabled="true"
-                >
-                  <ModuleVisualSlot slot={slot} moduleId={u.id} dimmed />
-                  <div style={{ minWidth: 0, display: "grid", gap: 4, flex: 1 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-text-muted)" }}>{t(u.nameKey)}</span>
-                    <span className="mc-state-badge is-locked">
-                      <LockIcon />
-                      {t("ui.availableFrom", { turn: u.fromTurn })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {slot === "instrument" && customSlotFooter}
-          </section>
-        );
-      })}
+      {SLOTS.map((slot) =>
+        category !== "all" && category !== slot ? null : (
+          <ModuleSlotSection
+            key={slot} state={state} slot={slot} controls={controls} upcoming={upcoming}
+            footer={slot === "instrument" ? customSlotFooter : undefined}
+          />
+        ),
+      )}
 
       {(category === "all" || category === "launcher") && (
-        <section className="mc-panel" style={{ display: "grid", gap: 12 }}>
-          <span className="mc-label">{t("ui.launcher")}</span>
-          <div className="mc-module-row">
-            {mission.launchers.map((l) => {
-              const selected = design.launcherId === l.id;
-              const launcherEnabled = can("launcher");
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  disabled={!launcherEnabled}
-                  aria-pressed={selected}
-                  onClick={() => act({ type: "setLauncher", launcherId: l.id })}
-                  className={`mc-module-card ${selected ? "is-selected" : ""}`}
-                >
-                  <div className="mc-sprite-slot">
-                    <LauncherPlaceholderIcon id={l.id} />
-                  </div>
-                  <div style={{ minWidth: 0, display: "grid", gap: 3, flex: 1 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-cream)" }}>{t(l.nameKey)}</span>
-                    <span className="mc-tabular" style={{ color: "var(--c-text-muted)", fontSize: 12 }}>
-                      ≤ {l.maxPayloadKg} kg · {fmt(l.costMUsd)} M$
-                    </span>
-                    {selected && (
-                      <div>
-                        <span className="mc-state-badge is-selected">✓ {t("ui.console.stateSelected")}</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mc-steppers-grid">
-            <Stepper
-              label={t("ui.fuel")}
-              value={`${fmt(design.fuelKg)} kg`}
-              disabled={!can("fuel")}
-              onMinus={() => act({ type: "setFuel", fuelKg: design.fuelKg - FUEL_STEP_KG })}
-              onPlus={() => act({ type: "setFuel", fuelKg: design.fuelKg + FUEL_STEP_KG })}
-            />
-            <Stepper
-              label={t("ui.altitude")}
-              value={`${fmt(design.altKm)} km`}
-              disabled={!can("alt")}
-              onMinus={() => act({ type: "setAlt", altKm: design.altKm - ALT_STEP_KM })}
-              onPlus={() => act({ type: "setAlt", altKm: design.altKm + ALT_STEP_KM })}
-            />
-          </div>
-        </section>
+        <LauncherSection state={state} controls={controls}>
+          <DesignSteppers state={state} controls={controls} />
+        </LauncherSection>
       )}
     </div>
   );

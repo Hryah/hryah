@@ -38,7 +38,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "disaster-response": {
     "id": "disaster-response",
@@ -79,7 +82,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "ice-watch": {
     "id": "ice-watch",
@@ -120,7 +126,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "big-eye": {
     "id": "big-eye",
@@ -161,7 +170,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "guest": {
     "id": "guest",
@@ -202,7 +214,14 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "flyby",
+      "imagingOrbits": [
+        3,
+        5
+      ]
+    }
   },
   "selene": {
     "id": "selene",
@@ -243,7 +262,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "station-resupply": {
     "id": "station-resupply",
@@ -291,6 +313,11 @@
       "food": 14,
       "parts": 24,
       "experiment": 30
+    },
+    "orbitObjective": {
+      "type": "cargo",
+      "telemetryReportMb": 8,
+      "telemetryBonusMaxFraction": 0.1
     }
   },
   "mars-relay": {
@@ -332,7 +359,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "cubesat-101": {
     "id": "cubesat-101",
@@ -373,7 +403,10 @@
         "maxPayloadKg": 400,
         "costMUsd": 30
       }
-    ]
+    ],
+    "orbitObjective": {
+      "type": "imaging"
+    }
   },
   "colony-resupply": {
     "id": "colony-resupply",
@@ -421,6 +454,11 @@
       "food": 36,
       "parts": 40,
       "experiment": 20
+    },
+    "orbitObjective": {
+      "type": "cargo",
+      "telemetryReportMb": 8,
+      "telemetryBonusMaxFraction": 0.1
     }
   }
 }

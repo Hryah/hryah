@@ -14,6 +14,7 @@ import type { CauseEntry, Damage, Design, DesignInput, Mission, SpacecraftSpec }
 import { applyAgency, type AgencyProfile } from '../design/agency';
 import { controlOf, designPhase, launchBlockers, SLOTS, type DesignAction, type DesignState } from '../design';
 import { stubFlight, stubOrbit } from '../stubs';
+import { orbitAccepted } from '../model';
 import {
   checkCampaign, hiddenMission, missionSeeds, pickReport, replayOrbit, sanitizeFlight, type CampaignConfig, type MissionReport,
 } from './campaign';
@@ -302,10 +303,10 @@ function runOf(state: ConsortiumState, e: AgencyEntry): AgencyRun | null {
   let flightLog: CauseEntry[] = [];
   let orbitOut;
   let reachedOrbit: boolean;
-  const [lo, hi] = mission.altRangeKm;
   if (e.report) {
     const flight = sanitizeFlight(mission, spec, e.report.flight);
-    reachedOrbit = flight.deploymentStatus !== 'lost' && flight.orbit.altKm >= lo && flight.orbit.altKm <= hi;
+    // Та сама межа, що й в орбіті: смуга допуску нижче мінімуму вважається виходом на орбіту.
+    reachedOrbit = flight.deploymentStatus !== 'lost' && orbitAccepted(mission, flight.orbit.altKm);
     orbitOut = replayOrbit(mission, spec, flight, log, e.report.orbitActions, seedsFor(state, e.agency.id).orbit);
   } else {
     const flight = stubFlight({ mission, spec, log });

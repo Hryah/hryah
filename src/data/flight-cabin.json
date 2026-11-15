@@ -27,7 +27,7 @@
   "levelConfig": [
     {
       "id": "MOD_HABITAT",
-      "title": "ВІДСІК 01 // ЕНЕРГОБЛОК (HORIZONTAL)",
+      "title": "BAY 01 // POWER MODULE (HORIZONTAL)",
       "orientation": "HORIZONTAL",
       "unlockedAtWave": 0,
       "worldPos": { "x": 0, "y": 0 },
@@ -38,8 +38,8 @@
         "wallThickness": 14,
         "gridPattern": "TECH_RIBS",
         "portholes": [
-          { "x": 280, "y": 145, "r": 46 },
-          { "x": 640, "y": 145, "r": 46 }
+          { "x": 338, "y": 334, "r": 36 },
+          { "x": 582, "y": 334, "r": 36 }
         ]
       },
       "doors": [
@@ -76,12 +76,12 @@
         }
       ],
       "handles": [
-        { "id": "H_START", "start": { "x": 48, "y": 180 }, "end": { "x": 48, "y": 300 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TOP_1", "start": { "x": 180, "y": 38 }, "end": { "x": 420, "y": 38 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_SOLAR_TERM", "start": { "x": 560, "y": 86 }, "end": { "x": 720, "y": 86 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
-        { "id": "H_BOT_1", "start": { "x": 150, "y": 442 }, "end": { "x": 350, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_BOT_2", "start": { "x": 420, "y": 442 }, "end": { "x": 580, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_BOT_3", "start": { "x": 650, "y": 442 }, "end": { "x": 810, "y": 442 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_START", "start": { "x": 52, "y": 180 }, "end": { "x": 52, "y": 300 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TOP_1", "start": { "x": 180, "y": 52 }, "end": { "x": 420, "y": 52 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_SOLAR_TERM", "start": { "x": 560, "y": 88 }, "end": { "x": 720, "y": 88 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
+        { "id": "H_BOT_1", "start": { "x": 150, "y": 428 }, "end": { "x": 350, "y": 428 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_BOT_2", "start": { "x": 420, "y": 428 }, "end": { "x": 580, "y": 428 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_BOT_3", "start": { "x": 650, "y": 428 }, "end": { "x": 800, "y": 428 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
         { "id": "H_HAB_DOOR", "start": { "x": 854, "y": 130 }, "end": { "x": 854, "y": 350 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
       ],
       "computers": [
@@ -106,7 +106,7 @@
     },
     {
       "id": "MOD_INTERSECTION",
-      "title": "ВУЗОЛ 02 // ЦЕНТРАЛЬНИЙ ХАБ (INTERSECTION)",
+      "title": "NODE 02 // CENTRAL HUB (INTERSECTION)",
       "orientation": "INTERSECTION",
       "unlockedAtWave": 0,
       "worldPos": { "x": 920, "y": -110 },
@@ -160,15 +160,15 @@
         { "id": "H_CORNER_TR", "start": { "x": 505, "y": 75 }, "end": { "x": 625, "y": 195 }, "grabRadius": 36, "visualStyle": "CORNER_45", "colorTheme": "#ef4444" },
         { "id": "H_CORNER_BL", "start": { "x": 75, "y": 505 }, "end": { "x": 195, "y": 625 }, "grabRadius": 36, "visualStyle": "CORNER_45", "colorTheme": "#ef4444" },
         { "id": "H_DOCK_CONSOLE", "start": { "x": 505, "y": 625 }, "end": { "x": 625, "y": 505 }, "grabRadius": 38, "visualStyle": "CORNER_45", "colorTheme": "#f59e0b" },
-        { "id": "H_HUB_NORTH", "start": { "x": 290, "y": 55 }, "end": { "x": 410, "y": 55 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" },
-        { "id": "H_HUB_EAST", "start": { "x": 645, "y": 290 }, "end": { "x": 645, "y": 410 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" }
+        { "id": "H_HUB_NORTH", "start": { "x": 314, "y": 58 }, "end": { "x": 386, "y": 58 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" },
+        { "id": "H_HUB_EAST", "start": { "x": 642, "y": 314 }, "end": { "x": 642, "y": 386 }, "grabRadius": 36, "visualStyle": "WALL_RAIL", "colorTheme": "#f59e0b" }
       ],
       "computers": [
         {
           "id": "DOCKING_1",
           "type": "DOCKING",
           "linkedHandleId": "H_HUB_NORTH",
-          "mountPosition": { "x": 350, "y": 96 },
+          "mountPosition": { "x": 350, "y": 105 },
           "mountAngle": 180,
           "causedBy": "design:engine",
           "baseUrgencyS": 65,
@@ -187,7 +187,7 @@
           "id": "DOCKING_2",
           "type": "DOCKING",
           "linkedHandleId": "H_HUB_EAST",
-          "mountPosition": { "x": 604, "y": 350 },
+          "mountPosition": { "x": 595, "y": 350 },
           "mountAngle": -90,
           "causedBy": "design:engine",
           "baseUrgencyS": 65,
@@ -206,7 +206,7 @@
           "id": "DOCKING_3",
           "type": "DOCKING",
           "linkedHandleId": "H_DOCK_CONSOLE",
-          "mountPosition": { "x": 532, "y": 532 },
+          "mountPosition": { "x": 529, "y": 529 },
           "mountAngle": -45,
           "causedBy": "design:engine",
           "baseUrgencyS": 70,
@@ -225,7 +225,7 @@
     },
     {
       "id": "MOD_VERTICAL_LAB",
-      "title": "ШАХТА 03 // ЖИТТЄЗАБЕЗПЕЧЕННЯ (VERTICAL)",
+      "title": "SHAFT 03 // LIFE SUPPORT (VERTICAL)",
       "orientation": "VERTICAL",
       "unlockedAtWave": 1,
       "worldPos": { "x": 1010, "y": -930 },
@@ -236,8 +236,8 @@
         "wallThickness": 14,
         "gridPattern": "PANELS",
         "portholes": [
-          { "x": 260, "y": 280, "r": 46 },
-          { "x": 260, "y": 560, "r": 46 }
+          { "x": 205, "y": 405, "r": 42 },
+          { "x": 158, "y": 705, "r": 38 }
         ]
       },
       "doors": [
@@ -267,17 +267,17 @@
         }
       ],
       "handles": [
-        { "id": "H_VLAB_R1", "start": { "x": 472, "y": 680 }, "end": { "x": 472, "y": 520 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_VLAB_L1", "start": { "x": 48, "y": 500 }, "end": { "x": 48, "y": 310 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_VLAB_R1", "start": { "x": 466, "y": 680 }, "end": { "x": 466, "y": 520 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_VLAB_L1", "start": { "x": 54, "y": 500 }, "end": { "x": 54, "y": 310 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
         { "id": "H_OXYGEN_TERM", "start": { "x": 454, "y": 320 }, "end": { "x": 454, "y": 460 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#38bdf8" },
-        { "id": "H_VLAB_TOP", "start": { "x": 190, "y": 44 }, "end": { "x": 330, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
+        { "id": "H_VLAB_TOP", "start": { "x": 190, "y": 54 }, "end": { "x": 330, "y": 54 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" }
       ],
       "computers": [
         {
           "id": "OXYGEN",
           "type": "OXYGEN",
           "linkedHandleId": "H_OXYGEN_TERM",
-          "mountPosition": { "x": 410, "y": 390 },
+          "mountPosition": { "x": 406, "y": 390 },
           "mountAngle": -90,
           "causedBy": "design:battery",
           "baseUrgencyS": 48,
@@ -294,7 +294,7 @@
     },
     {
       "id": "MOD_THERMAL_BAY",
-      "title": "ВІДСІК 04 // ТЕРМОКОНТУР ТА РЕАКТОР (HORIZONTAL)",
+      "title": "BAY 04 // THERMAL & REACTOR (HORIZONTAL)",
       "orientation": "HORIZONTAL",
       "unlockedAtWave": 2,
       "worldPos": { "x": 1620, "y": -20 },
@@ -305,8 +305,8 @@
         "wallThickness": 14,
         "gridPattern": "TECH_RIBS",
         "portholes": [
-          { "x": 240, "y": 140, "r": 42 },
-          { "x": 680, "y": 140, "r": 42 }
+          { "x": 240, "y": 260, "r": 42 },
+          { "x": 680, "y": 260, "r": 42 }
         ]
       },
       "doors": [
@@ -329,19 +329,19 @@
         }
       ],
       "handles": [
-        { "id": "H_TBAY_TOP1", "start": { "x": 140, "y": 44 }, "end": { "x": 340, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TBAY_BOT1", "start": { "x": 140, "y": 476 }, "end": { "x": 340, "y": 476 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TBAY_CORE_T", "start": { "x": 400, "y": 152 }, "end": { "x": 520, "y": 152 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TBAY_CORE_B", "start": { "x": 400, "y": 368 }, "end": { "x": 520, "y": 368 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_TBAY_TOP2", "start": { "x": 580, "y": 44 }, "end": { "x": 780, "y": 44 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
-        { "id": "H_THERMAL_TERM", "start": { "x": 872, "y": 190 }, "end": { "x": 872, "y": 330 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#f97316" }
+        { "id": "H_TBAY_TOP1", "start": { "x": 140, "y": 54 }, "end": { "x": 340, "y": 54 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_BOT1", "start": { "x": 140, "y": 466 }, "end": { "x": 340, "y": 466 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_CORE_T", "start": { "x": 400, "y": 140 }, "end": { "x": 520, "y": 140 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_CORE_B", "start": { "x": 400, "y": 380 }, "end": { "x": 520, "y": 380 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_TBAY_TOP2", "start": { "x": 580, "y": 54 }, "end": { "x": 780, "y": 54 }, "grabRadius": 34, "visualStyle": "WALL_RAIL", "colorTheme": "#ef4444" },
+        { "id": "H_THERMAL_TERM", "start": { "x": 866, "y": 190 }, "end": { "x": 866, "y": 330 }, "grabRadius": 38, "visualStyle": "WALL_RAIL", "colorTheme": "#f97316" }
       ],
       "computers": [
         {
           "id": "THERMAL",
           "type": "THERMAL",
           "linkedHandleId": "H_THERMAL_TERM",
-          "mountPosition": { "x": 828, "y": 260 },
+          "mountPosition": { "x": 818, "y": 260 },
           "mountAngle": -90,
           "causedBy": "design:instrument",
           "baseUrgencyS": 48,
@@ -358,7 +358,7 @@
     },
     {
       "id": "MOD_COMMAND",
-      "title": "МІСТОК 05 // КОМАНДНИЙ МОДУЛЬ (COMMAND)",
+      "title": "BRIDGE 05 // COMMAND MODULE (COMMAND)",
       "orientation": "INTERSECTION",
       "unlockedAtWave": 3,
       "worldPos": { "x": 980, "y": 590 },

@@ -6,7 +6,7 @@ import type {
   Catalog, CauseEntry, Design, DesignInput, FlightInput, FlightResult, Mission,
   MissionOutcome, OrbitInput, PhaseOutput, RunRecord, SlotId, SpacecraftSpec,
 } from './contracts';
-import { buildSpec, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
+import { buildSpec, orbitAccepted, orbitEnergyNeedWh, orbitInfo, reachedAltKm } from './model';
 import { fuelLeftKg } from './physics';
 import catalogData from '../data/catalog.json';
 import missionsData from '../data/missions.json';
@@ -93,7 +93,13 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     spec.downlinkMbps * mission.passSPerOrbit,
   );
   const survivedOrbits = batteryDies ? 1 : mission.durationOrbits;
-  const deliveredMb = perOrbitMb * survivedOrbits;
+  // Та сама ціль, що й у справжній орбіті (orbitObjective): проліт знімає лише на своїх витках і вимагає хоч якихось даних,
+  // вантажний рейс вимагає контейнера. Інакше боти й «оптимальний прохід» рахувались би щедріше, ніж може гравець.
+  const objective = mission.orbitObjective;
+  const imagingOrbits = objective?.type === 'flyby'
+    ? Math.max(0, Math.min(survivedOrbits, objective.imagingOrbits[1]) - objective.imagingOrbits[0] + 1)
+    : survivedOrbits;
+  const deliveredMb = perOrbitMb * imagingOrbits;
 
   if (batteryDies) {
     log.push({
@@ -103,9 +109,12 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     });
   }
 
-  const enoughData = deliveredMb >= mission.requiredDataMb;
+  const cargoOk = objective?.type !== 'cargo' || spec.cargoKind !== undefined;
+  const enoughData = objective?.type === 'flyby' ? deliveredMb > 0
+    : objective?.type === 'cargo' ? true
+      : deliveredMb >= mission.requiredDataMb;
   const enoughResolution = spec.resolutionM <= mission.requiredResolutionM;
-  const orbitOk = flight.orbit.altKm >= mission.altRangeKm[0] && flight.orbit.altKm <= mission.altRangeKm[1];
+  const orbitOk = orbitAccepted(mission, flight.orbit.altKm); // той самий допуск, що й у справжній орбіті
   const endS = flight.orbit.periodS * survivedOrbits;
 
   // Розряд батареї вже пояснює передчасне завершення й недоставлені дані.
@@ -125,6 +134,14 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     });
   }
 
+  if (!cargoOk) {
+    log.push({
+      id: 'orbit:cargo-missing', phase: 'orbit', tS: endS, kind: 'failure', system: 'science',
+      messageKey: 'orbit.cargo.invalidPayload', params: {},
+      causedBy: ['design:instrument'],
+    });
+  }
+
   if (!orbitOk) {
     const lowOrbitCause = input.log.find((entry) => entry.id === 'flight:low-orbit');
     log.push({
@@ -134,7 +151,7 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     });
   }
 
-  const success = !batteryDies && enoughData && enoughResolution && orbitOk;
+  const success = !batteryDies && enoughData && enoughResolution && orbitOk && cargoOk;
   return { result: { success, deliveredMb, survivedOrbits, score: Math.round(deliveredMb / 100) }, log };
 }
 

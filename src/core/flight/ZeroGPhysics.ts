@@ -95,8 +95,9 @@ export interface BallisticTrajectoryPreview {
 }
 
 /**
- * Якщо космонавт тримається за поручень біля самої стіни і випадково натягує рогатку
- * під кутом у стіну позаду себе, автоматично відбиваємо вектор від стіни всередину відсіку.
+ * Якщо стартова позиція перетинає внутрішню частину твердого сегмента стіни,
+ * відбиваємо лише компоненту швидкості, спрямовану вглиб стіни (dot(V, N) < 0).
+ * Відкриті прорізи шлюзів і сусідні стіни на безпечній дистанції не блокують приціл.
  */
 export function sanitizeLaunchVectorAgainstNearbyWalls(
   pos: { x: number; y: number },
@@ -118,16 +119,20 @@ export function sanitizeLaunchVectorAgainstNearbyWalls(
       wall.bx,
       wall.by,
     );
+    if (closest.t <= 0.001 || closest.t >= 0.999) {
+      continue;
+    }
     const dx = pos.x - closest.x;
     const dy = pos.y - closest.y;
     const dist = Math.hypot(dx, dy);
-    if (dist <= radius + 42) {
+    if (dist < radius) {
       const nx = dist > 1e-4 ? dx / dist : wall.normal.nx;
       const ny = dist > 1e-4 ? dy / dist : wall.normal.ny;
       const vn = vx * nx + vy * ny;
-      if (vn < -15) {
-        vx = vx - 1.9 * vn * nx;
-        vy = vy - 1.9 * vn * ny;
+      if (vn < 0) {
+        const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
+        vx = vx - (1 + e) * vn * nx;
+        vy = vy - (1 + e) * vn * ny;
       }
     }
   }
@@ -171,32 +176,34 @@ export function computeBallisticTrajectoryWithBounces(
     vx *= airFactor;
     vy *= airFactor;
 
-    // 1. Відбиття від восьмикутних стін та вантажних контейнерів
-    for (const wall of activeWalls) {
-      const closest = closestPointOnSegment(px, py, wall.ax, wall.ay, wall.bx, wall.by);
-      const dx = px - closest.x;
-      const dy = py - closest.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < radius) {
-        const nx = dist > 1e-4 ? dx / dist : wall.normal.nx;
-        const ny = dist > 1e-4 ? dy / dist : wall.normal.ny;
-        const overlap = radius - dist + 0.5;
-        px += nx * overlap;
-        py += ny * overlap;
+    // 1. Відбиття від восьмикутних стін та вантажних контейнерів (Clean Reflection)
+    for (let pass = 0; pass < 2; pass++) {
+      for (const wall of activeWalls) {
+        const closest = closestPointOnSegment(px, py, wall.ax, wall.ay, wall.bx, wall.by);
+        const dx = px - closest.x;
+        const dy = py - closest.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < radius) {
+          const nx = dist > 1e-4 ? dx / dist : wall.normal.nx;
+          const ny = dist > 1e-4 ? dy / dist : wall.normal.ny;
+          const penetrationDepth = radius - dist + 1e-3;
+          px += nx * penetrationDepth;
+          py += ny * penetrationDepth;
 
-        const vn = vx * nx + vy * ny;
-        if (vn < 0) {
-          const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
-          vx = (vx - 2 * vn * nx) * e;
-          vy = (vy - 2 * vn * ny) * e;
-          if (bouncePoints.length < 4) {
-            bouncePoints.push({ x: closest.x, y: closest.y });
+          const vn = vx * nx + vy * ny;
+          if (vn < 0) {
+            const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
+            vx = vx - (1 + e) * vn * nx;
+            vy = vy - (1 + e) * vn * ny;
+            if (pass === 0 && bouncePoints.length < 4) {
+              bouncePoints.push({ x: closest.x, y: closest.y });
+            }
           }
         }
       }
     }
 
-    // 2. Відбиття від круглих колон
+    // 2. Відбиття від круглих колон (Clean Reflection)
     for (const col of circleObstacles) {
       const dx = px - col.wx;
       const dy = py - col.wy;
@@ -205,14 +212,15 @@ export function computeBallisticTrajectoryWithBounces(
       if (dist < minDist) {
         const nx = dist > 1e-4 ? dx / dist : 1;
         const ny = dist > 1e-4 ? dy / dist : 0;
-        const overlap = minDist - dist + 0.5;
-        px += nx * overlap;
-        py += ny * overlap;
+        const penetrationDepth = minDist - dist + 1e-3;
+        px += nx * penetrationDepth;
+        py += ny * penetrationDepth;
 
         const vn = vx * nx + vy * ny;
         if (vn < 0) {
-          vx = (vx - 2 * vn * nx) * col.bounciness;
-          vy = (vy - 2 * vn * ny) * col.bounciness;
+          const e = col.bounciness;
+          vx = vx - (1 + e) * vn * nx;
+          vy = vy - (1 + e) * vn * ny;
           if (bouncePoints.length < 4) {
             bouncePoints.push({
               x: col.wx + nx * col.radius,
@@ -334,60 +342,62 @@ export function stepZeroGPhysics(
       }
     }
 
-    // 1. Колізії зі стінами восьмикутника та CARGO_BOX (Circle-to-Segment)
-    for (const wall of activeWalls) {
-      const closest = closestPointOnSegment(
-        pos.x,
-        pos.y,
-        wall.ax,
-        wall.ay,
-        wall.bx,
-        wall.by,
-      );
-      const dx = pos.x - closest.x;
-      const dy = pos.y - closest.y;
-      const dist = Math.hypot(dx, dy);
+    // 1. Колізії зі стінами восьмикутника та CARGO_BOX (Clean Reflection)
+    for (let pass = 0; pass < 2; pass++) {
+      for (const wall of activeWalls) {
+        const closest = closestPointOnSegment(
+          pos.x,
+          pos.y,
+          wall.ax,
+          wall.ay,
+          wall.bx,
+          wall.by,
+        );
+        const dx = pos.x - closest.x;
+        const dy = pos.y - closest.y;
+        const dist = Math.hypot(dx, dy);
 
-      if (dist < astronaut.radius) {
-        let nx = wall.normal.nx;
-        let ny = wall.normal.ny;
-        if (dist > 1e-4) {
-          nx = dx / dist;
-          ny = dy / dist;
-        }
-
-        const overlap = astronaut.radius - dist + 0.5;
-        pos = {
-          x: pos.x + nx * overlap,
-          y: pos.y + ny * overlap,
-        };
-
-        const vn = vel.vx * nx + vel.vy * ny;
-        if (vn < 0) {
-          const impactSpeed = Math.abs(vn);
-          if (impactSpeed > maxWallImpactSpeed) {
-            maxWallImpactSpeed = impactSpeed;
+        if (dist < astronaut.radius) {
+          let nx = wall.normal.nx;
+          let ny = wall.normal.ny;
+          if (dist > 1e-4) {
+            nx = dx / dist;
+            ny = dy / dist;
           }
 
-          const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
-          vel = {
-            vx: (vel.vx - 2 * vn * nx) * e,
-            vy: (vel.vy - 2 * vn * ny) * e,
+          const penetrationDepth = astronaut.radius - dist + 1e-3;
+          pos = {
+            x: pos.x + nx * penetrationDepth,
+            y: pos.y + ny * penetrationDepth,
           };
 
-          const tangentDot = vel.vx * -ny + vel.vy * nx;
-          angularVel = clamp(tangentDot * 0.015, -5.5, 5.5);
+          const vn = vel.vx * nx + vel.vy * ny;
+          if (vn < 0) {
+            const impactSpeed = Math.abs(vn);
+            if (impactSpeed > maxWallImpactSpeed) {
+              maxWallImpactSpeed = impactSpeed;
+            }
 
-          if (impactSpeed > PHYSICS_CONSTANTS.highSpeedStunThresholdPxS) {
-            state = "STUNNED";
-            stunTimer = PHYSICS_CONSTANTS.stunDurationS;
-            angularVel = (tangentDot >= 0 ? 1 : -1) * 6.2;
+            const e = wall.bounciness ?? PHYSICS_CONSTANTS.wallRestitution;
+            vel = {
+              vx: vel.vx - (1 + e) * vn * nx,
+              vy: vel.vy - (1 + e) * vn * ny,
+            };
+
+            const tangentDot = vel.vx * -ny + vel.vy * nx;
+            angularVel = clamp(tangentDot * 0.015, -5.5, 5.5);
+
+            if (impactSpeed > PHYSICS_CONSTANTS.highSpeedStunThresholdPxS) {
+              state = "STUNNED";
+              stunTimer = PHYSICS_CONSTANTS.stunDurationS;
+              angularVel = (tangentDot >= 0 ? 1 : -1) * 6.2;
+            }
           }
         }
       }
     }
 
-    // 2. Колізії з круглими колонами PILLAR_CIRCLE (Circle-to-Circle)
+    // 2. Колізії з круглими колонами PILLAR_CIRCLE (Clean Reflection)
     for (const col of circleObstacles) {
       const dx = pos.x - col.wx;
       const dy = pos.y - col.wy;
@@ -397,10 +407,10 @@ export function stepZeroGPhysics(
       if (dist < minDist) {
         const nx = dist > 1e-4 ? dx / dist : 1;
         const ny = dist > 1e-4 ? dy / dist : 0;
-        const overlap = minDist - dist + 0.5;
+        const penetrationDepth = minDist - dist + 1e-3;
         pos = {
-          x: pos.x + nx * overlap,
-          y: pos.y + ny * overlap,
+          x: pos.x + nx * penetrationDepth,
+          y: pos.y + ny * penetrationDepth,
         };
 
         const vn = vel.vx * nx + vel.vy * ny;
@@ -412,8 +422,8 @@ export function stepZeroGPhysics(
 
           const e = col.bounciness;
           vel = {
-            vx: (vel.vx - 2 * vn * nx) * e,
-            vy: (vel.vy - 2 * vn * ny) * e,
+            vx: vel.vx - (1 + e) * vn * nx,
+            vy: vel.vy - (1 + e) * vn * ny,
           };
 
           const tangentDot = vel.vx * -ny + vel.vy * nx;

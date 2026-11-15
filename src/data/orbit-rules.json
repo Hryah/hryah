@@ -1,0 +1,90 @@
+{
+  "epsilon": 1e-06,
+  "storm": {
+    "firstOrbit": 4,
+    "lastOrbit": 7,
+    "powerFactor": 0.5,
+    "linkFactor": 0.5
+  },
+  "cold": {
+    "lockStress": 2,
+    "maximumStress": 2,
+    "unheatedGain": 1,
+    "heatedRecovery": 1
+  },
+  "orbit": {
+    "lowToleranceFraction": 0.05,
+    "lowScoreFactor": 0.85
+  },
+  "score": {
+    "fullRateDivisorMb": 100,
+    "softTargetMultiplier": 2,
+    "minimumSoftTargetMb": 100,
+    "extraDivisorMb": 500,
+    "overflowDivisorMb": 500,
+    "failureDivisorMb": 200,
+    "resolutionWeight": 52,
+    "minimumResolutionM": 0.25,
+    "savedBudgetPointsPerMUsd": 1.8,
+    "commsMarginPoints": 14,
+    "cargoBasePoints": 100
+  },
+  "advice": {
+    "maxItems": 2,
+    "rules": [
+      {
+        "whenKeys": [
+          "orbit.cargo.invalidPayload"
+        ],
+        "messageKey": "orbit.advice.payload"
+      },
+      {
+        "whenKeys": [
+          "orbit.proto.orbitFailure"
+        ],
+        "messageKey": "orbit.advice.orbit"
+      },
+      {
+        "whenKeys": [
+          "campaign.lostInFlight",
+          "orbit.proto.arrivalFailure"
+        ],
+        "messageKey": "orbit.advice.flightDamage"
+      },
+      {
+        "whenKeys": [
+          "orbit.proto.powerFailure"
+        ],
+        "messageKey": "orbit.advice.power"
+      },
+      {
+        "whenKeys": [
+          "orbit.proto.cameraCold",
+          "orbit.clarity.unheatedShadow"
+        ],
+        "messageKey": "orbit.advice.heating"
+      },
+      {
+        "whenKeys": [
+          "orbit.proto.resolutionFailure"
+        ],
+        "messageKey": "orbit.advice.resolution"
+      },
+      {
+        "whenKeys": [
+          "orbit.flyby.noData",
+          "orbit.clarity.missedImaging"
+        ],
+        "messageKey": "orbit.advice.imaging"
+      },
+      {
+        "whenKeys": [
+          "orbit.proto.overflow",
+          "orbit.clarity.missedDownlink",
+          "orbit.cargo.reportMissed"
+        ],
+        "messageKey": "orbit.advice.downlink"
+      }
+    ]
+  }
+}

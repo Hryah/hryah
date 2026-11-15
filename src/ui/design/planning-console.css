@@ -23,8 +23,6 @@
   --c-status-ok: #4ecdc4;
   --c-status-warn: #ff9f1c;
   --c-status-bad: #ff6b6b;
-
-  --mc-sticky-offset: 136px;
 }
 
 .mc-app-backdrop {
@@ -96,48 +94,11 @@
   padding: 12px 14px;
 }
 
-.mc-sticky-bar {
-  position: sticky;
-  top: 8px;
-  z-index: 40;
-  background: var(--c-surface-strong);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--c-teal);
-  border-radius: 10px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% 100%,
-    14px 100%,
-    0 calc(100% - 14px)
-  );
-  padding: 10px 14px;
-  display: grid;
-  gap: 8px;
-}
-
-.mc-header-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
 .mc-active-agency {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-.mc-hud-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
 }
 
 .mc-stat-pill {
@@ -192,34 +153,6 @@
 .mc-agency-chip.is-launched {
   border-color: rgba(78, 205, 196, 0.55);
   color: var(--c-status-ok);
-}
-
-/* 3-Column Mission Control Grid */
-.mc-grid {
-  display: grid;
-  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr) minmax(310px, 360px);
-  gap: 16px;
-  align-items: start;
-}
-
-.mc-col-left {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-
-.mc-col-center {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-
-.mc-col-right {
-  position: sticky;
-  top: var(--mc-sticky-offset, 136px);
-  display: grid;
-  gap: 12px;
-  min-width: 0;
 }
 
 /* Tabs */
@@ -734,48 +667,6 @@
   font-size: 13px;
 }
 
-@media (min-width: 1200px) and (max-width: 1400px) {
-  .mc-shell {
-    --mc-sticky-offset: 156px;
-  }
-}
-
-/* Вкладки, крім проєктування (фабрика, наземний сегмент, технології, дослідження): центру потрібна ширина.
-   Центр займає дві колонки, а брифінг і кампанія переходять праворуч під перевірку проєкту. */
-@media (min-width: 1200px) {
-  .mc-grid.is-wide {
-    grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
-  }
-  .mc-grid.is-wide .mc-col-center {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-  .mc-grid.is-wide .mc-col-right {
-    grid-column: 2;
-    grid-row: 1;
-    position: static;
-  }
-  .mc-grid.is-wide .mc-col-left {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-/* Narrow viewports (<1200px): clean single column stack */
-@media (max-width: 1199px) {
-  .mc-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .mc-col-right {
-    position: static;
-  }
-
-  .mc-sticky-bar {
-    top: 0;
-  }
-}
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .mc-shell *,
@@ -791,4 +682,245 @@
     animation: none !important;
     transform: none !important;
   }
+}
+
+/* ───────── Пульт v2 (макет 1 Нікіти): шапка-статистика, ряди по дві картки ───────── */
+.mc-board {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 76px; /* місце під нижню панель запасів */
+}
+
+.mc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.mc-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  align-content: start;
+}
+
+.mc-card-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mc-card-title {
+  font-size: 20px;
+  color: var(--c-cream);
+  letter-spacing: 0.01em;
+}
+
+.mc-hero {
+  display: grid;
+  gap: 14px;
+  padding: 18px 22px;
+  background: var(--c-surface-strong);
+  border: 1px solid var(--c-teal);
+  border-radius: 14px;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+.mc-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.mc-hero-emblem {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--c-orange);
+  background: var(--c-surface-selected);
+  flex-shrink: 0;
+}
+
+.mc-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, auto));
+  gap: 10px 28px;
+}
+
+.mc-hero-stat {
+  display: grid;
+  gap: 2px;
+}
+
+.mc-hero-stat strong {
+  font-size: 20px;
+  color: var(--c-cream);
+}
+
+.mc-hero-stat strong.is-ok {
+  color: var(--c-status-ok);
+}
+
+.mc-hero-stat strong.is-accent {
+  color: var(--c-status-ok);
+}
+
+.mc-hero-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-orange);
+}
+
+.mc-hero-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--c-border-soft);
+  padding-top: 12px;
+}
+
+.mc-hero-tip {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border-soft);
+}
+
+.mc-hero-tip.is-ok {
+  color: var(--c-status-ok);
+  background: rgba(78, 205, 196, 0.08);
+}
+
+.mc-hero-tip.is-bad {
+  color: var(--c-status-bad);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.mc-agency-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-status-ok);
+  flex-shrink: 0;
+}
+
+.mc-agency-chip.is-active .mc-agency-dot {
+  background: var(--c-orange);
+}
+
+.mc-agency-chip.is-launched .mc-agency-dot {
+  background: var(--c-teal);
+}
+
+.mc-margins.is-2col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mc-margins.is-2col .mc-margin-row {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border-soft);
+  background: var(--c-surface-card);
+}
+
+.mc-launch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.mc-btn-launch,
+.mc-btn-launch-alt {
+  min-height: 48px;
+  font-size: 16px;
+  justify-content: center;
+}
+
+.mc-btn-launch {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Модулі однієї категорії: картки в рядок із прокруткою, щоб картка «пульта» не роздувалась. */
+.mc-board .mc-module-row {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .mc-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mc-hero-stats {
+    grid-template-columns: repeat(2, minmax(120px, auto));
+  }
+}
+
+@media (max-width: 640px) {
+  .mc-margins.is-2col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mc-launch-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Нижня панель запасів: видна, поки картка перевірки поза екраном. */
+.mc-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100% - 32px));
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--c-teal);
+  background: var(--c-surface-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.mc-dock-margins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mc-dock-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border-soft);
+}
+
+.mc-dock-chip.is-ok {
+  color: var(--c-status-ok);
+}
+
+.mc-dock-chip.is-bad {
+  color: var(--c-status-bad);
+  border-color: var(--c-status-bad);
+}
+
+/* Довгі назви модулів переносяться всередині картки. */
+.mc-module-card span,
+.mc-module-card div {
+  overflow-wrap: anywhere;
 }

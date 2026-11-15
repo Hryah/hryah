@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FlightResult, Mission, SpacecraftSpec } from "../../core/contracts";
+import type { FlightResult, Mission, MissionOutcome, SpacecraftSpec } from "../../core/contracts";
 import { MAX_ORBIT_ACTIONS, sanitizeFlight, type MissionReport } from "../../core/consortium";
 import { flightPhase } from "../../core/flight";
 import { orbitPhase, type OrbitAction } from "../../core/orbit";
 import { FlightScreen } from "../flight";
-import { OrbitPanel } from "../play/OrbitPanel";
-import { RetroToggle } from "../style/RetroStyle";
+import { OrbitPrototype } from "../orbit/OrbitPrototype";
+import "./campaign-orbit.css";
 import { fmt, t } from "../text";
 import { cardsEnabled, PhaseCard, useCardsEnabled, type SummaryRow } from "./PhaseCard";
 
@@ -18,7 +18,8 @@ const button = {
   color: "inherit", cursor: "pointer", fontSize: 15,
 } as const;
 const overlay = {
-  position: "fixed", right: 16, top: 16, zIndex: 1100, maxWidth: 360, gap: 8, display: "grid",
+  // Знизу ліворуч: правий верхній кут займає мінікарта станції, а внизу по центру — підказка керування.
+  position: "fixed", left: 16, bottom: 16, zIndex: 1100, maxWidth: 300, fontSize: 13, gap: 8, display: "grid",
   background: "rgba(20, 24, 41, 0.92)", border: `1px solid ${C.line}`, borderRadius: 12, padding: 12,
 } as const;
 
@@ -28,6 +29,7 @@ export interface MissionRunnerProps {
   spec: SpacecraftSpec;
   seeds: { flight: number; orbit: number };
   active: boolean;
+  windowNumber?: number;
   onReport: (report: MissionReport) => void;
 }
 
@@ -35,7 +37,7 @@ type Stage =
   | { kind: "flight" }
   | { kind: "orbit"; flight: FlightResult };
 
-export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, onReport }: MissionRunnerProps) {
+export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, windowNumber, onReport }: MissionRunnerProps) {
   // Місія й апарат за час одного запуску не змінюються; фіксуємо їх, щоб опитування кімнати не перераховувало орбіту.
   const [{ mission, spec }] = useState(() => ({ mission: missionProp, spec: specProp }));
   const [stage, setStage] = useState<Stage>({ kind: "flight" });
@@ -106,7 +108,8 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
         )}
         <div data-testid="campaign-flight-overlay" style={{ ...overlay, display: active ? "grid" : "none" }}>
           <strong>{t("ui.campaign.flightOf", { agency: agencyName })}</strong>
-          <div style={{ color: C.dim, fontSize: 13 }}>{t(lost ? "ui.play.lostFlightHint" : "ui.play.flightHint")}</div>
+          {/* Підказку керування й так показує нижня смуга польоту; тут лише пояснення втрати. */}
+          {lost && <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.lostFlightHint")}</div>}
           <div>
             <button
               disabled={sending}
@@ -119,8 +122,6 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
               {t(lost ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
             </button>
           </div>
-          {/* Політ перекриває шапку, тож перемикач стилю дублюємо тут. */}
-          <div><RetroToggle /></div>
         </div>
       </>
     );
@@ -148,42 +149,52 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
   if (done && ((cardsOn && !sending) || viaCard)) {
     if (!active) return null;
     const outcome = orbitPhase.finish(orbit).result;
-    const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
     return (
       <PhaseCard
         id="report" step={{ n: 4, total: 4 }} busy={sending} action={t("ui.campaign.sendReport")} onContinue={() => { setViaCard(true); send(); }}
-        summary={[
-          { label: t("ui.card.row.status"), value: t(outcome.success ? "ui.card.success" : "ui.card.failure"), tone: outcome.success ? "ok" : "bad" },
-          cargo
-            ? { label: t("ui.card.row.supplied"), value: `${fmt(share, 0)}%` }
-            : { label: t("ui.card.row.delivered"), value: `${fmt(outcome.deliveredMb, 0)} / ${fmt(mission.requiredDataMb, 0)} Mb` },
-          { label: t("ui.card.row.survived"), value: `${outcome.survivedOrbits} / ${mission.durationOrbits}` },
-          { label: t("ui.card.row.score"), value: fmt(outcome.score, 0) },
-        ]}
+        summary={orbitReportSummary(mission, outcome)}
       />
     );
   }
+  if (!active) return null;
+  // Повний екран орбіти Нікіти (як #orbit) на весь екран, як і політ. Дії йдуть у звіт: кімната перерахує ту саму орбіту.
+  // Звіт приймає не більше MAX_ORBIT_ACTIONS дій: далі решта витків іде автопілотом у кімнаті.
+  const full = !done && orbitActions.length >= MAX_ORBIT_ACTIONS;
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 10 }} data-testid="campaign-orbit">
-      <h2 style={{ margin: 0 }}>{t("ui.campaign.orbitOf", { agency: agencyName })}</h2>
-      <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-      {/* Звіт приймає не більше MAX_ORBIT_ACTIONS дій: далі решта витків іде автопілотом у кімнаті. */}
-      <OrbitPanel state={orbit} dispatch={(a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a]))} />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <button
-          style={{ ...button, borderColor: done ? C.ok : C.line }}
-          disabled={sending}
-          onClick={send}
-        >
-          📡 {t(done ? "ui.campaign.sendReport" : "ui.campaign.sendEarly")}
-        </button>
-        {!done && <span style={{ color: C.dim, fontSize: 13 }}>{t("ui.campaign.sendEarlyHint")}</span>}
-        {!done && orbitActions.length >= MAX_ORBIT_ACTIONS && (
-          <span role="status" style={{ color: C.bad, fontSize: 13 }}>{t("ui.campaign.actionsFull", { n: MAX_ORBIT_ACTIONS })}</span>
-        )}
-      </div>
+    <div className="campaign-orbit-screen" data-testid="campaign-orbit">
+      <OrbitPrototype
+        campaign={{
+          state: orbit,
+          windowNumber,
+          craftName: agencyName,
+          locked: full,
+          onAction: (a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a])),
+          footer: (
+            <div style={{ display: "grid", gap: 4, justifyItems: "end" }}>
+              <button className={done ? "advance-button" : "undo-button"} disabled={sending} onClick={send}>
+                📡 {t(done ? "ui.campaign.sendReport" : "ui.campaign.sendEarly")}
+              </button>
+              {full && <span role="status" style={{ color: C.bad, fontSize: 12 }}>{t("ui.campaign.actionsFull", { n: MAX_ORBIT_ACTIONS })}</span>}
+            </div>
+          ),
+        }}
+      />
     </div>
   );
+}
+
+export function orbitReportSummary(mission: Mission, outcome: MissionOutcome): SummaryRow[] {
+  const share = mission.requiredDataMb > 0 ? Math.min(999, (outcome.deliveredMb / mission.requiredDataMb) * 100) : 0;
+  const deliveryPercent = outcome.orbitSummary ? outcome.orbitSummary.cargoDelivered ? 100 : 0 : share;
+  return [
+    { label: t("ui.card.row.status"), value: t(outcome.success ? "ui.card.success" : "ui.card.failure"), tone: outcome.success ? "ok" : "bad" },
+    mission.kind === "cargo"
+      ? { label: t("ui.card.row.supplied"), value: `${fmt(deliveryPercent, 0)}%` }
+      : { label: t("ui.card.row.delivered"), value: outcome.orbitSummary?.objectiveType === "flyby"
+        ? `${fmt(outcome.deliveredMb, 0)} Mb` : `${fmt(outcome.deliveredMb, 0)} / ${fmt(mission.requiredDataMb, 0)} Mb` },
+    { label: t("ui.card.row.survived"), value: `${outcome.survivedOrbits} / ${mission.durationOrbits}` },
+    { label: t("ui.card.row.score"), value: fmt(outcome.score, 0) },
+  ];
 }
 
 function launchSummary(mission: Mission, spec: SpacecraftSpec): SummaryRow[] {

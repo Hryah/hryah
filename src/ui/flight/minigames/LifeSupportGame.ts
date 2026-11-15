@@ -8,6 +8,11 @@ import {
   LS_TRASH_POS,
 } from "../../../core/flight";
 import { flightAssetCache } from "../render/TemplateAssetCache";
+import { drawFittedText } from "./textFit";
+
+const ESC_BTN = { x: 800 - 104 - 24, y: 11, w: 104, h: 30 };
+const O2_BUTTON_POS = { x: LS_O2_BUTTON_POS.x + 26, y: LS_O2_BUTTON_POS.y };
+const O2_BUTTON_RADIUS = 44;
 
 export class LifeSupportGame {
   private dragMode: "RED_FILTER" | "GREEN_FILTER" | "AMMONIA_VALVE" | "O2_VALVE" | null = null;
@@ -51,8 +56,13 @@ export class LifeSupportGame {
   ): void {
     const { lx, ly } = this.toLocal(sx, sy, viewportW, viewportH);
 
-    // Кнопка [ESC]
-    if (lx >= 700 && lx <= 786 && ly >= 10 && ly <= 42) {
+    // Кнопка [ESC] (відступ 24px від правого краю)
+    if (
+      lx >= ESC_BTN.x - 2 &&
+      lx <= ESC_BTN.x + ESC_BTN.w + 2 &&
+      ly >= ESC_BTN.y - 2 &&
+      ly <= ESC_BTN.y + ESC_BTN.h + 2
+    ) {
       this.resetInput();
       dispatch({ type: "close_minigame" });
       return;
@@ -92,7 +102,8 @@ export class LifeSupportGame {
 
     // Перевірка клапана нагнітання O2 (Крок 3: затиснути і відпустити в 70-85 кПа)
     if (
-      Math.hypot(lx - LS_O2_BUTTON_POS.x, ly - LS_O2_BUTTON_POS.y) <= 58
+      Math.hypot(lx - O2_BUTTON_POS.x, ly - O2_BUTTON_POS.y) <=
+      O2_BUTTON_RADIUS + 14
     ) {
       this.dragMode = "O2_VALVE";
       dispatch({ type: "ls_hold_o2", held: true });
@@ -206,27 +217,31 @@ export class LifeSupportGame {
     ctx.roundRect(3, 3, 794, 46, [12, 12, 0, 0]);
     ctx.fill();
 
-    ctx.fillStyle = "#fdba74";
-    ctx.font = "700 15px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(
-      `ІНЖЕНЕРНИЙ ЩИТ СЖЗ ТА ТЕРМОКОНТУРУ [${mg.terminalId}]`,
+    drawFittedText(
+      ctx,
+      `ECLSS & THERMAL CONTROL PANEL [${mg.terminalId}]`,
       18,
       31,
+      ESC_BTN.x - 54,
+      { fontSize: 15, minFontSize: 11, color: "#fdba74" },
     );
 
-    // Кнопка [ESC]
+    // Кнопка [ESC] з відступом 24px від правого краю
     ctx.fillStyle = "#2b364f";
     ctx.strokeStyle = "#fdba74";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(704, 11, 80, 30, 6);
+    ctx.roundRect(ESC_BTN.x, ESC_BTN.y, ESC_BTN.w, ESC_BTN.h, 6);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("[ESC] Вихід", 744, 30);
+    drawFittedText(
+      ctx,
+      "[ESC] Exit",
+      ESC_BTN.x + ESC_BTN.w * 0.5,
+      ESC_BTN.y + 19,
+      ESC_BTN.w - 12,
+      { fontSize: 12, minFontSize: 10, align: "center", color: "#ffffff" },
+    );
 
     // 3 магістральні труби щита
     ctx.strokeStyle = "#334155";
@@ -274,10 +289,12 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("1. ЗАМІНА CO₂-ФІЛЬТРА", 151, 92);
+    drawFittedText(ctx, "1. REPLACE CO₂ FILTER", 151, 92, 219, {
+      fontSize: 12,
+      minFontSize: 10,
+      align: "center",
+      color: "#cbd5e1",
+    });
 
     // Паз фільтра
     ctx.fillStyle = "#162033";
@@ -287,9 +304,13 @@ export class LifeSupportGame {
     ctx.roundRect(LS_SLOT_POS.x - 42, LS_SLOT_POS.y - 52, 84, 104, 8);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "10px monospace";
-    ctx.fillText("ПАЗ ФІЛЬТРА", LS_SLOT_POS.x, LS_SLOT_POS.y - 60);
+    drawFittedText(ctx, "FILTER SLOT", LS_SLOT_POS.x, LS_SLOT_POS.y - 60, 120, {
+      fontWeight: 600,
+      fontSize: 10,
+      minFontSize: 8.5,
+      align: "center",
+      color: "#94a3b8",
+    });
 
     // Сміттєвий шлюз
     ctx.fillStyle = "#1f1218";
@@ -298,8 +319,13 @@ export class LifeSupportGame {
     ctx.roundRect(LS_TRASH_POS.x - 46, LS_TRASH_POS.y - 44, 92, 88, 8);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#fca5a5";
-    ctx.fillText("СМІТТЄВИЙ ШЛЮЗ", LS_TRASH_POS.x, LS_TRASH_POS.y + 58);
+    drawFittedText(ctx, "WASTE CHUTE", LS_TRASH_POS.x, LS_TRASH_POS.y + 58, 120, {
+      fontWeight: 600,
+      fontSize: 10,
+      minFontSize: 8.5,
+      align: "center",
+      color: "#fca5a5",
+    });
 
     // Новий зелений фільтр
     ctx.fillStyle = "#14532d";
@@ -326,22 +352,30 @@ export class LifeSupportGame {
       ctx.restore();
     }
 
-    // 2D SVG телеметричний датчик СЖЗ у шапці щита (assets/templates/design/ant-m.svg)
+    // 2D SVG телеметричний датчик СЖЗ у шапці щита ліворуч від [ESC]
     const sensorImg = flightAssetCache.getImage(
       "assets/templates/design/ant-m.svg",
     );
     if (sensorImg) {
       ctx.save();
-      ctx.translate(670, 26);
+      ctx.translate(ESC_BTN.x - 24, 26);
       ctx.rotate(Math.sin(timeElapsedS * 1.6) * 0.25);
-      ctx.drawImage(sensorImg, -16, -16, 32, 32);
+      ctx.drawImage(sensorImg, -14, -14, 28, 28);
       ctx.restore();
     }
 
-    ctx.fillStyle = "#dcfce7";
-    ctx.font = "700 10px monospace";
-    ctx.fillText("НОВИЙ", mg.greenFilterPos.x, mg.greenFilterPos.y - 4);
-    ctx.fillText("CO₂", mg.greenFilterPos.x, mg.greenFilterPos.y + 12);
+    drawFittedText(ctx, "NEW", mg.greenFilterPos.x, mg.greenFilterPos.y - 4, 54, {
+      fontSize: 10,
+      minFontSize: 8.5,
+      align: "center",
+      color: "#dcfce7",
+    });
+    drawFittedText(ctx, "CO₂", mg.greenFilterPos.x, mg.greenFilterPos.y + 12, 54, {
+      fontSize: 10,
+      minFontSize: 8.5,
+      align: "center",
+      color: "#dcfce7",
+    });
 
     // Відпрацьований червоний фільтр
     if (!mg.redFilterTrashed) {
@@ -352,9 +386,18 @@ export class LifeSupportGame {
       ctx.roundRect(mg.redFilterPos.x - 32, mg.redFilterPos.y - 42, 64, 84, 8);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#fee2e2";
-      ctx.fillText("СТАРИЙ", mg.redFilterPos.x, mg.redFilterPos.y - 4);
-      ctx.fillText("У ШЛЮЗ ↓", mg.redFilterPos.x, mg.redFilterPos.y + 12);
+      drawFittedText(ctx, "OLD", mg.redFilterPos.x, mg.redFilterPos.y - 4, 54, {
+        fontSize: 10,
+        minFontSize: 8.5,
+        align: "center",
+        color: "#fee2e2",
+      });
+      drawFittedText(ctx, "TO CHUTE ↓", mg.redFilterPos.x, mg.redFilterPos.y + 12, 54, {
+        fontSize: 10,
+        minFontSize: 8.5,
+        align: "center",
+        color: "#fee2e2",
+      });
     }
 
     // === СЕКЦІЯ 2: ВЕНТИЛЬ СКИДАННЯ АМІАКУ (360° DRAG) ===
@@ -366,9 +409,12 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = "700 12px monospace";
-    ctx.fillText("2. ВЕНТИЛЬ АМІАКУ (360°)", 422, 92);
+    drawFittedText(ctx, "2. AMMONIA VALVE (360°)", 422, 92, 219, {
+      fontSize: 12,
+      minFontSize: 10,
+      align: "center",
+      color: "#cbd5e1",
+    });
 
     const vCx = LS_AMMONIA_VALVE_POS.x;
     const vCy = LS_AMMONIA_VALVE_POS.y;
@@ -412,14 +458,20 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = mg.ammoniaFlushed ? "#3ddc84" : "#fdba74";
-    ctx.font = "700 12px monospace";
-    ctx.fillText(
+    drawFittedText(
+      ctx,
       mg.ammoniaFlushed
-        ? "✓ КОНТУР ПРОКАЧАНО (360°)"
-        : `Обертай мишею по колу: ${Math.round(mg.ammoniaValveDeg)}° / 360°`,
+        ? "✓ LOOP FLUSHED (360°)"
+        : `Turn wheel: ${Math.round(mg.ammoniaValveDeg)}° / 360°`,
       vCx,
       vCy + 115,
+      219,
+      {
+        fontSize: 12,
+        minFontSize: 9.5,
+        align: "center",
+        color: mg.ammoniaFlushed ? "#3ddc84" : "#fdba74",
+      },
     );
 
     // === СЕКЦІЯ 3: АНАЛОГОВИЙ МАНОМЕТР ТА КЛАПАН O2 (70–85 кПа) ===
@@ -431,9 +483,12 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = "700 12px monospace";
-    ctx.fillText("3. ТИСК O₂ (70–85 кПа)", 671, 92);
+    drawFittedText(ctx, "3. O₂ PRESSURE (70–85 kPa)", 671, 92, 174, {
+      fontSize: 12,
+      minFontSize: 9.5,
+      align: "center",
+      color: "#cbd5e1",
+    });
 
     // Циферблат аналогового манометра
     const mCx = LS_MANOMETER_POS.x + 26;
@@ -479,13 +534,18 @@ export class LifeSupportGame {
     );
     ctx.stroke();
 
-    ctx.fillStyle = "#e2e8f0";
-    ctx.font = "700 13px monospace";
-    ctx.fillText(`${Math.round(mg.pressureKpa)} кПа`, mCx, mCy + 36);
+    drawFittedText(
+      ctx,
+      `${Math.round(mg.pressureKpa)} kPa`,
+      mCx,
+      mCy + 36,
+      110,
+      { fontSize: 13, minFontSize: 10, align: "center", color: "#e2e8f0" },
+    );
 
     // Клапан-кнопка нагнітання O2
-    const btnX = LS_O2_BUTTON_POS.x + 26;
-    const btnY = LS_O2_BUTTON_POS.y;
+    const btnX = O2_BUTTON_POS.x;
+    const btnY = O2_BUTTON_POS.y;
     ctx.fillStyle = mg.pressureLocked
       ? "#14532d"
       : mg.o2ValveHeld
@@ -498,29 +558,47 @@ export class LifeSupportGame {
         : "#38bdf8";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(btnX, btnY, 44, 0, Math.PI * 2);
+    ctx.arc(btnX, btnY, O2_BUTTON_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 11px monospace";
-    ctx.fillText(
+    drawFittedText(
+      ctx,
       mg.pressureLocked
-        ? "✓ ЗАФІКСОВАНО"
+        ? "✓ DONE"
         : mg.o2ValveHeld
-          ? "ВІДПУСТИ В 70–85!"
-          : "ЗАТИСНИ КЛАПАН O₂",
+          ? "RELEASE!"
+          : "HOLD O₂",
       btnX,
       btnY + 4,
+      74,
+      { fontSize: 11, minFontSize: 8.5, align: "center", color: "#ffffff" },
     );
 
     if (mg.reliefValvePoppedTimerS > 0) {
-      ctx.fillStyle = "#ff4766";
-      ctx.fillText("✗ СКИДАННЯ >90 кПа!", btnX, btnY + 66);
+      drawFittedText(
+        ctx,
+        "✗ VENTED >90 kPa!",
+        btnX,
+        btnY + 66,
+        174,
+        { fontSize: 11, minFontSize: 9, align: "center", color: "#ff4766" },
+      );
     } else if (!mg.greenFilterInstalled || !mg.ammoniaFlushed) {
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "10px monospace";
-      ctx.fillText("Спочатку виконай кроки 1 і 2", btnX, btnY + 66);
+      drawFittedText(
+        ctx,
+        "Complete steps 1 & 2 first",
+        btnX,
+        btnY + 66,
+        174,
+        {
+          fontWeight: 600,
+          fontSize: 10,
+          minFontSize: 8.5,
+          align: "center",
+          color: "#94a3b8",
+        },
+      );
     }
 
     ctx.restore();

@@ -9,7 +9,6 @@ import { FlightScreen } from "../flight";
 import { resolveAssetUrl } from "../graphics/registry";
 import { OrbitPanel } from "./OrbitPanel";
 import { fmt, t } from "../text";
-import { RetroToggle } from "../style/RetroStyle";
 
 // Наскрізна гра для одного гравця: проєктування → політ → орбіта → розбір. Екран лише показує стан
 // core/game і шле дії; перехід між частинами робить сама склейка в core/game.ts, коли частина завершується.
@@ -24,7 +23,8 @@ const button = {
 } as const;
 
 const overlay = {
-  position: "fixed", right: 16, top: 16, zIndex: 1100, maxWidth: 360, gap: 8,
+  // Знизу ліворуч: правий верхній кут займає мінікарта станції, а внизу по центру — підказка керування.
+  position: "fixed", left: 16, bottom: 16, zIndex: 1100, maxWidth: 300, fontSize: 13, gap: 8,
   background: "rgba(20, 24, 41, 0.92)", border: `1px solid ${C.line}`, borderRadius: 12, padding: 12,
 } as const;
 
@@ -84,14 +84,13 @@ export function PlayScreen({ game, setGame, active }: Props) {
           {/* Екран польоту займає весь вікно (fixed, z-index 1000), тож наша панель лежить над ним. */}
           <div data-testid="flight-overlay" style={{ ...overlay, display: active ? "grid" : "none" }}>
             {stepper}
-            <div style={{ color: C.dim, fontSize: 13 }}>{t(game.flight.gameMode === "GAME_OVER" ? "ui.play.lostFlightHint" : "ui.play.flightHint")}</div>
+            {/* Підказку керування й так показує нижня смуга польоту; тут лише пояснення втрати. */}
+            {game.flight.gameMode === "GAME_OVER" && <div style={{ color: C.dim, fontSize: 13 }}>{t("ui.play.lostFlightHint")}</div>}
             <div>
               <button style={button} onClick={() => dispatch({ phase: "flight", action: { type: "complete_phase" } })}>
                 {t(game.flight.gameMode === "GAME_OVER" ? "ui.play.finishLostFlight" : "ui.play.skipFlight")}
               </button>
             </div>
-            {/* Політ перекриває шапку, тож перемикач стилю дублюємо тут. */}
-            <div><RetroToggle /></div>
           </div>
         </>
       );
