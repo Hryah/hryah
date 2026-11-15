@@ -261,7 +261,7 @@
       420
     ],
     "requiredResolutionM": 1000000,
-    "requiredDataMb": 1,
+    "requiredDataMb": 0,
     "durationOrbits": 6,
     "imagingSPerOrbit": 300,
     "passSPerOrbit": 480,
@@ -391,7 +391,7 @@
       420
     ],
     "requiredResolutionM": 1000000,
-    "requiredDataMb": 1,
+    "requiredDataMb": 0,
     "durationOrbits": 6,
     "imagingSPerOrbit": 300,
     "passSPerOrbit": 480,

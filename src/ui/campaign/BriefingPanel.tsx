@@ -1,4 +1,4 @@
-import { agencyAfterEvents, failureChance, SCENARIOS, trlOf, type ConsortiumState } from "../../core/consortium";
+import { agencyAfterEvents, failureChance, reputationGrantFactor, SCENARIOS, trlOf, type ConsortiumState } from "../../core/consortium";
 import { designPhase, SLOTS } from "../../core/design";
 import { fmt, t } from "../text";
 
@@ -38,7 +38,7 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   lines.push({ text: t("ui.brief.funds", { funds: fmt(account.fundsMUsd), research: account.researchPts }) });
   if ((account.reputation ?? 0) !== 0) {
     const rep = account.reputation ?? 0;
-    const pct = Math.round((Math.min(1.5, Math.max(0.5, 1 + 0.1 * rep)) - 1) * 100);
+    const pct = Math.round((reputationGrantFactor(rep) - 1) * 100);
     lines.push({ text: t("ui.brief.reputation", { rep: rep > 0 ? `+${rep}` : rep, percent: pct > 0 ? `+${pct}` : pct }), color: rep > 0 ? undefined : C.bad });
   }
   if ((campaign.config.gapTurns ?? 0) > 0 && campaign.round + 1 < campaign.config.rounds) {

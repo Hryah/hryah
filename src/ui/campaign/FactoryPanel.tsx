@@ -43,7 +43,9 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
     setBaseId(entry.design.input.catalog.modules.find((m) => m.slot === l.slot && !m.id.startsWith("fab-") && !m.id.startsWith("custom-"))?.id ?? "");
   };
   const safeDeposit = deposits.includes(depositId) ? depositId : deposits[0]!;
-  const order: FactoryOrder = { line: lineId, depositId: safeDeposit, steps, baseModuleId: baseId };
+  // Обраний модуль міг зникнути з каталогу (зрив постачальника): тоді беремо перший доступний.
+  const safeBaseId = bases.some((m) => m.id === baseId) ? baseId : bases[0]?.id ?? "";
+  const order: FactoryOrder = { line: lineId, depositId: safeDeposit, steps, baseModuleId: safeBaseId };
   const plan = planBatch(entry.agency, factory, order, turn, entry.design.input.catalog.modules);
   const expected = expectedQuality(entry.agency, factory, order, turn);
   const known = knownFlaws(factory, lineId, safeDeposit, turn);
@@ -124,7 +126,7 @@ export function FactoryPanel({ entry, turn, dispatch }: { entry: AgencyEntry; tu
         {ARROW}
         <div style={{ display: "grid", gap: 6, alignContent: "start" }}>
           <div style={{ color: C.dim, fontSize: 12 }}>{t("ui.factory.product")}</div>
-          <select value={baseId} onChange={(e) => setBaseId(e.target.value)} aria-label={t("ui.factory.product")}>
+          <select value={safeBaseId} onChange={(e) => setBaseId(e.target.value)} aria-label={t("ui.factory.product")}>
             {bases.map((m) => <option key={m.id} value={m.id}>{t(m.nameKey)}</option>)}
           </select>
           {plan.batch && (
