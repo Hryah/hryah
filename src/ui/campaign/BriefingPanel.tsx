@@ -7,7 +7,8 @@ import { fmt, t } from "../text";
 
 const C = { panel: "#17203a", line: "#2a2f4a", dim: "#8a90a8", gold: "#ffd166", bad: "#ff5c7a", accent: "#5ca8ff" };
 
-export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; agencyId: string }) {
+// testId відрізняє копію брифінгу у вікні старту від панелі на сторінці.
+export function BriefingPanel({ state, agencyId, testId = "briefing" }: { state: ConsortiumState; agencyId: string; testId?: string }) {
   const campaign = state.campaign;
   const entry = state.agencies.find((e) => e.agency.id === agencyId);
   const account = entry?.account;
@@ -72,7 +73,7 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   if (scenario?.def.analogKey) lines.push({ text: t("ui.brief.analog", { analog: t(scenario.def.analogKey) }), color: C.dim });
 
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 6, borderLeft: `3px solid ${C.accent}` }} data-testid="briefing">
+    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 6, borderLeft: `3px solid ${C.accent}` }} data-testid={testId}>
       <strong>📋 {t("ui.brief.title")}</strong>
       {lines.map((l, i) => <div key={i} style={{ fontSize: 14, color: l.color ?? "inherit" }}>{l.text}</div>)}
     </div>
