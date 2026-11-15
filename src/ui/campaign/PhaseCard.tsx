@@ -19,13 +19,17 @@ const artFor = (id: PhaseCardId) => ART[id] ?? ART[ART_FALLBACK[id] ?? id];
 
 export interface SummaryRow { label: string; value: string; tone?: "ok" | "bad" | "gold" }
 
-// Чи показувати вікна взагалі (гравець може вимкнути, вибір зберігається).
+// Чи показувати вікна взагалі (гравець може вимкнути, вибір зберігається). Значення тримаємо й у пам'яті:
+// без localStorage (приватний режим, переповнення) вимкнення все одно діє до перезавантаження.
+let enabled: boolean | null = null;
 export function cardsEnabled(): boolean {
-  return load<unknown>(KEY) !== false;
+  if (enabled === null) enabled = load<unknown>(KEY) !== false;
+  return enabled;
 }
 // Спільний стан для всіх компонентів: галочка у вікні й кнопка під панеллю кампанії бачать одне й те саме.
 const listeners = new Set<() => void>();
 export function setCardsEnabled(on: boolean) {
+  enabled = on;
   save(KEY, on);
   listeners.forEach((l) => l());
 }
@@ -97,8 +101,8 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
 
           {summary.length > 0 && (
             <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 16px", background: C.bg, borderRadius: 10, padding: 12, fontSize: 14 }}>
-              {summary.map((r) => (
-                <div key={r.label} style={{ display: "contents" }}>
+              {summary.map((r, i) => (
+                <div key={i} style={{ display: "contents" }}>
                   <dt style={{ color: C.dim }}>{r.label}</dt>
                   <dd style={{ margin: 0, textAlign: "right", fontWeight: 600, color: tone(r) }}>{r.value}</dd>
                 </div>

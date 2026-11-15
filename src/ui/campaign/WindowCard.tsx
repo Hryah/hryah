@@ -10,11 +10,19 @@ import { PhaseCard, useCardsEnabled, type SummaryRow } from "./PhaseCard";
 
 const SEEN_KEY = "phaseCardsSeen";
 const SEEN_LIMIT = 64;
+// Кеш у пам'яті, ініціалізований зі сховища: без localStorage вікно все одно закривається.
+let seen: string[] | null = null;
 const seenList = (): string[] => {
-  const v = load<unknown>(SEEN_KEY);
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  if (seen === null) {
+    const v = load<unknown>(SEEN_KEY);
+    seen = Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  }
+  return seen;
 };
-const markSeen = (key: string) => save(SEEN_KEY, [...seenList().filter((k) => k !== key), key].slice(-SEEN_LIMIT));
+const markSeen = (key: string) => {
+  seen = [...seenList().filter((k) => k !== key), key].slice(-SEEN_LIMIT);
+  save(SEEN_KEY, seen);
+};
 
 export function WindowCard({ state, agencyId }: { state: ConsortiumState; agencyId: string }) {
   const campaign = state.campaign;
@@ -40,7 +48,7 @@ export function WindowCard({ state, agencyId }: { state: ConsortiumState; agency
     <PhaseCard
       id="window" step={{ n: 1, total: 4 }} summary={summary} vars={{ turns }}
       title={t("ui.card.window.title", { n: campaign.round + 1, total: campaign.config.rounds, agency: t(entry.agency.nameKey) })}
-      extra={<BriefingPanel state={state} agencyId={agencyId} />}
+      extra={<BriefingPanel state={state} agencyId={agencyId} testId="briefing-card" />}
       onContinue={() => { markSeen(key); rerender((n) => n + 1); }}
     />
   );
