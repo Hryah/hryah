@@ -133,21 +133,40 @@ function Menu({
   };
   const named = name.trim().length > 0;
   return (
-    <div className="mc-panel" style={{ display: "grid", gap: 14, maxWidth: 760 }} data-testid="menu">
-      <h2 style={{ margin: 0, color: "var(--c-cream)" }}>{t("ui.menu.title")}</h2>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <button type="button" className="mc-btn mc-btn-primary" onClick={onSolo}>
-          {t("ui.menu.solo")}
-        </button>
-        <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.soloHint")}</span>
+    <div className="mc-panel" style={{ display: "grid", gap: 18, maxWidth: 1100 }} data-testid="menu">
+      {/* Вітання: що це за гра й що тут обирати (прохання Ашота). */}
+      <div style={{ display: "grid", gap: 8 }}>
+        <span className="mc-label">{t("ui.menu.title")}</span>
+        <h2 style={{ margin: 0, color: "var(--c-cream)", fontSize: 28 }}>{t("ui.menu.welcome")}</h2>
+        <p style={{ margin: 0, color: "var(--c-text-muted)", fontSize: 15, lineHeight: 1.5, maxWidth: 820 }}>{t("ui.menu.pitch")}</p>
+        <ol style={{ margin: "4px 0 0", paddingLeft: 20, color: "var(--c-text-muted)", fontSize: 14, lineHeight: 1.6, display: "grid", gap: 2 }}>
+          <li>{t("ui.menu.loop1")}</li>
+          <li>{t("ui.menu.loop2")}</li>
+          <li>{t("ui.menu.loop3")}</li>
+          <li>{t("ui.menu.loop4")}</li>
+        </ol>
       </div>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <button type="button" className="mc-btn" onClick={onLocal}>
-          {t("ui.menu.local")}
-        </button>
-        <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.localHint")}</span>
-      </div>
-      <hr style={{ borderColor: "var(--c-border-soft)", width: "100%", margin: "2px 0" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+        <div className="mc-panel" style={{ display: "grid", gap: 8, alignContent: "space-between" }}>
+          <div style={{ display: "grid", gap: 4 }}>
+            <strong style={{ color: "var(--c-cream)", fontSize: 16 }}>🚀 {t("ui.menu.solo")}</strong>
+            <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.soloHint")}</span>
+          </div>
+          <button type="button" className="mc-btn mc-btn-primary" onClick={onSolo}>
+            {t("ui.menu.solo")}
+          </button>
+        </div>
+        <div className="mc-panel" style={{ display: "grid", gap: 8, alignContent: "space-between" }}>
+          <div style={{ display: "grid", gap: 4 }}>
+            <strong style={{ color: "var(--c-cream)", fontSize: 16 }}>👥 {t("ui.menu.local")}</strong>
+            <span style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.localHint")}</span>
+          </div>
+          <button type="button" className="mc-btn" onClick={onLocal}>
+            {t("ui.menu.local")}
+          </button>
+        </div>
+        <div className="mc-panel" style={{ display: "grid", gap: 8, alignContent: "start" }}>
+          <strong style={{ color: "var(--c-cream)", fontSize: 16 }}>🌐 {t("ui.menu.online")}</strong>
       <div style={{ color: "var(--c-text-muted)", fontSize: 13 }}>{t("ui.menu.onlineHint")}</div>
       <form
         style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
@@ -187,6 +206,8 @@ function Menu({
           {t("ui.menu.join")}
         </button>
       </form>
+        </div>
+      </div>
       {notice && <div style={{ color: "var(--c-orange)", fontSize: 13 }}>{notice}</div>}
       {error && <div className="mc-alert-bad">{t("ui.menu.error", { error })}</div>}
     </div>

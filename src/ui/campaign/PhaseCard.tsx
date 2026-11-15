@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { resolveAssetUrl } from "../graphics";
 import { load, save } from "../../storage";
 import { t } from "../text";
+import "./phase-card.css";
 
 // Інформаційне вікно між фазами кампанії: що щойно сталося, що робити далі і навіщо так роблять справжні місії.
 // Один шаблон на всі переходи: текст бере з ключів `ui.card.<id>.*`, підсумок (рядки «назва — значення») передає виклик.
@@ -59,10 +60,37 @@ interface Props {
   vars?: Record<string, string | number>;
   action?: string;          // підпис кнопки; за замовчуванням «Далі»
   busy?: boolean;
+  // Вікно як повідомлення від персонажа (директор місії): рядок відправника з портретом над заголовком.
+  sender?: { name: string; role: string };
   onContinue: () => void;
 }
 
-export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, busy = false, onContinue }: Props) {
+// Портрет директора місії (1:1, PNG з прозорістю). Вписати шлях, коли художники здадуть файл; до того — монограма.
+const DIRECTOR_PORTRAIT: string | null = null;
+
+function SenderLine({ name, role }: { name: string; role: string }) {
+  const [ok, setOk] = useState(true);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, background: C.bg, border: `1px solid ${C.line}` }}>
+      {DIRECTOR_PORTRAIT && ok ? (
+        <img src={resolveAssetUrl(DIRECTOR_PORTRAIT)} alt="" width={52} height={52} onError={() => setOk(false)} style={{ borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.gold}` }} />
+      ) : (
+        <div aria-hidden="true" style={{ width: 52, height: 52, borderRadius: "50%", display: "grid", placeItems: "center", background: "#2a2140", border: `2px solid ${C.gold}`, color: C.gold, fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
+          MD
+        </div>
+      )}
+      <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+        <div style={{ color: C.gold, fontSize: 11, letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" }}>
+          <span className="phase-card-blink" aria-hidden="true">●</span> {t("ui.card.incoming")}
+        </div>
+        <strong style={{ fontSize: 16 }}>{name}</strong>
+        <span style={{ color: C.dim, fontSize: 13 }}>{role}</span>
+      </div>
+    </div>
+  );
+}
+
+export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, busy = false, sender, onContinue }: Props) {
   const art = artFor(id);
   const [artOk, setArtOk] = useState(true);
   const [hide, setHide] = useState(false);
@@ -100,6 +128,7 @@ export function PhaseCard({ id, step, title, summary, extra, vars = {}, action, 
           />
         )}
         <div style={{ padding: 24, display: "grid", gap: 16 }}>
+          {sender && <SenderLine name={sender.name} role={sender.role} />}
           <div>
             {step && (
               <div style={{ color: C.accent, fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>

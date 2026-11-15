@@ -581,5 +581,15 @@
   "ui.card.toggleOff": "ℹ Phase windows: off",
   "ui.retro.on": "Retro style on",
   "ui.retro.off": "Retro style off",
-  "ui.factory.route": "Your route"
+  "ui.factory.route": "Your route",
+  "ui.menu.welcome": "Welcome to hryah",
+  "ui.menu.pitch": "You run a space agency. Over several launch windows you build satellites, fly them and keep them alive in orbit, competing with rival agencies for the same science programme. Every launch teaches you something for the next one.",
+  "ui.menu.loop1": "Design: pick modules, fuel and orbit until every margin is green.",
+  "ui.menu.loop2": "Flight: as the astronaut on board, keep the station's systems running.",
+  "ui.menu.loop3": "Orbit: set camera, transmitter, heater and safe mode for every orbit.",
+  "ui.menu.loop4": "Debrief: see why things went right or wrong, collect the payout and plan the next window.",
+  "ui.menu.online": "Online",
+  "ui.card.incoming": "Incoming message",
+  "ui.card.director": "Mission Director",
+  "ui.card.directorRole": "{agency} · mission control"
 }
