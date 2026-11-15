@@ -49,7 +49,8 @@ export interface Account {
   knowsConditions: boolean;  // після першого запуску агенція знає справжні умови місії
   missedInRow: number;       // скільки вікон поспіль без запуску
   unlocked: string[];        // відкриті вузли досліджень
-  trlGain?: Record<string, number>; // досвід агенції з модулем: +1 TRL за вдалий запуск чи наземні випробування
+  trlGain?: Record<string, number>;
+  groundStations?: number;   // власні наземні станції: довші сеанси зв'язку // досвід агенції з модулем: +1 TRL за вдалий запуск чи наземні випробування
   lastDesign?: Design;       // проєкт останнього запуску (для серії)
 }
 
@@ -116,7 +117,8 @@ export type ConsortiumAction =
   | { type: 'research'; nodeId: string }
   | { type: 'factory'; order: FactoryOrder }
   | { type: 'analyze'; line: string; depositId: string }
-  | { type: 'qualify'; moduleId: string };
+  | { type: 'qualify'; moduleId: string }
+  | { type: 'groundStation' };
 
 export interface ConsortiumOptions {
   campaign?: CampaignConfig;
@@ -143,7 +145,14 @@ export function inputFor(
 
 // Яку місію бачить агенція: номінальну, поки не запускалась, або справжню.
 export function knownMission(state: Pick<ConsortiumState, 'base' | 'campaign'>, entry: Pick<AgencyEntry, 'account'>): Mission {
-  return state.campaign && entry.account?.knowsConditions ? state.campaign.trueMission : state.base.mission;
+  return withGround(state.campaign && entry.account?.knowsConditions ? state.campaign.trueMission : state.base.mission, entry.account);
+}
+
+// Наземний сегмент (поділ місії NASA на сегменти): кожна власна наземна станція подовжує сеанс зв'язку за виток.
+export const GROUND_STATION = { costMUsd: 6, passBonus: 0.25, max: 3 } as const;
+function withGround(mission: Mission, account: Account | undefined): Mission {
+  const n = Math.min(GROUND_STATION.max, account?.groundStations ?? 0);
+  return n > 0 ? { ...mission, passSPerOrbit: Math.round(mission.passSPerOrbit * (1 + GROUND_STATION.passBonus * n)) } : mission;
 }
 
 // Вхід частини 1 з урахуванням кампанії: бюджет — це рахунок агенції (розробки вже списані з нього).
@@ -256,8 +265,8 @@ function launchLog(entry: AgencyEntry): CauseEntry[] {
 }
 
 // Місія, яку агенція реально виконує (у кампанії — справжні умови).
-export function flownMission(state: ConsortiumState): Mission {
-  return state.campaign ? state.campaign.trueMission : state.base.mission;
+export function flownMission(state: ConsortiumState, entry?: Pick<AgencyEntry, 'account'>): Mission {
+  return withGround(state.campaign ? state.campaign.trueMission : state.base.mission, entry?.account);
 }
 
 // Сіди польоту й орбіти, з якими гравець має грати свій запуск у цьому вікні.
@@ -268,7 +277,7 @@ export function seedsFor(state: ConsortiumState, agencyId: string): { flight: nu
 function runOf(state: ConsortiumState, e: AgencyEntry): AgencyRun | null {
   const spec = flownSpec(e);
   if (!e.launch || !spec) return null;
-  const mission = flownMission(state);
+  const mission = flownMission(state, e);
   const log = launchLog(e);
   const windowStart = state.campaign?.windowStartTurn ?? 0;
   let flightLog: CauseEntry[] = [];
@@ -525,6 +534,17 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
     case 'factory':
     case 'analyze':
       return stepFactory(state, entry, action);
+    case 'groundStation': {
+      // Нова наземна станція: 1 дія й гроші; сеанси зв'язку довші для всіх наступних запусків агенції.
+      const account = entry.account;
+      if (!account || entry.actionsLeft <= 0 || entry.touched.includes('ground')) return state;
+      if ((account.groundStations ?? 0) >= GROUND_STATION.max || account.fundsMUsd <= GROUND_STATION.costMUsd) return state;
+      const next: Account = { ...account, fundsMUsd: money(account.fundsMUsd - GROUND_STATION.costMUsd), groundStations: (account.groundStations ?? 0) + 1 };
+      return replaceAt(state, state.active, {
+        ...entry, account: next, actionsLeft: entry.actionsLeft - 1, touched: [...entry.touched, 'ground'],
+        design: { ...entry.design, input: entryInput(state, entry.agency, state.turn, entry.projects, next, entry.factory) },
+      });
+    }
     case 'qualify': {
       // Наземні випробування модуля: 1 дія й трохи грошей, +1 TRL для цієї агенції.
       const account = entry.account;

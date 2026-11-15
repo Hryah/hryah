@@ -11,6 +11,7 @@ import { ResearchPanel } from "../campaign/ResearchPanel";
 import { FactoryPanel } from "../campaign/FactoryPanel";
 import { TrlPanel } from "../campaign/TrlPanel";
 import { BriefingPanel } from "../campaign/BriefingPanel";
+import { GroundPanel } from "../campaign/GroundPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
@@ -212,7 +213,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
     return (
       <MissionRunner
         key={`${flyingEntry.agency.id}:${consortium.campaign?.round ?? 0}`}
-        agencyName={t(flyingEntry.agency.nameKey)} mission={flownMission(consortium)} spec={spec}
+        agencyName={t(flyingEntry.agency.nameKey)} mission={flownMission(consortium, flyingEntry)} spec={spec}
         seeds={seedsFor(consortium, flyingEntry.agency.id)} active={active}
         onReport={(report) => send(flyingOwner.playerId, { type: "report", report })}
       />
@@ -245,6 +246,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
       {mine && entry && entry.account && (
         <>
           <FactoryPanel key={entry.agency.id} entry={entry} turn={consortium.turn} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+          <GroundPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
           <TrlPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
           <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
         </>

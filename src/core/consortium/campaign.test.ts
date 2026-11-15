@@ -330,3 +330,16 @@ describe("TRL у кімнаті", () => {
     expect(Object.values(gain).some((v) => v >= 1)).toBe(true);
   });
 });
+
+describe("наземний сегмент", () => {
+  it("станція подовжує сеанс зв'язку в проєктуванні й у польоті; ліміт і вартість", () => {
+    const s = soloRoom();
+    const me = (r: RoomState) => (r as PlayState).consortium.agencies.find((e) => e.agency.id === "borealis")!;
+    const pass = me(s).design.input.mission.passSPerOrbit;
+    const next = send(s, "me", { type: "play", action: { type: "groundStation" } }) as PlayState;
+    expect(me(next).account!.groundStations).toBe(1);
+    expect(me(next).design.input.mission.passSPerOrbit).toBe(Math.round(pass * 1.25));
+    expect(flownMission(next.consortium, me(next)).passSPerOrbit).toBeGreaterThan(flownMission(next.consortium).passSPerOrbit);
+    expect(send(next, "me", { type: "play", action: { type: "groundStation" } })).toBe(next); // одна за хід
+  });
+});
