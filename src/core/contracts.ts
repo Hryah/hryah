@@ -40,6 +40,11 @@ export interface LauncherDef {
   costMUsd: number;
 }
 
+export type OrbitObjective =
+  | { type: 'imaging' }
+  | { type: 'flyby'; imagingOrbits: [number, number] }
+  | { type: 'cargo'; telemetryReportMb: number; telemetryBonusMaxFraction: number };
+
 export interface Mission {
   id: string;
   titleKey: string;
@@ -49,12 +54,20 @@ export interface Mission {
   dvRequiredMs: number;            // скільки Δv треба, щоб вийти на робочу орбіту
   altRangeKm: [number, number];    // допустимі висоти орбіти
   requiredResolutionM: number;     // вимога науковців до чіткості знімка
-  requiredDataMb: number;          // скільки даних треба доставити для перемоги
+  requiredDataMb: number;          // квота imaging; опорний обсяг flyby; 0 для cargo
   durationOrbits: number;          // скільки витків триває частина 3
   imagingSPerOrbit: number;        // тривалість вікна зйомки за виток
   passSPerOrbit: number;           // тривалість прольоту над станцією за виток
   launchers: LauncherDef[];
+  // Необов'язкові поля (зворотно сумісні): відсутній kind означає 'imaging', тобто все як раніше.
+  // 'cargo': вантажний рейс до станції. Частини 2 і 3 працюють без змін: орбіта — це підхід і стикування,
+  // а цінність рейсу рахує нагорода консорціуму з stationNeeds і типу вантажу.
+  kind?: 'imaging' | 'cargo';
+  stationNeeds?: Partial<Record<CargoKind, number>>; // цінність одного контейнера кожного типу, M$
+  orbitObjective?: OrbitObjective; // відсутність зберігає чинні правила орбіти
 }
+
+export type CargoKind = 'water' | 'food' | 'parts' | 'experiment';
 
 // ───────────────────────── 4. Каталог модулів (дані) ─────────────────────────
 
@@ -75,6 +88,7 @@ export interface InstrumentDef extends ModuleBase {
   wavelengthM: number;
   dataRateMbps: number;
   powerW: number;
+  cargoKind?: CargoKind;           // є: це не камера, а вантажний контейнер (місія kind: 'cargo')
 }
 
 export type ModuleDef = EngineDef | SolarDef | BatteryDef | AntennaDef | InstrumentDef;
@@ -127,6 +141,7 @@ export interface SpacecraftSpec {
   instrumentRateMbps: number;
   instrumentW: number;
   resolutionM: number;
+  cargoKind?: CargoKind;           // тип контейнера; відсутній у старих spec та камер
   // гроші
   costMUsd: number;
   margins: Margin[];
@@ -149,15 +164,27 @@ export interface FlightResult {
   orbit: OrbitInfo;                // куди реально вийшли
   fuelLeftKg: number;
   damage: Damage[];
+  deploymentStatus?: 'deployed' | 'lost'; // відсутнє у старих результатах: вважаємо deployed
 }
 
 // ───────────────────────── 7. Вихід частини 3 ─────────────────────────
+
+export interface OrbitSummary {
+  objectiveType: 'imaging' | 'flyby' | 'cargo';
+  actualResolutionM: number;
+  capturedMb: number;
+  lostMb: number;
+  cargoDelivered: boolean;
+  telemetryReportsSent: number;
+  telemetryReportsExpected: number;
+}
 
 export interface MissionOutcome {
   success: boolean;
   deliveredMb: number;
   survivedOrbits: number;
   score: number;
+  orbitSummary?: OrbitSummary;     // відсутній у старих результатах орбіти
 }
 
 // ───────────────────────── 8. Єдиний інтерфейс частини ─────────────────────────

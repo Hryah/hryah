@@ -1,7 +1,9 @@
 import texts from "../data/texts.en.json";
+import orbitTexts from "./orbit/texts.en.json";
 
 // Усі тексти беремо за ключем із src/data/texts.en.json. Відсутній ключ показуємо як є, щоб помилка впадала в очі.
-const dictionary: Record<string, string> = texts;
+// Тексти орбіти (Нікіта) лежать поруч із її екраном; спільні ключі мають перевагу, щоб орбіта не переписала чужі тексти.
+const dictionary: Record<string, string> = { ...orbitTexts, ...texts };
 
 export function t(key: string, params?: Record<string, number | string>): string {
   const template = dictionary[key];

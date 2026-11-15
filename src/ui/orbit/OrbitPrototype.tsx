@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
-import { createDemoOrbit, orbitPhase, orbitView, type OrbitState, type ToggleId } from '../../core/orbit';
+import { createDemoOrbit, orbitPhase, orbitClarity, orbitDebrief, type OrbitState, type ToggleId } from '../../core/orbit';
+import { resolveAssetUrl } from '../graphics/registry';
 import { OrbitScene } from './OrbitScene';
-import messages from './texts.en.json';
-import sharedMessages from '../../data/texts.en.json';
+import { t as translate } from '../text';
+import { SAMPLE_CATALOG } from '../../core/stubs';
+import type { CauseEntry } from '../../core/contracts';
+import { describeEntry } from '../design/cause';
 import './orbit.css';
 
-const copy: Record<string, string> = { ...sharedMessages, ...messages };
-const t = (key: string, params: Record<string, string | number> = {}) =>
-  (copy[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => {
-    const value = params[name];
-    if (name === 'toggle' && typeof value === 'string') return copy[`ui.control.${value}`] ?? value;
-    if (name === 'enabled') return copy[value ? 'ui.enabled' : 'ui.off'] ?? String(value);
-    if (typeof value === 'number') return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
-    return value ?? `{${name}}`;
-  });
+// Записи журналу перекладає спільний describeEntry; тут лише числа екрана з локальним форматуванням.
+const t = (key: string, params: Record<string, string | number> = {}) => {
+  const formatted: Record<string, string | number> = {};
+  for (const [name, value] of Object.entries(params)) formatted[name] = typeof value === 'number' ? number(value, 1) : value;
+  return translate(key, formatted);
+};
 const number = (n: number, digits = 0) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(n);
 type Preset = 'balanced' | 'comms' | 'power';
 type IconName = 'orbit' | 'check' | 'camera' | 'radio' | 'heat' | 'shield' | 'arrow' | 'reset' | 'activity' | 'code' | 'chevron' | 'close' | 'help' | 'sun';
@@ -40,15 +40,16 @@ function Meter({ value, tone = 'green', label }: { value: number; tone?: string;
   return <div className={`meter ${tone}`} role="progressbar" aria-label={label} aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${Math.min(100, Math.max(0, value))}%` }} /></div>;
 }
 
-export function OrbitPrototype() {
+export function OrbitPrototype({ initialState }: { initialState?: OrbitState } = {}) {
   const [preset, setPreset] = useState<Preset>('balanced');
-  const [history, setHistory] = useState<OrbitState[]>(() => [createDemoOrbit('balanced', 42)]);
+  const [history, setHistory] = useState<OrbitState[]>(() => [initialState ?? createDemoOrbit('balanced', 42)]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const state = history[history.length - 1]!;
-  const view = orbitView(state);
+  const { view, systems, risks } = orbitClarity(state);
   const forecast = view.forecast;
   const done = state.status !== 'active';
+  const debrief = done ? orbitDebrief(state) : [];
   const outcome = orbitPhase.finish(state).result;
   const totals = state.input.mission.durationOrbits;
   const currentTurn = Math.min(state.completedOrbits + 1, totals);
@@ -75,6 +76,8 @@ export function OrbitPrototype() {
     return [...previous.slice(0, -1), orbitPhase.step(active, { type: 'toggle', id })];
   });
   const visibleLog = [...state.log].reverse().slice(0, done ? 10 : 5);
+  const entryText = (entry: CauseEntry) =>
+    describeEntry(entry, { mission: state.input.mission, catalog: SAMPLE_CATALOG });
 
   return <div className="orbit-app">
     <aside className="mission-sidebar">
@@ -103,7 +106,7 @@ export function OrbitPrototype() {
           <div className="viewport-header"><span className="panel-kicker"><span className="live-dot" />{done ? t('ui.missionEnded') : t('ui.orbitalView')}</span><span className="orbit-counter">{t('ui.orbit')} <strong>{String(currentTurn).padStart(2, '0')}</strong><span>/ {String(totals).padStart(2, '0')}</span></span></div>
           <div className="scene-context"><span className="scene-coordinate">LEO / {number(state.input.flight.orbit.altKm)} KM</span><span className={`scene-mode ${state.toggles.safeMode ? 'safe' : ''}`}>{t(done ? 'ui.missionEnded' : state.toggles.safeMode ? 'ui.safeModeActive' : view.stormNext ? 'ui.stormApproaching' : 'ui.nominal')}</span></div>
           <OrbitScene turn={state.completedOrbits} totalTurns={totals} storm={view.stormNext && !done} safeMode={state.toggles.safeMode} complete={done} />
-          <div className="viewport-caption"><span className="tracking-icon">⌖</span><div><strong>{t('ui.earthObserver')}</strong><small>{t('ui.telemetryLinked')}</small></div><div className="orbit-dots" aria-label={`${state.completedOrbits} / ${totals}`}>{Array.from({ length: totals }, (_, i) => <span key={i} className={i < state.completedOrbits ? 'filled' : i === state.completedOrbits && !done ? 'next' : ''} />)}</div></div>
+          <div className="viewport-caption"><span className="tracking-icon"><img src={resolveAssetUrl('assets/icons/ui/satellite-dish.svg')} alt="" width={16} height={16} /></span><div><strong>{t('ui.earthObserver')}</strong><small>{t('ui.telemetryLinked')}</small></div><div className="orbit-dots" aria-label={`${state.completedOrbits} / ${totals}`}>{Array.from({ length: totals }, (_, i) => <span key={i} className={i < state.completedOrbits ? 'filled' : i === state.completedOrbits && !done ? 'next' : ''} />)}</div></div>
         </section>
 
         <section className="telemetry-panel panel" aria-label={t('ui.liveTelemetry')}>
@@ -116,18 +119,30 @@ export function OrbitPrototype() {
 
         <section className="systems-panel" aria-label={t('ui.spacecraftSystems')}>
           <div className="section-heading"><h2>{t('ui.spacecraftSystems')}</h2><span>{t('ui.systemsHint')}</span></div>
-          <div className="system-grid">{controls.map(({ id, icon }, i) => {
-            const overridden = state.toggles.safeMode && id !== 'safeMode';
-            const enabled = !done && (overridden ? view.activeSystems[id] : state.toggles[id]);
-            const unavailable = !done && !overridden && enabled && !view.activeSystems[id];
-            return <button key={id} className={`system-card ${enabled ? 'on' : ''} ${id === 'safeMode' ? 'safety' : ''} ${overridden ? 'overridden' : ''} ${unavailable ? 'blocked' : ''}`} role="switch" aria-checked={enabled} aria-label={t(`ui.control.${id}`)} disabled={done || overridden} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t(`ui.control.${id}`)}</strong><small>{t(`ui.control.${id}.description`)}</small><div className="system-footer"><span>{t(unavailable ? 'controls.unavailable' : overridden ? (id === 'heater' ? 'controls.forcedHeater' : 'controls.overridden') : enabled ? 'ui.enabled' : 'ui.off')}</span><span>{i === 0 ? `${number(state.input.spec.instrumentW)} W` : i === 1 ? `${number(state.input.spec.transmitterW)} W` : i === 2 ? `${number(state.input.spec.heaterW)} W` : t('ui.protection')}</span></div></button>;
+          <div className="system-grid">{controls.map(({ id, icon }) => {
+            const system = systems[id];
+            return <button key={id} className={['system-card', system.commandOn ? 'on' : '', id === 'safeMode' ? 'safety' : '', system.commandOn && !system.effectiveOn ? 'blocked' : ''].join(' ')} role="switch" aria-checked={system.commandOn} aria-label={t('ui.control.' + id)} disabled={done} onClick={() => toggle(id)}><div className="system-card-top"><span className="system-icon"><Icon name={icon} size={21} /></span><span className="toggle-track"><span /></span></div><strong>{t('ui.control.' + id)}</strong><small>{t('ui.control.' + id + '.description')}</small><div className="system-footer"><span>{t(system.commandOn ? 'clarity.command.on' : 'clarity.command.off')}</span></div><div className="system-actual"><span>{t(id === 'safeMode' ? system.effectiveOn ? 'clarity.safe.on' : 'clarity.safe.off' : system.effectiveOn ? 'clarity.actual.on' : 'clarity.actual.off')}</span><small>{t(id === 'safeMode' && system.reason === 'ready' ? 'clarity.safe.ready' : 'clarity.reason.' + system.reason)}{system.forcedBySafe && <span> · {t('clarity.forcedHeater')}</span>}</small>{system.effectiveOn && <small>{t(id === 'safeMode' ? 'clarity.safe.duration' : 'clarity.operation', { seconds: system.operationS })}</small>}</div></button>;
           })}</div>
         </section>
 
         <section className={`forecast-panel panel ${forecast.powerFailure ? 'danger' : ''}`} aria-label={t('ui.nextOrbitForecast')}>
           <div className="panel-title"><h2>{t(done ? 'ui.finalTelemetry' : 'ui.nextOrbitForecast')}</h2><span className="small-label">{t(done ? 'ui.confirmed' : 'ui.prediction')}</span></div>
-          <div className="forecast-row"><span>{t('ui.endingCharge')}</span><strong className={forecast.powerFailure ? 'text-amber' : ''}>{number(forecast.chargeWh, 1)} Wh</strong></div><div className="forecast-row"><span>{t('ui.dataDownlink')}</span><strong>+{number(forecast.deliveredMb)} Mb</strong></div><div className="forecast-row"><span>{t('ui.dataLoss')}</span><strong className={forecast.lostMb > 0 ? 'text-amber' : ''}>{number(forecast.lostMb)} Mb</strong></div>
-          <div className={`forecast-note ${view.stormNext || forecast.powerFailure ? 'warning' : ''}`}><Icon name={view.stormNext ? 'sun' : 'shield'} size={16} /><span>{t(done ? 'forecast.finished' : forecast.powerFailure ? 'ui.powerRisk' : view.stormNext ? 'ui.stormWarning' : view.stormInOrbits !== null && view.stormInOrbits <= 2 ? 'ui.stormSoon' : 'ui.forecastNominal', { turns: view.stormInOrbits ?? 0 })}</span></div>
+          <div className="forecast-row"><span>{t('ui.endingCharge')}</span><strong className={forecast.powerFailure ? 'text-amber' : ''}>{number(forecast.chargeWh, 1)} Wh</strong></div>
+          {!done && <>
+            <div className="forecast-row"><span>{t('clarity.chargeChange')}</span><strong>{number(forecast.chargeDeltaWh, 1)} Wh</strong></div>
+            <div className="forecast-row"><span>{t('clarity.minimumCharge')}</span><strong>{number(forecast.cost.minimumChargeWh, 1)} Wh</strong></div>
+            <div className="forecast-row"><span>{t('clarity.endingStorage')}</span><strong>{number(forecast.bufferMb)} / {number(view.bufferCapacityMb)} Mb</strong></div>
+            <div className="forecast-row"><span>{t('clarity.memoryChange')}</span><strong>{number(forecast.bufferDeltaMb)} Mb</strong></div>
+            <div className="forecast-row"><span>{t('clarity.peakStorage')}</span><strong>{number(forecast.cost.peakBufferMb)} Mb</strong></div>
+            <div className="forecast-row"><span>{t('ui.dataDownlink')}</span><strong>+{number(forecast.deliveredMb)} Mb</strong></div>
+            <div className="forecast-row"><span>{t('ui.dataLoss')}</span><strong className={forecast.lostMb > 0 ? 'text-amber' : ''}>{number(forecast.lostMb)} Mb</strong></div>
+            <div className="forecast-row"><span>{t('clarity.turnCost')}</span><strong>{number(forecast.cost.consumedWh, 1)} Wh</strong></div>
+            <div className="forecast-row"><span>{t('clarity.generation')}</span><strong>{number(forecast.cost.generatedWh, 1)} Wh</strong></div>
+            <div className="forecast-row"><span>{t('clarity.duration')}</span><strong>{number(forecast.cost.elapsedS / 60, 1)} min</strong></div>
+            <p className="forecast-note">{t('clarity.costHint')}</p>
+          </>}
+          {risks.map(key => <div key={key} className="forecast-note warning"><Icon name="activity" size={16} /><span>{t(key, { turns: view.stormInOrbits ?? 0 })}</span></div>)}
+          {risks.length === 0 && <div className="forecast-note"><Icon name="shield" size={16} /><span>{t(done ? 'forecast.finished' : 'ui.forecastNominal')}</span></div>}
         </section>
       </div>
 
@@ -135,7 +150,10 @@ export function OrbitPrototype() {
 
       {done && <section className={`mission-outcome panel ${outcome.success ? 'success' : 'failure'}`} aria-live="polite"><span className="outcome-symbol"><Icon name={outcome.success ? 'check' : 'activity'} size={28} /></span><div><div className="eyebrow">{t('ui.missionDebrief')}</div><h2>{t(outcome.success ? 'ui.successTitle' : 'ui.failureTitle')}</h2><p>{t(outcome.success ? 'ui.successDescription' : 'ui.failureDescription', { delivered: number(outcome.deliveredMb), turns: outcome.survivedOrbits, total: totals })}</p></div><div className="outcome-score"><strong>{number(outcome.score)}</strong><span>{t('ui.missionScore')}</span></div></section>}
 
-      <section className="event-log panel"><div className="panel-title"><h2>{t('ui.missionLog')}<span className="log-count">{number(state.log.length)}</span></h2><span className="small-label">{t('ui.latestEvents')}</span></div><div className="log-entries" aria-live="polite">{visibleLog.map(entry => <div className={`log-entry ${entry.kind}`} key={entry.id}><span className="log-time">T+{number(entry.tS / 60, 1)}<small> MIN</small></span><span className="log-marker" /><span className="log-message">{t(entry.messageKey, entry.params)}{entry.kind === 'failure' && entry.causedBy && <small className="cause-detail">{t('ui.causedBy')} {entry.causedBy.map(id => { const cause = [...state.input.log, ...state.log].find(item => item.id === id); return cause ? t(cause.messageKey, cause.params) : id; }).join(' · ')}</small>}</span><span className="log-type">{t(`ui.log.${entry.kind}`)}</span></div>)}</div></section>
+
+      {done && debrief.length > 0 && <section className="event-log panel" aria-label={t('clarity.causeChains')}><div className="panel-title"><h2>{t('clarity.causeChains')}</h2></div><p className="cause-detail">{t('clarity.chainHint')}</p>{debrief.map(problem => <details className="cause-problem" key={problem.failure.id}><summary>{entryText(problem.failure)}</summary>{problem.paths.map((path, index) => <ol className="cause-path" key={index}>{path.map(entry => <li key={entry.id} className={entry.kind === 'decision' ? 'text-green' : ''}>{entryText(entry)} <small>{t('clarity.eventTime', { minutes: entry.tS / 60 })}</small></li>)}</ol>)}</details>)}</section>}
+
+      <section className="event-log panel"><div className="panel-title"><h2>{t('ui.missionLog')}<span className="log-count">{number(state.log.length)}</span></h2><span className="small-label">{t('ui.latestEvents')}</span></div><div className="log-entries" aria-live="polite">{visibleLog.map(entry => <div className={`log-entry ${entry.kind}`} key={entry.id}><span className="log-time">T+{number(entry.tS / 60, 1)}<small> MIN</small></span><span className="log-marker" /><span className="log-message">{entryText(entry)}{entry.kind === 'failure' && entry.causedBy && <small className="cause-detail">{t('ui.causedBy')} {entry.causedBy.map(id => { const cause = [...state.input.log, ...state.log].find(item => item.id === id); return cause ? entryText(cause) : id; }).join(' · ')}</small>}</span><span className="log-type">{t(`ui.log.${entry.kind}`)}</span></div>)}</div></section>
       <footer className="orbit-footer"><span>{t('ui.footer')}</span><span>HRYAH–01 <span className="footer-separator">/</span> {t('ui.simulationOnly')}</span></footer>
     </main>
 

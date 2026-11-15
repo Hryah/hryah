@@ -1,0 +1,13 @@
+{
+  "ind-metallurgy": { "nameKey": "research.indMetallurgy", "costPts": 8, "effect": { "kind": "industry", "industry": "metallurgy", "delta": 0.1 } },
+  "ind-electronics": { "nameKey": "research.indElectronics", "costPts": 8, "effect": { "kind": "industry", "industry": "electronics", "delta": 0.1 } },
+  "ind-software": { "nameKey": "research.indSoftware", "costPts": 8, "effect": { "kind": "industry", "industry": "software", "delta": 0.1 } },
+  "ind-chemistry": { "nameKey": "research.indChemistry", "costPts": 8, "effect": { "kind": "industry", "industry": "chemistry", "delta": 0.1 } },
+  "ind-optics": { "nameKey": "research.indOptics", "costPts": 8, "effect": { "kind": "industry", "industry": "optics", "delta": 0.1 } },
+  "ind-manufacturing": { "nameKey": "research.indManufacturing", "costPts": 8, "effect": { "kind": "industry", "industry": "manufacturing", "delta": 0.1 } },
+  "test-stand": { "nameKey": "research.testStand", "costPts": 10, "effect": { "kind": "defect", "factor": 0.7 } },
+  "fast-track": { "nameKey": "research.fastTrack", "costPts": 10, "effect": { "kind": "devSpeed", "factor": 0.8 } },
+  "early-access": { "nameKey": "research.earlyAccess", "costPts": 12, "effect": { "kind": "marketLead", "turns": 2 } },
+  "scouting": { "nameKey": "research.scouting", "costPts": 6, "effect": { "kind": "scout" } },
+  "series": { "nameKey": "research.series", "costPts": 10, "effect": { "kind": "series", "refund": 0.15 } }
+}

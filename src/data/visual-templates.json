@@ -44,18 +44,29 @@
     "antenna": "ant-m",
     "instrument": "cam-m"
   },
+  "aliases": {
+    "eng-mono": "eng-cold",
+    "eng-hall": "eng-ion",
+    "sol-gaas": "sol-m",
+    "sol-roll": "sol-l",
+    "bat-nih2": "bat-m",
+    "bat-ss": "bat-s",
+    "ant-ka": "ant-m",
+    "ant-laser": "ant-s",
+    "cam-ms": "cam-m",
+    "cam-swir": "cam-m"
+  },
   "templates": [
     {
       "id": "bus:standard",
       "category": "spacecraft",
       "system": "structure",
       "displayName": "CubeSat / SmallSat Bus",
-      "packName": "NASA 3D / Kenney Space Kit",
-      "model3d": {
-        "url": "assets/models/spacecraft/satellite_bus.glb",
-        "format": "glb",
-        "scale": 1.0,
-        "attribution": "NASA / Kenney CC0"
+      "packName": "Team 2D Vectors",
+      "sprite2d": {
+        "url": "assets/templates/design/bus-standard.svg",
+        "format": "svg",
+        "attribution": "Team 2D Vector"
       },
       "blueprint": {
         "shape": "satellite-bus",
@@ -72,7 +83,8 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Cold Gas Thruster",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/eng-cold.svg", "format": "svg" },
       "blueprint": {
         "shape": "engine-cold",
         "primaryColor": "#64748b",
@@ -88,7 +100,8 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Hydrazine Chemical Thruster",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/eng-chem.svg", "format": "svg" },
       "blueprint": {
         "shape": "engine-chem",
         "primaryColor": "#475569",
@@ -104,7 +117,8 @@
       "slot": "engine",
       "system": "propulsion",
       "displayName": "Hall-Effect Ion Drive",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/eng-ion.svg", "format": "svg" },
       "blueprint": {
         "shape": "engine-ion",
         "primaryColor": "#1e293b",
@@ -120,7 +134,8 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Small Solar Wings",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/sol-s.svg", "format": "svg" },
       "blueprint": {
         "shape": "solar-small",
         "primaryColor": "#1e3a8a",
@@ -136,8 +151,8 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Medium Dual Solar Array",
-      "packName": "NASA 3D / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/solar_medium.glb", "format": "glb", "scale": 1.0 },
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/sol-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "solar-medium",
         "primaryColor": "#1d4ed8",
@@ -153,7 +168,8 @@
       "slot": "solar",
       "system": "power",
       "displayName": "Large Quad Solar Array",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/sol-l.svg", "format": "svg" },
       "blueprint": {
         "shape": "solar-large",
         "primaryColor": "#1e40af",
@@ -169,7 +185,8 @@
       "slot": "battery",
       "system": "power",
       "displayName": "Compact Li-Ion Pack",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/bat-s.svg", "format": "svg" },
       "blueprint": {
         "shape": "battery-small",
         "primaryColor": "#065f46",
@@ -185,7 +202,8 @@
       "slot": "battery",
       "system": "power",
       "displayName": "Dual Li-Ion Battery Bank",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/bat-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "battery-medium",
         "primaryColor": "#047857",
@@ -201,7 +219,8 @@
       "slot": "battery",
       "system": "power",
       "displayName": "High-Capacity Deep-Eclipse Battery",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/bat-l.svg", "format": "svg" },
       "blueprint": {
         "shape": "battery-large",
         "primaryColor": "#064e3b",
@@ -217,7 +236,8 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "Omni Whip Antenna",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/ant-s.svg", "format": "svg" },
       "blueprint": {
         "shape": "antenna-whip",
         "primaryColor": "#7c2d12",
@@ -233,8 +253,8 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "X-Band Patch Array",
-      "packName": "NASA 3D / Kenney Space Station Kit",
-      "model3d": { "url": "assets/models/modules/antenna_medium.glb", "format": "glb", "scale": 1.0 },
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/ant-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "antenna-patch",
         "primaryColor": "#9a3412",
@@ -250,7 +270,8 @@
       "slot": "antenna",
       "system": "comms",
       "displayName": "Ka-Band High-Gain Parabolic Dish",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/ant-l.svg", "format": "svg" },
       "blueprint": {
         "shape": "antenna-dish",
         "primaryColor": "#c2410c",
@@ -266,7 +287,8 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "Compact Wide-Field Imager",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/cam-s.svg", "format": "svg" },
       "blueprint": {
         "shape": "camera-compact",
         "primaryColor": "#581c87",
@@ -282,7 +304,8 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "Multispectral Pushbroom Scanner",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/cam-m.svg", "format": "svg" },
       "blueprint": {
         "shape": "camera-medium",
         "primaryColor": "#6b21a8",
@@ -298,7 +321,8 @@
       "slot": "instrument",
       "system": "science",
       "displayName": "High-Resolution Orbital Telescope",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/design/cam-l.svg", "format": "svg" },
       "blueprint": {
         "shape": "camera-telescope",
         "primaryColor": "#4c1d95",
@@ -312,7 +336,8 @@
       "id": "small",
       "category": "launcher",
       "displayName": "Light Launch Vehicle",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Wikimedia Commons / Team Palette",
+      "sprite2d": { "url": "assets/templates/design/launcher-small.svg", "format": "svg" },
       "blueprint": {
         "shape": "launcher-small",
         "primaryColor": "#334155",
@@ -326,7 +351,8 @@
       "id": "medium",
       "category": "launcher",
       "displayName": "Medium Launch Vehicle",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Wikimedia Commons / Team Palette",
+      "sprite2d": { "url": "assets/templates/design/launcher-medium.svg", "format": "svg" },
       "blueprint": {
         "shape": "launcher-medium",
         "primaryColor": "#1e293b",
@@ -340,7 +366,8 @@
       "id": "heavy",
       "category": "launcher",
       "displayName": "Heavy Lift Launch Vehicle",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Wikimedia Commons / Team Palette",
+      "sprite2d": { "url": "assets/templates/design/launcher-heavy.svg", "format": "svg" },
       "blueprint": {
         "shape": "launcher-heavy",
         "primaryColor": "#0f172a",
@@ -353,8 +380,13 @@
     {
       "id": "Earth",
       "category": "body",
-      "displayName": "Earth (NASA Blue Marble)",
-      "packName": "Blueprint / Custom Pack",
+      "displayName": "Earth (Orbital Globe)",
+      "packName": "Noto Emoji / Wikimedia Commons",
+      "sprite2d": { "url": "assets/bodies/earth-globe.svg", "format": "svg" },
+      "planetTextures": {
+        "dayMapUrl": "assets/bodies/earth-map.svg",
+        "attribution": "Tom-b CC0 / Google Noto Apache-2.0"
+      },
       "blueprint": {
         "shape": "body-earth",
         "primaryColor": "#0284c7",
@@ -367,8 +399,9 @@
     {
       "id": "Moon",
       "category": "body",
-      "displayName": "Moon (NASA LRO)",
-      "packName": "Blueprint / Custom Pack",
+      "displayName": "Moon",
+      "packName": "Google Noto Emoji",
+      "sprite2d": { "url": "assets/bodies/moon.svg", "format": "svg", "attribution": "Google Noto Apache-2.0" },
       "blueprint": {
         "shape": "body-moon",
         "primaryColor": "#64748b",
@@ -381,8 +414,9 @@
     {
       "id": "char:astronaut",
       "category": "character",
-      "displayName": "NASA Astronaut (EVA EMU)",
-      "packName": "Blueprint / Custom Pack",
+      "displayName": "Astronaut (EVA EMU)",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/flight/astro-idle.svg", "format": "svg" },
       "blueprint": {
         "shape": "character-astronaut",
         "primaryColor": "#e2e8f0",
@@ -396,7 +430,8 @@
       "id": "char:engineer",
       "category": "character",
       "displayName": "Flight Engineer (EVA Suit)",
-      "packName": "Blueprint / Custom Pack",
+      "packName": "Team 2D Vectors",
+      "sprite2d": { "url": "assets/templates/extras/astro-front.svg", "format": "svg" },
       "blueprint": {
         "shape": "character-engineer",
         "primaryColor": "#f97316",

@@ -213,7 +213,7 @@ describe("частина 1 у складі гри", () => {
 
     const { log } = end.record;
     const ids = new Set(log.map((e) => e.id));
-    const failure = log.find((e) => e.id === "orbit:battery-dead");
+    const failure = log.find((e) => e.phase === "orbit" && e.kind === "failure");
     expect(failure).toBeDefined();
     for (const cause of failure?.causedBy ?? []) expect(ids.has(cause)).toBe(true);
     expect(ids.has("design:margin-energy")).toBe(true);

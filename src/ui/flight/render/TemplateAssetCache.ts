@@ -1,40 +1,51 @@
 import type { FlightState } from "../../../core/flight";
 import {
   type BlueprintSpec,
-  parseGlbBuffer,
   type SpacecraftVisualAssembly,
+  resolveAssetUrl,
   templateRegistry,
   type VisualTemplate,
 } from "../../graphics";
-import type { ParsedMesh, Vec3 } from "../../graphics/glb-viewer";
-
-function resolveAssetUrl(rawUrl: string): string {
-  const baseUrl = import.meta.env.BASE_URL ?? "/";
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const cleanPath = rawUrl.startsWith("/") ? rawUrl.slice(1) : rawUrl;
-  return `${normalizedBase}${cleanPath}`;
-}
 
 /**
- * Кеш і Canvas-адаптер для інтеграції `templateRegistry` (`visual-templates.json`),
- * 3D `.glb` моделей (`parseGlbBuffer`), текстур планет (`public/assets/textures/`)
- * та спрайтів станції (`public/assets/sprites/station/`) безпосередньо в ігровий цикл FlightScreen.
+ * Кеш і 2D Canvas-адаптер для інтеграції `templateRegistry` (`visual-templates.json`)
+ * та 2D SVG-темплейтів (`public/assets/templates/`, `public/assets/bodies/`, `public/assets/icons/`)
+ * безпосередньо в ігровий цикл FlightScreen.
  */
 export class TemplateAssetCache {
   private readonly images = new Map<string, HTMLImageElement | "loading" | "error">();
-  private readonly meshes = new Map<string, ParsedMesh | "loading" | "error">();
 
   public constructor() {
-    // Попередньо ініціюємо завантаження 3 базових GLB моделей із реєстру темплейтів
     const preloadTemplates = [
       templateRegistry.getBusTemplate(),
       templateRegistry.getTemplate("sol-m"),
       templateRegistry.getTemplate("ant-m"),
     ];
     for (const tpl of preloadTemplates) {
-      if (tpl.model3d?.url) {
-        this.getGlbMesh(tpl.model3d.url);
+      if (tpl.sprite2d?.url) {
+        this.getImage(tpl.sprite2d.url);
       }
+    }
+
+    const flightSprites = [
+      "assets/templates/flight/mod-horizontal.svg",
+      "assets/templates/flight/mod-hub.svg",
+      "assets/templates/flight/mod-vertical.svg",
+      "assets/templates/flight/astro-idle.svg",
+      "assets/templates/flight/astro-pull.svg",
+      "assets/templates/flight/astro-fly.svg",
+      "assets/templates/flight/astro-stun.svg",
+      "assets/templates/flight/door-seal.svg",
+      "assets/templates/flight/handle-rail.svg",
+      "assets/templates/flight/console-terminal.svg",
+      "assets/templates/flight/obstacle-pillar.svg",
+      "assets/templates/flight/obstacle-cargo.svg",
+      "assets/bodies/earth-map.svg",
+      "assets/icons/station/radar-dish.svg",
+      "assets/icons/station/filter-barrel.svg",
+    ];
+    for (const path of flightSprites) {
+      this.getImage(path);
     }
   }
 
@@ -85,124 +96,6 @@ export class TemplateAssetCache {
     };
     img.src = url;
     return null;
-  }
-
-  /**
-   * Завантажує та парсить бінарну 3D-модель `.glb` через `parseGlbBuffer` із `src/ui/graphics/glb-viewer.tsx`.
-   */
-  public getGlbMesh(rawUrl: string): ParsedMesh | null {
-    const url = resolveAssetUrl(rawUrl);
-    const cached = this.meshes.get(url);
-    if (cached === "loading" || cached === "error") {
-      return null;
-    }
-    if (cached) {
-      return cached;
-    }
-
-    if (typeof fetch === "undefined") {
-      this.meshes.set(url, "error");
-      return null;
-    }
-
-    this.meshes.set(url, "loading");
-    fetch(url)
-      .then((res) => {
-        const ct = res.headers.get("content-type") ?? "";
-        if (!res.ok || ct.includes("text/html")) {
-          throw new Error(`GLB fetch failed: ${res.status}`);
-        }
-        return res.arrayBuffer();
-      })
-      .then((buf) => {
-        const parsed = parseGlbBuffer(buf);
-        this.meshes.set(url, parsed);
-      })
-      .catch(() => {
-        this.meshes.set(url, "error");
-      });
-
-    return null;
-  }
-
-  /**
-   * Проєктує та рендерить 3D `.glb` меш безпосередньо на ігровий `CanvasRenderingContext2D`
-   * (використовується в оптичному візирі СОІ стикування та на пульті сервоприводів сонячних панелей).
-   */
-  public drawGlbMeshOnCanvas(
-    ctx: CanvasRenderingContext2D,
-    mesh: ParsedMesh,
-    cx: number,
-    cy: number,
-    radiusPx: number,
-    yawRad: number,
-    pitchRad: number,
-    tintHex?: string,
-  ): void {
-    const cosY = Math.cos(yawRad);
-    const sinY = Math.sin(yawRad);
-    const cosX = Math.cos(pitchRad);
-    const sinX = Math.sin(pitchRad);
-
-    const transform = (v: Vec3): Vec3 => {
-      const x1 = v.x * cosY - v.z * sinY;
-      const z1 = v.x * sinY + v.z * cosY;
-      const y2 = v.y * cosX - z1 * sinX;
-      const z2 = v.y * sinX + z1 * cosX;
-      return { x: x1, y: y2, z: z2 };
-    };
-
-    const projected = mesh.triangles.map((t) => {
-      const p0 = transform(t.v0);
-      const p1 = transform(t.v1);
-      const p2 = transform(t.v2);
-      const n = transform(t.normal);
-      const avgZ = (p0.z + p1.z + p2.z) / 3;
-      return { p0, p1, p2, n, avgZ, color: t.color };
-    });
-
-    projected.sort((a, b) => a.avgZ - b.avgZ);
-
-    const fov = radiusPx * 1.15;
-    const lightDir = { x: 0.42, y: 0.65, z: 0.63 };
-
-    ctx.save();
-    for (const tri of projected) {
-      const d0 = 3.2 - tri.p0.z;
-      const d1 = 3.2 - tri.p1.z;
-      const d2 = 3.2 - tri.p2.z;
-      if (d0 <= 0.2 || d1 <= 0.2 || d2 <= 0.2) continue;
-
-      const sx0 = cx + (tri.p0.x * fov) / d0;
-      const sy0 = cy - (tri.p0.y * fov) / d0;
-      const sx1 = cx + (tri.p1.x * fov) / d1;
-      const sy1 = cy - (tri.p1.y * fov) / d1;
-      const sx2 = cx + (tri.p2.x * fov) / d2;
-      const sy2 = cy - (tri.p2.y * fov) / d2;
-
-      const dot = Math.abs(
-        tri.n.x * lightDir.x + tri.n.y * lightDir.y + tri.n.z * lightDir.z,
-      );
-      const shade = 0.3 + 0.7 * dot;
-      const r = Math.min(255, Math.round(tri.color[0] * shade));
-      const g = Math.min(255, Math.round(tri.color[1] * shade));
-      const b = Math.min(255, Math.round(tri.color[2] * shade));
-
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.beginPath();
-      ctx.moveTo(sx0, sy0);
-      ctx.lineTo(sx1, sy1);
-      ctx.lineTo(sx2, sy2);
-      ctx.closePath();
-      ctx.fill();
-
-      if (tintHex) {
-        ctx.strokeStyle = tintHex;
-        ctx.lineWidth = 0.45;
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
   }
 
   /**

@@ -12,6 +12,7 @@ export function applyDamage(spec: SpacecraftSpec, damage: Damage[]): SpacecraftS
     if (d.system === 'science') next = { ...next, resolutionM: next.resolutionM / keep, instrumentRateMbps: next.instrumentRateMbps * keep };
     else if (d.system === 'power') next = { ...next, panelPowerW: next.panelPowerW * keep };
     else if (d.system === 'comms') next = { ...next, downlinkMbps: next.downlinkMbps * keep };
+    else if (d.system === 'propulsion') next = { ...next, dvMs: next.dvMs * keep };
   }
   return next;
 }

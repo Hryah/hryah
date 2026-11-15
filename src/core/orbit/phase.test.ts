@@ -61,6 +61,20 @@ describe('orbit prototype integration', () => {
     expect(end.log.some((e) => e.messageKey === 'orbit.proto.insufficientData')).toBe(true);
   });
 
+  it('accepts the minimum altitude and rejects 200 km with a causal failure', () => {
+    const original = createDemoOrbit();
+    for (const [altKm, success] of [[200, false], [399.999, false], [400, true]] as const) {
+      const input = { ...original.input, flight: { ...original.input.flight,
+        orbit: { ...original.input.flight.orbit, altKm } } };
+      const end = play(orbitPhase.init(input, 42));
+      expect(orbitPhase.finish(end).result.success).toBe(success);
+      if (!success) {
+        expect(end.log).toContainEqual(expect.objectContaining({ messageKey: 'orbit.proto.orbitFailure', kind: 'failure', causedBy: expect.any(Array) }));
+        expect(danglingCauses([...input.log, ...end.log])).toEqual([]);
+      }
+    }
+  });
+
   it('requires image quality and the actual orbit as well as data', () => {
     const original = createDemoOrbit();
     const quality = orbitPhase.init({ ...original.input, spec: { ...original.input.spec, resolutionM: 9 } }, 42);
@@ -309,5 +323,21 @@ describe('purity, reproducibility and event links', () => {
     const actions = orbitPhase.debugActions?.(state) ?? [];
     expect(actions.at(-1)?.action).toEqual({ type: 'tick', dtS: state.input.flight.orbit.periodS });
     for (const entry of actions) expect(() => orbitPhase.step(state, entry.action as OrbitAction)).not.toThrow();
+  });
+});
+
+describe('missed imaging and downlink causes', () => {
+  it('links both SAFE and the switched-off command when the player used both', () => {
+    let state = orbitPhase.init(createDemoOrbit().input, 42);
+    state = orbitPhase.step(state, { type: 'toggle', id: 'camera' });
+    state = orbitPhase.step(state, { type: 'toggle', id: 'transmitter' });
+    state = orbitPhase.step(state, { type: 'toggle', id: 'safeMode' });
+    state = orbitPhase.step(state, { type: 'tick', dtS: state.input.flight.orbit.periodS });
+    const decisions = (toggle: string) => state.log.filter((e) => e.kind === 'decision' && e.params?.toggle === toggle).map((e) => e.id);
+    const imaging = state.log.find((e) => e.messageKey === 'orbit.clarity.missedImaging');
+    expect(imaging).toBeDefined();
+    expect(imaging!.causedBy).toEqual(expect.arrayContaining([...decisions('camera'), ...decisions('safeMode')]));
+    const downlink = state.log.find((e) => e.messageKey === 'orbit.clarity.missedDownlink');
+    if (downlink) expect(downlink.causedBy).toEqual(expect.arrayContaining([...decisions('transmitter'), ...decisions('safeMode')]));
   });
 });

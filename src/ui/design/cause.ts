@@ -1,3 +1,4 @@
+import { fabBaseOf } from "../../core/factory";
 import type { CauseEntry, DesignInput } from "../../core/contracts";
 import { fmt, t } from "../text";
 
@@ -6,13 +7,19 @@ import { fmt, t } from "../text";
 export function describeEntry(entry: CauseEntry, base: DesignInput): string {
   const params: Record<string, number | string> = {};
   for (const [key, value] of Object.entries(entry.params ?? {})) {
-    if (typeof value === "number") params[key] = fmt(value);
+    if (key === "toggle") params[key] = t(`ui.control.${value}`);
+    else if (key === "enabled") params[key] = t(value ? "ui.enabled" : "ui.off");
+    else if (typeof value === "number") params[key] = fmt(value);
     else if (key === "slot") params[key] = t(`ui.slot.${value}`);
     else if (key === "margin") params[key] = t(`ui.margin.${value}`);
     else if (key === "module") {
       const module = base.catalog.modules.find((m) => m.id === value);
-      // Власна розробка не входить у базовий каталог: її модулі мають id custom-<слот>-<агенція>.
-      params[key] = module ? t(module.nameKey) : String(value).startsWith("custom-") ? t("custom.instrument") : value;
+      // Власна розробка й фабрика не входять у базовий каталог: custom-<слот>-<агенція> та fab-<базовий id>-<агенція>-<n>.
+      const fabBase = fabBaseOf(String(value), base.catalog.modules.map((m) => m.id));
+      const fab = fabBase ? base.catalog.modules.find((m) => m.id === fabBase) : undefined;
+      params[key] = module ? t(module.nameKey)
+        : fab ? t(`fab.${fab.nameKey}`)
+        : String(value).startsWith("custom-") ? t("custom.instrument") : value;
     } else if (key === "launcherId") {
       const launcher = base.mission.launchers.find((l) => l.id === value);
       params[key] = launcher ? t(launcher.nameKey) : value;

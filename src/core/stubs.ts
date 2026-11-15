@@ -105,6 +105,7 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
 
   const enoughData = deliveredMb >= mission.requiredDataMb;
   const enoughResolution = spec.resolutionM <= mission.requiredResolutionM;
+  const orbitOk = flight.orbit.altKm >= mission.altRangeKm[0] && flight.orbit.altKm <= mission.altRangeKm[1];
   const endS = flight.orbit.periodS * survivedOrbits;
 
   // Розряд батареї вже пояснює передчасне завершення й недоставлені дані.
@@ -124,7 +125,16 @@ export function stubOrbit(input: OrbitInput): PhaseOutput<MissionOutcome> {
     });
   }
 
-  const success = !batteryDies && enoughData && enoughResolution;
+  if (!orbitOk) {
+    const lowOrbitCause = input.log.find((entry) => entry.id === 'flight:low-orbit');
+    log.push({
+      id: 'orbit:invalid-altitude', phase: 'orbit', tS: endS, kind: 'failure', system: 'propulsion',
+      messageKey: 'orbit.invalidAltitude', params: { altKm: flight.orbit.altKm },
+      causedBy: lowOrbitCause ? [lowOrbitCause.id] : ['design:engine'],
+    });
+  }
+
+  const success = !batteryDies && enoughData && enoughResolution && orbitOk;
   return { result: { success, deliveredMb, survivedOrbits, score: Math.round(deliveredMb / 100) }, log };
 }
 

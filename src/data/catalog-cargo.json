@@ -1,0 +1,52 @@
+{
+  "modules": [
+    {
+      "slot": "instrument",
+      "id": "cargo-water",
+      "nameKey": "cargo.water",
+      "massKg": 60,
+      "costMUsd": 2,
+      "apertureM": 0.05,
+      "wavelengthM": 5.5e-07,
+      "dataRateMbps": 0.5,
+      "powerW": 5,
+      "cargoKind": "water"
+    },
+    {
+      "slot": "instrument",
+      "id": "cargo-food",
+      "nameKey": "cargo.food",
+      "massKg": 45,
+      "costMUsd": 3,
+      "apertureM": 0.05,
+      "wavelengthM": 5.5e-07,
+      "dataRateMbps": 0.5,
+      "powerW": 15,
+      "cargoKind": "food"
+    },
+    {
+      "slot": "instrument",
+      "id": "cargo-parts",
+      "nameKey": "cargo.parts",
+      "massKg": 50,
+      "costMUsd": 5,
+      "apertureM": 0.05,
+      "wavelengthM": 5.5e-07,
+      "dataRateMbps": 0.5,
+      "powerW": 5,
+      "cargoKind": "parts"
+    },
+    {
+      "slot": "instrument",
+      "id": "cargo-experiment",
+      "nameKey": "cargo.experiment",
+      "massKg": 35,
+      "costMUsd": 8,
+      "apertureM": 0.05,
+      "wavelengthM": 5.5e-07,
+      "dataRateMbps": 0.5,
+      "powerW": 30,
+      "cargoKind": "experiment"
+    }
+  ]
+}

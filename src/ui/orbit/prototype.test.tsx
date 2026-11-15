@@ -1,12 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createDemoOrbit, orbitPhase, type OrbitState } from '../../core/orbit';
+import * as orbit from '../../core/orbit';
+import * as text from '../text';
 import type { OrbitInput } from '../../core/contracts';
 import sharedMessages from '../../data/texts.en.json';
 import messages from './texts.en.json';
 import { OrbitPrototype } from './OrbitPrototype';
 
-const copy: Record<string, string> = { ...sharedMessages, ...messages };
+const copy: Record<string, string> = { ...messages, ...sharedMessages };
 
 function finishMission(initial: OrbitState): OrbitState {
   let state = initial;
@@ -17,6 +19,84 @@ function finishMission(initial: OrbitState): OrbitState {
 }
 
 describe('orbit prototype presentation', () => {
+  it('waits until the mission ends before calculating the debrief', () => {
+    const debrief = vi.spyOn(orbit, 'orbitDebrief');
+    try {
+      renderToStaticMarkup(<OrbitPrototype />);
+      expect(debrief).not.toHaveBeenCalled();
+
+      const end = finishMission(createDemoOrbit('comms'));
+      const html = renderToStaticMarkup(<OrbitPrototype initialState={end} />);
+      expect(debrief).toHaveBeenCalledExactlyOnceWith(end);
+      expect(html).toContain('Problems and player decisions');
+    } finally {
+      debrief.mockRestore();
+    }
+  });
+
+  it('uses the shared translator for both controls and causal command labels', () => {
+    const translate = text.t;
+    const sharedText = vi.spyOn(text, 't').mockImplementation((key, params) =>
+      key === 'ui.control.heater' ? 'Cabin heater' : translate(key, params));
+    try {
+      const initial = orbitPhase.step(createDemoOrbit('comms'), { type: 'toggle', id: 'heater' });
+      const html = renderToStaticMarkup(<OrbitPrototype initialState={finishMission(initial)} />);
+      expect(html).toContain('aria-label="Cabin heater"');
+      expect(html).toContain('Cabin heater command changed to Off');
+    } finally {
+      sharedText.mockRestore();
+    }
+  });
+
+  it('uses readable module names in causal paths and immediate cause summaries', () => {
+    const state = finishMission(createDemoOrbit('comms'));
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={state} />);
+    expect(html).toContain('Problems and player decisions');
+    expect(html).toContain(sharedMessages['antenna.s']);
+    expect(html).not.toContain('ant-s');
+    expect(html).not.toMatch(/Selected cam-|Selected bat-|Selected sol-|Selected eng-/);
+  });
+
+  it('describes SAFE as protection rather than a scheduled instrument', () => {
+    const safe = orbitPhase.step(createDemoOrbit(), { type: 'toggle', id: 'safeMode' });
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={safe} />);
+    const card = html.match(/<button[^>]*aria-label="Safe mode"[^>]*>[\s\S]*?<\/button>/)?.[0];
+    expect(card).toBeDefined();
+    expect(card).toContain('Protection enabled for the next turn');
+    expect(card).toContain('Protection planned for');
+    expect(card).not.toContain('Scheduled in its operating window');
+    expect(card).not.toContain('Operating for');
+  });
+
+  it('shows memory forecast and turn cost before a command is executed', () => {
+    const html = renderToStaticMarkup(<OrbitPrototype />);
+    for (const label of ['Energy consumed', 'Solar energy available', 'Ending memory', 'Peak memory before downlink', 'Time simulated', 'Command: ON', 'Next turn: operating']) {
+      expect(html).toContain(label);
+    }
+  });
+
+  it('renders an ON command as checked when SAFE blocks actual work', () => {
+    const initialState = orbitPhase.step(createDemoOrbit(), { type: 'toggle', id: 'safeMode' });
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={initialState} />);
+    expect(html).toContain('Blocked by SAFE');
+    expect(html).toContain('Heating requested by SAFE');
+    expect(html).toMatch(/aria-checked="true" aria-label="Camera"/);
+    expect(html).toContain('Next turn: inactive');
+    expect(html).not.toMatch(/\bclarity\.[\w.]+/);
+  });
+
+  it('renders causal paths to a concrete command and module choice in the debrief', () => {
+    const initial = orbitPhase.step(createDemoOrbit('comms'), { type: 'toggle', id: 'heater' });
+    const end = finishMission(initial);
+    const html = renderToStaticMarkup(<OrbitPrototype initialState={end} />);
+    expect(html).toContain('Problems and player decisions');
+    expect(html).toContain('Heater command changed to Off');
+    expect(html).toContain(sharedMessages['antenna.s']);
+    expect(html).not.toContain('ant-s');
+    expect(html).toContain('cause-path');
+    expect(html).not.toMatch(/\bclarity\.[\w.]+|\borbit\.clarity\.[\w.]+/);
+  });
+
   it('renders a readable first-orbit control screen with labelled switches and no missing copy', () => {
     const html = renderToStaticMarkup(<OrbitPrototype />);
     expect(html).toContain('Orbital operations');

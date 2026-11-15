@@ -76,7 +76,7 @@ export function defectChance(agency: AgencyProfile, order: DevOrder): number {
   const base = INDUSTRY_DATA.develop[order.slot]?.baseDefectChance ?? 0;
   const c = capability(agency.industries, order.slot);
   const complexity = 1 + SCALING.complexityPerReference * (ratio(order.apertureM) - 1);
-  const chance = base * (1.3 - c) * complexity * (order.inspect ? SCALING.inspectDefectFactor : 1);
+  const chance = base * (1.3 - c) * complexity * (order.inspect ? SCALING.inspectDefectFactor : 1) * (agency.defectFactor ?? 1);
   return Math.min(0.9, Math.max(0, chance));
 }
 
@@ -113,7 +113,10 @@ export function startDevelopment(agency: AgencyProfile, order: DevOrder, startTu
   const [hit, severityRoll] = rolls(seed, `${agency.id}|${order.slot}|${order.apertureM}|${order.inspect}`, 2) as [number, number];
   const defect = hit < chance ? { severity: round2(SCALING.severityMin + SCALING.severityRange * severityRoll) } : null;
   return {
-    ...order,
+    // Лише відомі поля замовлення: зайві поля з чужого JSON не мають потрапити в проєкт і в стан кімнати.
+    slot: order.slot,
+    apertureM: order.apertureM,
+    inspect: order.inspect,
     id: `${order.slot}-${agency.id}`,
     agencyId: agency.id,
     startTurn,

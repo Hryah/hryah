@@ -1,0 +1,204 @@
+{
+  "cubesat-101": {
+    "titleKey": "scenario.cubesat101.title",
+    "briefKey": "scenario.cubesat101.brief",
+    "missionId": "cubesat-101",
+    "analogKey": "scenario.cubesat-101.analog",
+    "tutorial": true,
+    "campaign": {
+      "rounds": 2,
+      "windowTurns": 4,
+      "programGoal": 250,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
+  "living-planet": {
+    "titleKey": "scenario.livingPlanet.title",
+    "briefKey": "scenario.livingPlanet.brief",
+    "missionId": "earth-observer",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 1800,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.living-planet.analog"
+  },
+  "disaster": {
+    "titleKey": "scenario.disaster.title",
+    "briefKey": "scenario.disaster.brief",
+    "missionId": "disaster-response",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 420,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.disaster.analog"
+  },
+  "ice-watch": {
+    "titleKey": "scenario.iceWatch.title",
+    "briefKey": "scenario.iceWatch.brief",
+    "missionId": "ice-watch",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 4200,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.ice-watch.analog"
+  },
+  "big-eye": {
+    "titleKey": "scenario.bigEye.title",
+    "briefKey": "scenario.bigEye.brief",
+    "missionId": "big-eye",
+    "campaign": {
+      "rounds": 4,
+      "windowTurns": 5,
+      "programGoal": 260,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.big-eye.analog"
+  },
+  "guest": {
+    "titleKey": "scenario.guest.title",
+    "briefKey": "scenario.guest.brief",
+    "missionId": "guest",
+    "campaign": {
+      "rounds": 2,
+      "windowTurns": 5,
+      "programGoal": 1500,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.guest.analog"
+  },
+  "selene": {
+    "titleKey": "scenario.selene.title",
+    "briefKey": "scenario.selene.brief",
+    "missionId": "selene",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 4,
+      "programGoal": 5500,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.selene.analog"
+  },
+  "lifeline": {
+    "titleKey": "scenario.lifeline.title",
+    "briefKey": "scenario.lifeline.brief",
+    "missionId": "station-resupply",
+    "catalog": "cargo",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 250,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    },
+    "analogKey": "scenario.lifeline.analog"
+  },
+  "red-planet": {
+    "titleKey": "scenario.redPlanet.title",
+    "briefKey": "scenario.redPlanet.brief",
+    "missionId": "mars-relay",
+    "analogKey": "scenario.red-planet.analog",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 600,
+      "grantMUsd": 45,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "gapTurns": 6
+    }
+  },
+  "gold-rush": {
+    "titleKey": "scenario.goldRush.title",
+    "briefKey": "scenario.goldRush.brief",
+    "missionId": "earth-observer",
+    "analogKey": "scenario.gold-rush.analog",
+    "campaign": {
+      "rounds": 6,
+      "windowTurns": 4,
+      "programGoal": 1800,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "victory": "commercial",
+      "victoryTarget": 550,
+      "saturation": 0.7
+    }
+  },
+  "first-light": {
+    "titleKey": "scenario.firstLight.title",
+    "briefKey": "scenario.firstLight.brief",
+    "missionId": "big-eye",
+    "analogKey": "scenario.first-light.analog",
+    "campaign": {
+      "rounds": 5,
+      "windowTurns": 5,
+      "programGoal": 260,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "victory": "race",
+      "victoryTarget": 80
+    }
+  },
+  "colony": {
+    "titleKey": "scenario.colony.title",
+    "briefKey": "scenario.colony.brief",
+    "missionId": "colony-resupply",
+    "catalog": "cargo",
+    "analogKey": "scenario.colony.analog",
+    "campaign": {
+      "rounds": 3,
+      "windowTurns": 3,
+      "programGoal": 300,
+      "grantMUsd": 50,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000,
+      "gapTurns": 6
+    }
+  }
+}
