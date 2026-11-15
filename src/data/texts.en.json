@@ -78,8 +78,8 @@
   "ui.menu.local": "Play at one screen",
   "ui.menu.localHint": "Everyone takes turns on this device.",
   "ui.menu.onlineHint": "Or play online: create a room and share its code, or join a friend's room.",
-  "ui.menu.name": "Your name",
-  "ui.menu.code": "Code",
+  "ui.menu.name": "Your name (optional)",
+  "ui.menu.code": "Code (4 letters)",
   "ui.menu.create": "Create room",
   "ui.menu.join": "Join",
   "ui.menu.back": "Menu",
@@ -607,5 +607,8 @@
   "ui.console.deck": "Industrial & science deck",
   "ui.console.telemetry": "Window telemetry",
   "ui.console.lastResults": "Results of the previous window",
-  "ui.campaign.noResultsYet": "No window has closed yet: results appear after the first launch window."
+  "ui.campaign.noResultsYet": "No window has closed yet: results appear after the first launch window.",
+  "ui.menu.defaultName": "Commander",
+  "ui.menu.codeHint": "A room code is 4 letters, like ZJSF. Ask the host to read it from the top of their room.",
+  "ui.menu.noSuchRoom": "no room with this code here. Check that you both opened the same site (the main game or /experimental/ each have their own rooms), and that the room was created after the last site update."
 }
