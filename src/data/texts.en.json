@@ -417,5 +417,11 @@
   "ui.trl.title": "Technology readiness (TRL)",
   "ui.trl.hint": "New technology is not more expensive, it is less proven. Every successful flight and every ground test makes it one level more mature for your agency.",
   "ui.trl.row": "{module}: TRL {trl} · failure risk {risk}%",
-  "ui.trl.qualify": "Ground test ({cost} M$, 1 action)"
+  "ui.trl.qualify": "Ground test ({cost} M$, 1 action)",
+  "ui.campaign.cargoLine": "container delivered, {orbits}/{total} approach orbits survived: contribution {value}, payout {payout} M$ + grant {grant} M$, +{research} research",
+  "ui.campaign.cargoMissed": "never reached the station orbit: nothing delivered; grant {grant} M$, +{research} research",
+  "ui.cargoKind.water": "water",
+  "ui.cargoKind.food": "food",
+  "ui.cargoKind.parts": "spare parts",
+  "ui.cargoKind.experiment": "experiment"
 }

@@ -38,3 +38,15 @@ describe("вантажна місія", () => {
     expect(sumMixed).toBeGreaterThan(sumSame);
   });
 });
+
+describe("вантаж: рев'ю", () => {
+  it("контейнер власного виробництва має тип базового й приносить цінність", () => {
+    const fab = run("a", "fab-cargo-parts-borealis-1");
+    expect(cargoKindOf(catalog, fab)).toBe("parts");
+    expect(runValueMUsd(mission, fab, undefined, catalog)).toBe(mission.stationNeeds!.parts);
+  });
+
+  it("не дістався до орбіти станції — нуль, хоч би скільки витків прожив", () => {
+    expect(runValueMUsd(mission, { ...run("a", "cargo-parts"), reachedOrbit: false }, undefined, catalog)).toBe(0);
+  });
+});

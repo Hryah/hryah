@@ -262,16 +262,20 @@ function runOf(state: ConsortiumState, e: AgencyEntry): AgencyRun | null {
   const windowStart = state.campaign?.windowStartTurn ?? 0;
   let flightLog: CauseEntry[] = [];
   let orbitOut;
+  let reachedOrbit: boolean;
+  const [lo, hi] = mission.altRangeKm;
   if (e.report) {
     const flight = sanitizeFlight(mission, spec, e.report.flight);
+    reachedOrbit = flight.deploymentStatus !== 'lost' && flight.orbit.altKm >= lo && flight.orbit.altKm <= hi;
     orbitOut = replayOrbit(mission, spec, flight, log, e.report.orbitActions, seedsFor(state, e.agency.id).orbit);
   } else {
     const flight = stubFlight({ mission, spec, log });
+    reachedOrbit = spec.dvMs >= mission.dvRequiredMs;
     flightLog = flight.log;
     orbitOut = stubOrbit({ mission, spec, flight: flight.result, log: [...log, ...flight.log] });
   }
   return {
-    agencyId: e.agency.id, launchTurn: e.launch.turn - windowStart, spec, outcome: orbitOut.result,
+    agencyId: e.agency.id, launchTurn: e.launch.turn - windowStart, spec, outcome: orbitOut.result, reachedOrbit,
     log: [...log, ...flightLog, ...orbitOut.log],
   };
 }
@@ -426,6 +430,7 @@ export function stepConsortium(state: ConsortiumState, action: ConsortiumAction)
       const control = `develop:${action.order.slot}`;
       if (entry.touched.includes(control) || entry.actionsLeft <= 0) return state;
       if (entry.projects.some((p) => p.slot === action.order.slot)) return state;
+      if (entry.design.input.mission.kind === 'cargo') return state; // камера вантажному рейсу не потрібна
       let project: DevProject;
       try {
         project = startDevelopment(developerProfile(entry, state.turn), action.order, state.turn, state.seed);
