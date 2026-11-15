@@ -89,6 +89,7 @@ export interface CampaignState {
   trueMission: Mission;    // справжні умови; агенція бачить їх у проєктуванні лише після першого запуску
   rounds: RoundSummary[];  // підсумки закритих вікон
   scenarioId?: string;     // сценарій кімнати (для брифінгу, назви й реальної місії-аналога)
+  winner?: { agencyId: string; reason: 'program' | 'commercial' | 'race' }; // хто переміг і чим (після підсумку)
 }
 
 export interface ConsortiumState {
@@ -311,7 +312,10 @@ function closeRound(state: ConsortiumState): ConsortiumState {
     const launched = run !== undefined;
     // Внесок у програму — та сама цінність, що й у виплаті (для вантажу з урахуванням повторів).
     const valuePts = run ? settlement.payouts.find((p) => p.agencyId === e.agency.id)?.valueMUsd ?? 0 : 0;
-    const payoutMUsd = settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0;
+    // Комерційний режим: що більше даних уже продано (заповнення програми), то менше платять за нові.
+    const filled = Math.min(1, state.agencies.reduce((sum, x) => sum + (x.account?.programPts ?? 0), 0) / config.programGoal);
+    const saturationFactor = config.victory === 'commercial' ? 1 - (config.saturation ?? 0) * filled : 1;
+    const payoutMUsd = money((settlement.payouts.find((p) => p.agencyId === e.agency.id)?.payoutMUsd ?? 0) * saturationFactor);
     const missedInRow = launched ? 0 : account.missedInRow + 1;
     const grantFactor = launched ? 1 : missedInRow >= 2 ? config.missedTwiceGrantFactor : config.missedGrantFactor;
     const grantMUsd = money(config.grantMUsd * grantFactor);
@@ -337,11 +341,14 @@ function closeRound(state: ConsortiumState): ConsortiumState {
   const summary: RoundSummary = { round: campaign.round, runs, settlement, agencies: results };
   const total = agencies.reduce((sum, e) => sum + (e.account?.programPts ?? 0), 0);
   const nextCampaign: CampaignState = { ...campaign, rounds: [...campaign.rounds, summary] };
-  const done = campaign.round + 1 >= config.rounds || total >= config.programGoal;
-  if (done) {
+  const winner = decideWinner(config, agencies, results);
+  const lastRound = campaign.round + 1 >= config.rounds;
+  const programDone = (config.victory ?? 'program') === 'program' && total >= config.programGoal;
+  if (lastRound || programDone || (winner && config.victory && config.victory !== 'program')) {
     // Сирі звіти (до 400 дій орбіти на гравця) після підсумку не потрібні: не тягнемо їх у фінальний стан.
     const clean = agencies.map((e) => { const { report: _r, ...rest } = e; return rest; });
-    return { ...state, agencies: clean, campaign: nextCampaign, result: { runs, settlement } };
+    const final = winner ?? fallbackWinner(config, agencies);
+    return { ...state, agencies: clean, campaign: { ...nextCampaign, ...(final ? { winner: final } : {}) }, result: { runs, settlement } };
   }
 
   // Нове вікно: календар іде далі, проєкт агенції лишається (друге коло коротше), звіти скидаються.
@@ -365,6 +372,27 @@ function closeRound(state: ConsortiumState): ConsortiumState {
       };
     }),
   };
+}
+
+// Переможець, якщо умову режиму вже виконано (commercial/race), або null.
+function decideWinner(config: CampaignConfig, agencies: AgencyEntry[], results: AgencyRoundResult[]): CampaignState['winner'] | null {
+  const target = config.victoryTarget ?? 0;
+  if (config.victory === 'commercial') {
+    const rich = agencies.filter((e) => (e.account?.fundsMUsd ?? 0) >= target).sort((a, b) => (b.account?.fundsMUsd ?? 0) - (a.account?.fundsMUsd ?? 0))[0];
+    return rich ? { agencyId: rich.agency.id, reason: 'commercial' } : null;
+  }
+  if (config.victory === 'race') {
+    const best = results.filter((r) => r.valuePts >= target).sort((a, b) => b.valuePts - a.valuePts)[0];
+    return best ? { agencyId: best.agencyId, reason: 'race' } : null;
+  }
+  return null;
+}
+
+// Кампанія скінчилась без виконаної умови: перемагає найкращий за метрикою режиму.
+function fallbackWinner(config: CampaignConfig, agencies: AgencyEntry[]): CampaignState['winner'] | null {
+  const metric = (e: AgencyEntry) => (config.victory === 'commercial' ? e.account?.fundsMUsd ?? 0 : e.account?.programPts ?? 0);
+  const best = [...agencies].sort((a, b) => metric(b) - metric(a))[0];
+  return best ? { agencyId: best.agency.id, reason: config.victory ?? 'program' } : null;
 }
 
 // Прогрес наукової програми, 0..1.
