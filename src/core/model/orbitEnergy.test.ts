@@ -163,13 +163,29 @@ describe('cargo metadata and design margins', () => {
   });
 
   it('requires an eight-Mb report in the link margin instead of a fictional imaging quota', () => {
-    const mission = { ...scenario.mission, passSPerOrbit: 15 };
+    const { orbitObjective: _objective, ...legacyMission } = scenario.mission;
+    const mission = { ...legacyMission, passSPerOrbit: 15 };
     const legacy = buildSpec({ mission, catalog: CARGO_CATALOG }, design).result;
     const modern = buildSpec({ mission: { ...mission, orbitObjective: cargo.orbitObjective }, catalog: CARGO_CATALOG }, design).result;
     expect(legacy.margins.find((m) => m.id === 'link')).toMatchObject({ have: 30, need: 150, ok: false });
-    expect(modern.margins.find((m) => m.id === 'link')).toMatchObject({ have: 30, need: 8, ok: true });
+    expect(modern.margins.find((m) => m.id === 'link')).toMatchObject({ have: 8, need: 8, ok: true });
     expect(modern.dryMassKg).toBe(126);
     expect(modern.wetMassKg).toBe(146);
     expect(modern.costMUsd).toBe(25);
+  });
+
+  it.each([0, 0.01])('cannot report a green cargo link when monitoring generates only %s Mbps', (dataRateMbps) => {
+    const mission: Mission = { ...scenario.mission, orbitObjective: cargo.orbitObjective };
+    const catalog = { modules: CARGO_CATALOG.modules.map(module => module.id === 'cargo-water'
+      && module.slot === 'instrument' ? { ...module, dataRateMbps } : module) };
+    const spec = buildSpec({ mission, catalog }, design).result;
+    expect(spec.margins.find(margin => margin.id === 'link'))
+      .toMatchObject({ have: dataRateMbps * mission.imagingSPerOrbit, need: 8, ok: false });
+  });
+
+  it('rejects an inverted flyby range instead of returning a false green link', () => {
+    const mission: Mission = { ...SAMPLE_MISSION, orbitObjective: { type: 'flyby', imagingOrbits: [5, 3] } };
+    expect(() => orbitProfile(mission, 3)).toThrow(/imagingOrbits/);
+    expect(() => buildSpec({ mission, catalog: SAMPLE_CATALOG }, SAMPLE_DESIGN)).toThrow(/imagingOrbits/);
   });
 });

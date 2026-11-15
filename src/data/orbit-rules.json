@@ -9,7 +9,8 @@
   "cold": {
     "lockStress": 2,
     "maximumStress": 2,
-    "unheatedGain": 1
+    "unheatedGain": 1,
+    "heatedRecovery": 1
   },
   "score": {
     "fullRateDivisorMb": 100,

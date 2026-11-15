@@ -13,6 +13,7 @@
 import type { Mission, OrbitInfo, SpacecraftSpec } from '../contracts';
 import rules from '../../data/orbit-rules.json';
 import { downlinkMb } from './power';
+import { validateOrbitObjective } from './orbitObjective';
 
 export type SegmentKind = 'sunIdle' | 'imaging' | 'transmit' | 'passRest' | 'shadow';
 
@@ -43,6 +44,7 @@ export interface OrbitProfile {
 // Індекс витка починається з 1. Профіль не змінює тривалість жодного відрізка.
 export function orbitProfile(mission: Pick<Mission, 'orbitObjective'>, orbitIndex: number): OrbitProfile {
   const objective = mission.orbitObjective;
+  validateOrbitObjective(objective);
   if (objective?.type === 'cargo') {
     return { cameraWindow: false, continuousPayload: true,
       reportLimitMb: objective.telemetryReportMb, expireAfterPass: true };
@@ -101,6 +103,12 @@ export function orbitEnergyNeedWh(
   let worstWh = 0;
   let bufferMb = 0;
   let coldStress = 0;
+  const objective = mission.orbitObjective;
+  const fixedProfile = objective?.type === 'flyby' ? null : orbitProfile(mission, 1);
+  const tracksCold = !!objective && !on.heater && t.shadowS > 0;
+  const fixedActive = !objective ? on : {
+    ...on, camera: on.camera && spec.instrumentRateMbps > 0 && (fixedProfile?.cameraWindow ?? false),
+  };
 
   const run = (durationS: number, generationW: number, loadW: number) => {
     cumWh += ((generationW - loadW) * durationS) / 3600;
@@ -109,11 +117,10 @@ export function orbitEnergyNeedWh(
   };
 
   for (let i = 0; i < Math.max(0, mission.durationOrbits); i++) {
-    const profile = orbitProfile(mission, i + 1);
-    const available = !mission.orbitObjective || coldStress < rules.cold.lockStress;
-    const active = mission.orbitObjective
-      ? { ...on, camera: on.camera && available && spec.instrumentRateMbps > 0 && profile.cameraWindow }
-      : on;
+    const profile = fixedProfile ?? orbitProfile(mission, i + 1);
+    const available = !tracksCold || coldStress < rules.cold.lockStress;
+    const active = fixedProfile && !tracksCold ? fixedActive : objective
+      ? { ...on, camera: on.camera && available && spec.instrumentRateMbps > 0 && profile.cameraWindow } : on;
     run(t.idleSunS, spec.panelPowerW, segmentLoadW(spec, 'sunIdle', active, profile));
     run(t.imagingS, spec.panelPowerW, segmentLoadW(spec, 'imaging', active, profile));
     const producedMb = orbitGeneratedMb(profile, available ? spec.instrumentRateMbps : 0, t.imagingS, active.camera);
@@ -124,9 +131,9 @@ export function orbitEnergyNeedWh(
     run(t.passS - transmitS, spec.panelPowerW, segmentLoadW(spec, 'passRest', active, profile));
     if (profile.expireAfterPass) bufferMb = 0;
     run(t.shadowS, 0, segmentLoadW(spec, 'shadow', active, profile));
-    if (mission.orbitObjective && t.shadowS > 0) {
+    if (tracksCold) {
       coldStress = Math.min(rules.cold.maximumStress,
-        Math.max(0, coldStress + (active.heater ? -1 : rules.cold.unheatedGain)));
+        Math.max(0, coldStress + (active.heater ? -rules.cold.heatedRecovery : rules.cold.unheatedGain)));
     }
   }
   return worstWh;

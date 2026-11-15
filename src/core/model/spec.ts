@@ -7,6 +7,7 @@ import type {
 import { deltaVMs, groundResolutionM } from '../physics';
 import { orbitInfo } from './orbit';
 import { orbitEnergyNeedWh, orbitGeneratedMb, orbitProfile, orbitTiming, type EnergySpec } from './orbitEnergy';
+import { validateOrbitMission } from './orbitObjective';
 
 // Константи апарата, яких гравець не обирає.
 export const STRUCTURE_MASS_KG = 40;
@@ -26,6 +27,7 @@ function pick<S extends SlotId>(catalog: Catalog, design: Design, slot: S): Extr
 
 export function buildSpec(input: DesignInput, design: Design): PhaseOutput<SpacecraftSpec> {
   const { mission, catalog } = input;
+  validateOrbitMission(mission);
   const engine = pick(catalog, design, 'engine');
   const solar = pick(catalog, design, 'solar');
   const battery = pick(catalog, design, 'battery');
@@ -56,7 +58,10 @@ export function buildSpec(input: DesignInput, design: Design): PhaseOutput<Space
   const dataPerOrbitMb = objective?.type === 'cargo' ? objective.telemetryReportMb
     : objective ? orbitGeneratedMb(profile, instrument.dataRateMbps, timing.imagingS, true)
       : instrument.dataRateMbps * mission.imagingSPerOrbit;
-  const downlinkPerOrbitMb = antenna.downlinkMbps * (objective ? timing.passS : mission.passSPerOrbit);
+  const channelCapacityMb = antenna.downlinkMbps * (objective ? timing.passS : mission.passSPerOrbit);
+  const downlinkPerOrbitMb = objective?.type === 'cargo'
+    ? Math.min(channelCapacityMb, orbitGeneratedMb(profile, instrument.dataRateMbps, timing.imagingS, false))
+    : channelCapacityMb;
 
   const margins: Margin[] = [
     { id: 'dv', have: dvMs, need: mission.dvRequiredMs, unit: 'm/s', ok: dvMs >= mission.dvRequiredMs },
