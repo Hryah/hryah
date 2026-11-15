@@ -1,8 +1,57 @@
 {
-  "cam-m": { "fromTurn": 0, "startFactor": 1.3, "settleTurn": 6 },
-  "sol-l": { "fromTurn": 2, "startFactor": 1.6, "settleTurn": 8 },
-  "bat-l": { "fromTurn": 2, "startFactor": 1.6, "settleTurn": 8 },
-  "eng-ion": { "fromTurn": 3, "startFactor": 1.7, "settleTurn": 9 },
-  "ant-l": { "fromTurn": 3, "startFactor": 1.6, "settleTurn": 9 },
-  "cam-l": { "fromTurn": 4, "startFactor": 1.8, "settleTurn": 10 }
+  "cam-m": {
+    "fromTurn": 0,
+    "startFactor": 1.3,
+    "settleTurn": 6
+  },
+  "sol-l": {
+    "fromTurn": 2,
+    "startFactor": 1.6,
+    "settleTurn": 8
+  },
+  "bat-l": {
+    "fromTurn": 2,
+    "startFactor": 1.6,
+    "settleTurn": 8
+  },
+  "eng-ion": {
+    "fromTurn": 3,
+    "startFactor": 1.7,
+    "settleTurn": 9
+  },
+  "ant-l": {
+    "fromTurn": 3,
+    "startFactor": 1.6,
+    "settleTurn": 9
+  },
+  "cam-l": {
+    "fromTurn": 4,
+    "startFactor": 1.8,
+    "settleTurn": 10
+  },
+  "eng-hall": {
+    "fromTurn": 6,
+    "startFactor": 1.7,
+    "settleTurn": 12
+  },
+  "sol-roll": {
+    "fromTurn": 5,
+    "startFactor": 1.6,
+    "settleTurn": 11
+  },
+  "bat-ss": {
+    "fromTurn": 6,
+    "startFactor": 1.6,
+    "settleTurn": 12
+  },
+  "ant-laser": {
+    "fromTurn": 6,
+    "startFactor": 1.8,
+    "settleTurn": 13
+  },
+  "cam-ms": {
+    "fromTurn": 2,
+    "startFactor": 1.4,
+    "settleTurn": 8
+  }
 }

@@ -76,7 +76,7 @@ export function defectChance(agency: AgencyProfile, order: DevOrder): number {
   const base = INDUSTRY_DATA.develop[order.slot]?.baseDefectChance ?? 0;
   const c = capability(agency.industries, order.slot);
   const complexity = 1 + SCALING.complexityPerReference * (ratio(order.apertureM) - 1);
-  const chance = base * (1.3 - c) * complexity * (order.inspect ? SCALING.inspectDefectFactor : 1);
+  const chance = base * (1.3 - c) * complexity * (order.inspect ? SCALING.inspectDefectFactor : 1) * (agency.defectFactor ?? 1);
   return Math.min(0.9, Math.max(0, chance));
 }
 

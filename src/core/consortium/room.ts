@@ -9,6 +9,7 @@ import type { Market } from './market';
 import { rolls } from './seed';
 import { botAction } from './bot';
 import { isMissionReport, type CampaignConfig, type MissionReport } from './campaign';
+import type { ScenarioSetup } from './scenarios';
 import {
   activeAgency, applyReport, forfeitReport, newConsortium, stepConsortium, type ConsortiumAction, type ConsortiumState,
 } from './session';
@@ -37,6 +38,7 @@ export interface LobbyState {
   players: Player[];
   agencyIds: string[];        // агенції, доступні в цій кімнаті; їхній порядок задає порядок ходів у грі
   minPlayers: number;
+  scenarioId?: string;        // сценарій кампанії, обраний господарем
 }
 
 export interface PlayState {
@@ -58,6 +60,7 @@ export type RoomAction =
   | { type: 'ready'; ready: boolean }
   | { type: 'start' }
   | { type: 'addBot' }
+  | { type: 'scenario'; scenarioId: string }
   | { type: 'removeBot'; playerId: string }
   | { type: 'play'; action: ConsortiumAction }
   | { type: 'report'; report: MissionReport };
@@ -73,6 +76,7 @@ function isConsortiumAction(a: unknown): a is ConsortiumAction {
   if (!isObj(a)) return false;
   switch (a.type) {
     case 'launch': case 'wait': return true;
+    case 'research': return isStr(a.nodeId);
     case 'develop': {
       const o = a.order;
       return isObj(o) && o.slot === 'instrument' && isNum(o.apertureM) && typeof o.inspect === 'boolean';
@@ -100,6 +104,7 @@ export function isRoomAction(a: unknown): a is RoomAction {
     case 'wish': return a.agencyId === null || isStr(a.agencyId);
     case 'start': case 'leave': case 'addBot': return true;
     case 'removeBot': return isStr(a.playerId);
+    case 'scenario': return isStr(a.scenarioId);
     case 'play': return isConsortiumAction(a.action);
     case 'report': return isMissionReport(a.report);
     default: return false;
@@ -112,6 +117,14 @@ export interface RoomSetup {
   agencies: AgencyProfile[];
   deadlineTurn?: number;
   campaign?: CampaignConfig;   // є: кімната грає кампанію з кількох вікон запуску
+  scenarios?: Record<string, ScenarioSetup>; // є: господар обирає сценарій; він задає місію й кампанію
+}
+
+// Що реально грає кімната: обраний сценарій замінює місію й налаштування кампанії.
+export function effectiveSetup(setup: RoomSetup, scenarioId: string | undefined): RoomSetup {
+  const scenario = scenarioId ? setup.scenarios?.[scenarioId] : undefined;
+  if (!scenario) return setup;
+  return { ...setup, base: { ...setup.base, mission: scenario.mission }, campaign: scenario.campaign };
 }
 
 export function newRoom(hostId: string, hostName: string, agencyIds: string[], seed = 1, minPlayers = 1): LobbyState {
@@ -228,6 +241,10 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       while (state.players.some((p) => p.id === `bot-${n}`)) n++;
       return { ...state, players: [...state.players, { id: `bot-${n}`, name: `Bot ${n}`, wish: null, ready: true, bot: true }] };
     }
+    case 'scenario': {
+      if (playerId !== state.hostId || !setup.scenarios?.[action.scenarioId] || state.scenarioId === action.scenarioId) return state;
+      return { ...state, scenarioId: action.scenarioId };
+    }
     case 'removeBot': {
       if (playerId !== state.hostId || !state.players.some((p) => p.id === action.playerId && p.bot)) return state;
       return { ...state, players: state.players.filter((p) => p.id !== action.playerId) };
@@ -251,9 +268,10 @@ export function stepRoom(state: RoomState, playerId: string, action: RoomAction,
       if (agencies.length !== assignments.length) return state;
       const bots = state.players.filter((p) => p.bot).map((p) => p.id);
       // Звіт про політ чекаємо лише в кампанії й лише від людей: боти й одиночна гра без кампанії рахуються заглушками.
-      const reportsFrom = setup.campaign ? assignments.filter((a) => !bots.includes(a.playerId)).map((a) => a.agencyId) : [];
-      const consortium = newConsortium(setup.base, setup.market, agencies, setup.deadlineTurn, state.seed, {
-        ...(setup.campaign ? { campaign: setup.campaign } : {}), reportsFrom,
+      const reportsFrom = setup.campaign || setup.scenarios ? assignments.filter((a) => !bots.includes(a.playerId)).map((a) => a.agencyId) : [];
+      const play = effectiveSetup(setup, state.scenarioId);
+      const consortium = newConsortium(play.base, play.market, agencies, play.deadlineTurn, state.seed, {
+        ...(play.campaign ? { campaign: play.campaign } : {}), reportsFrom: play.campaign ? reportsFrom : [],
       });
       const playerNames = Object.fromEntries(state.players.map((p) => [p.id, p.name]));
       return autoPlay({ phase: 'play', seed: state.seed, assignments, playerNames, left: [], ...(bots.length ? { bots } : {}), consortium }, bots);

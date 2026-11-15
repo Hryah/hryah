@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import agenciesData from "../../data/agencies.json";
 import marketData from "../../data/market.json";
-import campaignData from "../../data/campaign.json";
 import {
-  activeAgency, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
-  type CampaignConfig, type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
+  activeAgency, campaignRoomSetup, effectiveSetup, flownMission, flownSpec, newRoom, pendingReports, seedsFor, stepRoom,
+  type ConsortiumAction, type ConsortiumState, type Market, type RoomAction, type RoomSetup, type RoomState,
 } from "../../core/consortium";
 import { CampaignPanel, CampaignStandings } from "../campaign/CampaignPanel";
 import { MissionRunner } from "../campaign/MissionRunner";
+import { ResearchPanel } from "../campaign/ResearchPanel";
 import { Lobby } from "./Lobby";
 import { createRoom, joinRoom, loadSession, poll, saveSession, sendAction, sendLeave, type Session } from "./online";
 import { defectChance, developmentCostMUsd, developmentTurns, MAX_APERTURE_M, MIN_APERTURE_M, type DevOrder, type DevProject } from "../../core/consortium/develop";
 import { launchBlockers } from "../../core/design";
 import type { AgencyProfile } from "../../core/design/agency";
-import { SAMPLE_CATALOG, SAMPLE_MISSION } from "../../core/stubs";
 import { resolveAssetUrl } from "../graphics/registry";
 import { fmt, t } from "../text";
 import { causeChains } from "../../core/debrief";
@@ -25,7 +24,6 @@ import { DesignScreen, type Upcoming } from "./DesignScreen";
 const C = { panel: "#141829", line: "#2a2f4a", dim: "#8a90a8", ok: "#3ddc84", bad: "#ff5c7a", accent: "#5ca8ff", gold: "#ffd166" };
 const AGENCIES = Object.values(agenciesData) as AgencyProfile[];
 const MARKET = marketData as Market;
-const BASE = { mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG };
 // Сід кидків браку береться тут, на екрані: ядро власного рандому не має, тож кожна нова гра отримує свій.
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
@@ -37,7 +35,7 @@ const button = {
 // Локальний режим: кімната живе в стані екрана, усі гравці за одним екраном.
 // Онлайн: той самий RoomState приходить із сервера кімнат (online.ts), а дії йдуть на сервер.
 // Основний режим — кампанія з кількох вікон запуску (docs/EXPANSION.md); сервер кімнат грає з тими самими налаштуваннями.
-const ROOM_SETUP: RoomSetup = { base: BASE, market: MARKET, agencies: AGENCIES, campaign: campaignData as CampaignConfig };
+const ROOM_SETUP: RoomSetup = campaignRoomSetup(MARKET, AGENCIES);
 const newLocalRoom = () => newRoom("p1", "Player 1", AGENCIES.map((a) => a.id), newSeed());
 // Соло: одна людина й три боти-конкуренти. Країну гравець обирає в лобі.
 const newSoloRoom = (): RoomState => {
@@ -187,7 +185,7 @@ interface RoomViewProps {
 }
 
 function RoomView({ room, local = false, active = true, meId, send, onStart, onRestart }: RoomViewProps) {
-  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} local={local} meId={meId} send={send} onStart={onStart} />;
+  if (room.phase === "lobby") return <Lobby room={room} agencies={AGENCIES} scenarios={ROOM_SETUP.scenarios} local={local} meId={meId} send={send} onStart={onStart} />;
   const { consortium } = room;
   const bots = room.bots ?? [];
   // Чиї агенції «мої»: за одним екраном — усіх людей, онлайн — лише своя.
@@ -240,6 +238,9 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
       <div inert={!mine} style={mine ? undefined : { pointerEvents: "none", opacity: 0.7 }}>
         <Turn state={consortium} active={active} dispatch={(action) => owner && mine && send(owner.playerId, { type: "play", action })} />
       </div>
+      {mine && entry && entry.account && (
+        <ResearchPanel entry={entry} dispatch={(action) => owner && send(owner.playerId, { type: "play", action })} />
+      )}
     </div>
   );
 }
@@ -308,14 +309,15 @@ export function Turn({ state, dispatch, active = true }: { state: ConsortiumStat
   // Що ще з'явиться на ринку: модулі, яких агенція зараз не бачить, але які не під санкціями.
   const catalogNow = entry?.design.input.catalog;
   const blocked = entry?.agency.blockedModules;
+  const lead = entry?.agency.marketLeadTurns ?? 0; // дослідження «ранній доступ»: новинки на кілька ходів раніше
   const upcoming: Upcoming[] = useMemo(
     () => {
       const available = new Set((catalogNow?.modules ?? []).map((m) => m.id));
       return base.catalog.modules
-        .filter((m) => market[m.id] !== undefined && (market[m.id]?.fromTurn ?? 0) > turn && !available.has(m.id) && !(blocked ?? []).includes(m.id))
-        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: market[m.id]?.fromTurn ?? 0 }));
+        .filter((m) => market[m.id] !== undefined && (market[m.id]?.fromTurn ?? 0) - lead > turn && !available.has(m.id) && !(blocked ?? []).includes(m.id))
+        .map((m) => ({ id: m.id, slot: m.slot, nameKey: m.nameKey, fromTurn: (market[m.id]?.fromTurn ?? 0) - lead }));
     },
-    [base, market, turn, catalogNow, blocked],
+    [base, market, turn, catalogNow, blocked, lead],
   );
   if (!entry) return null;
   const canLaunch = launchBlockers(entry.design).length === 0;
