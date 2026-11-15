@@ -369,6 +369,7 @@ function RoomView({ room, local = false, active = true, meId, send, onStart, onR
         spec={spec}
         seeds={seedsFor(consortium, flyingEntry.agency.id)}
         active={active}
+        windowNumber={(consortium.campaign?.round ?? 0) + 1}
         onReport={(report) => send(flyingOwner.playerId, { type: "report", report })}
       />
     );

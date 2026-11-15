@@ -4,7 +4,8 @@ import { MAX_ORBIT_ACTIONS, sanitizeFlight, type MissionReport } from "../../cor
 import { flightPhase } from "../../core/flight";
 import { orbitPhase, type OrbitAction } from "../../core/orbit";
 import { FlightScreen } from "../flight";
-import { OrbitPanel } from "../play/OrbitPanel";
+import { OrbitPrototype } from "../orbit/OrbitPrototype";
+import "./campaign-orbit.css";
 import { fmt, t } from "../text";
 import { cardsEnabled, PhaseCard, useCardsEnabled, type SummaryRow } from "./PhaseCard";
 
@@ -28,6 +29,7 @@ export interface MissionRunnerProps {
   spec: SpacecraftSpec;
   seeds: { flight: number; orbit: number };
   active: boolean;
+  windowNumber?: number;
   onReport: (report: MissionReport) => void;
 }
 
@@ -35,7 +37,7 @@ type Stage =
   | { kind: "flight" }
   | { kind: "orbit"; flight: FlightResult };
 
-export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, onReport }: MissionRunnerProps) {
+export function MissionRunner({ agencyName, mission: missionProp, spec: specProp, seeds, active, windowNumber, onReport }: MissionRunnerProps) {
   // Місія й апарат за час одного запуску не змінюються; фіксуємо їх, щоб опитування кімнати не перераховувало орбіту.
   const [{ mission, spec }] = useState(() => ({ mission: missionProp, spec: specProp }));
   const [stage, setStage] = useState<Stage>({ kind: "flight" });
@@ -154,25 +156,29 @@ export function MissionRunner({ agencyName, mission: missionProp, spec: specProp
       />
     );
   }
+  if (!active) return null;
+  // Повний екран орбіти Нікіти (як #orbit) на весь екран, як і політ. Дії йдуть у звіт: кімната перерахує ту саму орбіту.
+  // Звіт приймає не більше MAX_ORBIT_ACTIONS дій: далі решта витків іде автопілотом у кімнаті.
+  const full = !done && orbitActions.length >= MAX_ORBIT_ACTIONS;
   return (
-    <div style={{ background: C.panel, borderRadius: 12, padding: 16, display: "grid", gap: 10 }} data-testid="campaign-orbit">
-      <h2 style={{ margin: 0 }}>{t("ui.campaign.orbitOf", { agency: agencyName })}</h2>
-      <div style={{ color: C.dim }}>{t("ui.play.orbitHint")}</div>
-      {/* Звіт приймає не більше MAX_ORBIT_ACTIONS дій: далі решта витків іде автопілотом у кімнаті. */}
-      <OrbitPanel state={orbit} dispatch={(a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a]))} />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <button
-          style={{ ...button, borderColor: done ? C.ok : C.line }}
-          disabled={sending}
-          onClick={send}
-        >
-          📡 {t(done ? "ui.campaign.sendReport" : "ui.campaign.sendEarly")}
-        </button>
-        {!done && <span style={{ color: C.dim, fontSize: 13 }}>{t("ui.campaign.sendEarlyHint")}</span>}
-        {!done && orbitActions.length >= MAX_ORBIT_ACTIONS && (
-          <span role="status" style={{ color: C.bad, fontSize: 13 }}>{t("ui.campaign.actionsFull", { n: MAX_ORBIT_ACTIONS })}</span>
-        )}
-      </div>
+    <div className="campaign-orbit-screen" data-testid="campaign-orbit">
+      <OrbitPrototype
+        campaign={{
+          state: orbit,
+          windowNumber,
+          craftName: agencyName,
+          locked: full,
+          onAction: (a) => !done && setOrbitActions((list) => (list.length >= MAX_ORBIT_ACTIONS ? list : [...list, a])),
+          footer: (
+            <div style={{ display: "grid", gap: 4, justifyItems: "end" }}>
+              <button className={done ? "advance-button" : "undo-button"} disabled={sending} onClick={send}>
+                📡 {t(done ? "ui.campaign.sendReport" : "ui.campaign.sendEarly")}
+              </button>
+              {full && <span role="status" style={{ color: C.bad, fontSize: 12 }}>{t("ui.campaign.actionsFull", { n: MAX_ORBIT_ACTIONS })}</span>}
+            </div>
+          ),
+        }}
+      />
     </div>
   );
 }
