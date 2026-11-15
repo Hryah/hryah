@@ -20,6 +20,7 @@ export interface ScenarioDef {
   missionId: string;
   catalog?: 'cargo';        // вантажний сценарій: замість камер — контейнери
   analogKey?: string;       // схожа реальна місія (для брифінгу й підсумку)
+  tutorial?: boolean;       // навчальний: брифінг пояснює кожен червоний запас
   campaign: CampaignConfig;
 }
 

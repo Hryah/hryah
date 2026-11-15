@@ -466,5 +466,18 @@
   "ui.event.grant": "News: a government programme adds {grant} M$ to every agency's funds.",
   "ui.ground.title": "Ground segment: {n} of {max} own ground stations",
   "ui.ground.hint": "Every own ground station makes each contact pass {percent}% longer (now {pass} s per orbit), so more data gets home.",
-  "ui.ground.build": "Build a ground station ({cost} M$, 1 action)"
+  "ui.ground.build": "Build a ground station ({cost} M$, 1 action)",
+  "mission.cubesat101.title": "CubeSat 101",
+  "mission.cubesat101.brief": "Your first small Earth-imaging satellite: a low orbit, a modest camera, a short mission. Learn the margins before the big programmes.",
+  "scenario.cubesat101.title": "CubeSat 101 (tutorial)",
+  "scenario.cubesat101.brief": "Two short windows to learn the ropes. The mission director explains every red margin.",
+  "scenario.cubesat-101.analog": "NASA's CubeSat Launch Initiative: student teams fly 10 cm satellites to learn mission design on a small budget.",
+  "ui.advice.title": "Director's notes on your design:",
+  "ui.advice.dv": "Delta-v is short: add fuel, or pick a more efficient engine (higher Isp).",
+  "ui.advice.energy": "The battery will not survive the night side: a bigger battery, bigger panels, or fewer power-hungry modules.",
+  "ui.advice.link": "The camera takes more data than the antenna can send home per pass: a faster antenna or a slower camera.",
+  "ui.advice.science": "The images are not sharp enough: a bigger aperture, or fly lower.",
+  "ui.advice.mass": "Too heavy for the launcher: pick a bigger launcher or lighter modules.",
+  "ui.advice.budget": "Over budget: cheaper modules or a smaller launcher.",
+  "ui.advice.allGood": "Every margin is green. Launch now, or wait for better modules if the window allows."
 }

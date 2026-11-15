@@ -1,5 +1,5 @@
 import { failureChance, SCENARIOS, trlOf, type ConsortiumState } from "../../core/consortium";
-import { SLOTS } from "../../core/design";
+import { designPhase, SLOTS } from "../../core/design";
 import { fmt, t } from "../text";
 
 // Брифінг керівника місії (рамка «інтерн в агенції», пропозиція Олексія): перед кожним вікном коротко, що відомо,
@@ -52,6 +52,15 @@ export function BriefingPanel({ state, agencyId }: { state: ConsortiumState; age
   const last = campaign.rounds[campaign.rounds.length - 1]?.agencies.find((a) => a.agencyId === agencyId);
   if (last && last.launched && last.optimalPts > 0) {
     lines.push({ text: t("ui.brief.lastResult", { value: fmt(last.valuePts, 1), optimal: fmt(last.optimalPts, 1), percent: fmt(Math.min(999, (last.valuePts / last.optimalPts) * 100), 0) }) });
+  }
+  // Поради за червоними запасами: у навчальному сценарії завжди, в інших — коли щось червоне.
+  if (!entry.launch) {
+    const red = designPhase.finish(entry.design).result.margins.filter((m) => !m.ok && !(m.id === "science" && entry.design.input.mission.kind === "cargo"));
+    if (red.length > 0 || scenario?.def.tutorial) {
+      lines.push({ text: t("ui.advice.title"), color: C.gold });
+      if (red.length === 0) lines.push({ text: `✓ ${t("ui.advice.allGood")}` });
+      for (const m of red) lines.push({ text: `• ${t(`ui.advice.${m.id}`)}` });
+    }
   }
   if (scenario?.def.analogKey) lines.push({ text: t("ui.brief.analog", { analog: t(scenario.def.analogKey) }), color: C.dim });
 

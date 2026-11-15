@@ -1,4 +1,21 @@
 {
+  "cubesat-101": {
+    "titleKey": "scenario.cubesat101.title",
+    "briefKey": "scenario.cubesat101.brief",
+    "missionId": "cubesat-101",
+    "analogKey": "scenario.cubesat-101.analog",
+    "tutorial": true,
+    "campaign": {
+      "rounds": 2,
+      "windowTurns": 4,
+      "programGoal": 250,
+      "grantMUsd": 30,
+      "missedGrantFactor": 0.5,
+      "missedTwiceGrantFactor": 0.25,
+      "missedResearchPts": 3,
+      "mbPerResearchPt": 2000
+    }
+  },
   "living-planet": {
     "titleKey": "scenario.livingPlanet.title",
     "briefKey": "scenario.livingPlanet.brief",
