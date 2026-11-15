@@ -223,7 +223,7 @@ export class DockingGame {
 
     drawFittedText(
       ctx,
-      `СОІ · РУЧНЕ СТИКУВАННЯ [${mg.terminalId}]`,
+      `OAS · MANUAL DOCKING [${mg.terminalId}]`,
       18,
       31,
       escX - 18 - 14,
@@ -240,7 +240,7 @@ export class DockingGame {
     ctx.stroke();
     drawFittedText(
       ctx,
-      "[ESC] Вихід",
+      "[ESC] Exit",
       escX + escW * 0.5,
       escY + 19,
       escW - 12,
@@ -424,7 +424,7 @@ export class DockingGame {
     const textStartY = cardY + padY + 6;
     drawFittedText(
       ctx,
-      `ДИСТАНЦІЯ Z: ${mg.distanceZM.toFixed(1)} м`,
+      `DISTANCE Z: ${mg.distanceZM.toFixed(1)} m`,
       rightX + padX,
       textStartY,
       textMaxW,
@@ -432,7 +432,7 @@ export class DockingGame {
     );
     drawFittedText(
       ctx,
-      `ШВИДКІСТЬ Vz: ${mg.approachSpeedVzMs.toFixed(2)} м/с`,
+      `VELOCITY Vz: ${mg.approachSpeedVzMs.toFixed(2)} m/s`,
       rightX + padX,
       textStartY + 24,
       textMaxW,
@@ -440,7 +440,7 @@ export class DockingGame {
     );
     drawFittedText(
       ctx,
-      `ВІДХИЛЕННЯ R: ${Math.round(radialErr)} px (<25px)`,
+      `OFFSET R: ${Math.round(radialErr)} px (<25px)`,
       rightX + padX,
       textStartY + 48,
       textMaxW,
@@ -461,8 +461,8 @@ export class DockingGame {
     drawFittedText(
       ctx,
       mg.inLockZone
-        ? "✓ В НОРМІ — ТРИМАЙ ЦЕНТР"
-        : "⚠ ВИРІВНЯЙ МІШЕНЬ (<25px)",
+        ? "✓ ON TARGET — HOLD CENTER"
+        : "⚠ ALIGN TARGET (<25px)",
       rightX + padX,
       cardY + 132,
       textMaxW,
@@ -476,7 +476,7 @@ export class DockingGame {
     if (mg.collisionFlashTimerS > 0) {
       drawFittedText(
         ctx,
-        "✗ УДАР! ВІДКАТ +5М · -15%",
+        "✗ IMPACT! PUSHBACK +5M · -15%",
         rightX + padX,
         cardY + cardH - padY + 4,
         textMaxW,
@@ -503,7 +503,7 @@ export class DockingGame {
 
     drawFittedText(
       ctx,
-      "ДВИГУНИ [WASD / Стрілки / Миша]",
+      "THRUSTERS [WASD / Arrows / Mouse]",
       joyCx,
       joyCy + 76,
       rightW,

@@ -219,7 +219,7 @@ export class LifeSupportGame {
 
     drawFittedText(
       ctx,
-      `ІНЖЕНЕРНИЙ ЩИТ СЖЗ ТА ТЕРМОКОНТУРУ [${mg.terminalId}]`,
+      `ECLSS & THERMAL CONTROL PANEL [${mg.terminalId}]`,
       18,
       31,
       ESC_BTN.x - 54,
@@ -236,7 +236,7 @@ export class LifeSupportGame {
     ctx.stroke();
     drawFittedText(
       ctx,
-      "[ESC] Вихід",
+      "[ESC] Exit",
       ESC_BTN.x + ESC_BTN.w * 0.5,
       ESC_BTN.y + 19,
       ESC_BTN.w - 12,
@@ -289,7 +289,7 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    drawFittedText(ctx, "1. ЗАМІНА CO₂-ФІЛЬТРА", 151, 92, 219, {
+    drawFittedText(ctx, "1. REPLACE CO₂ FILTER", 151, 92, 219, {
       fontSize: 12,
       minFontSize: 10,
       align: "center",
@@ -304,7 +304,7 @@ export class LifeSupportGame {
     ctx.roundRect(LS_SLOT_POS.x - 42, LS_SLOT_POS.y - 52, 84, 104, 8);
     ctx.fill();
     ctx.stroke();
-    drawFittedText(ctx, "ПАЗ ФІЛЬТРА", LS_SLOT_POS.x, LS_SLOT_POS.y - 60, 120, {
+    drawFittedText(ctx, "FILTER SLOT", LS_SLOT_POS.x, LS_SLOT_POS.y - 60, 120, {
       fontWeight: 600,
       fontSize: 10,
       minFontSize: 8.5,
@@ -319,7 +319,7 @@ export class LifeSupportGame {
     ctx.roundRect(LS_TRASH_POS.x - 46, LS_TRASH_POS.y - 44, 92, 88, 8);
     ctx.fill();
     ctx.stroke();
-    drawFittedText(ctx, "СМІТТЄВИЙ ШЛЮЗ", LS_TRASH_POS.x, LS_TRASH_POS.y + 58, 120, {
+    drawFittedText(ctx, "WASTE CHUTE", LS_TRASH_POS.x, LS_TRASH_POS.y + 58, 120, {
       fontWeight: 600,
       fontSize: 10,
       minFontSize: 8.5,
@@ -364,7 +364,7 @@ export class LifeSupportGame {
       ctx.restore();
     }
 
-    drawFittedText(ctx, "НОВИЙ", mg.greenFilterPos.x, mg.greenFilterPos.y - 4, 54, {
+    drawFittedText(ctx, "NEW", mg.greenFilterPos.x, mg.greenFilterPos.y - 4, 54, {
       fontSize: 10,
       minFontSize: 8.5,
       align: "center",
@@ -386,13 +386,13 @@ export class LifeSupportGame {
       ctx.roundRect(mg.redFilterPos.x - 32, mg.redFilterPos.y - 42, 64, 84, 8);
       ctx.fill();
       ctx.stroke();
-      drawFittedText(ctx, "СТАРИЙ", mg.redFilterPos.x, mg.redFilterPos.y - 4, 54, {
+      drawFittedText(ctx, "OLD", mg.redFilterPos.x, mg.redFilterPos.y - 4, 54, {
         fontSize: 10,
         minFontSize: 8.5,
         align: "center",
         color: "#fee2e2",
       });
-      drawFittedText(ctx, "У ШЛЮЗ ↓", mg.redFilterPos.x, mg.redFilterPos.y + 12, 54, {
+      drawFittedText(ctx, "TO CHUTE ↓", mg.redFilterPos.x, mg.redFilterPos.y + 12, 54, {
         fontSize: 10,
         minFontSize: 8.5,
         align: "center",
@@ -409,7 +409,7 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    drawFittedText(ctx, "2. ВЕНТИЛЬ АМІАКУ (360°)", 422, 92, 219, {
+    drawFittedText(ctx, "2. AMMONIA VALVE (360°)", 422, 92, 219, {
       fontSize: 12,
       minFontSize: 10,
       align: "center",
@@ -461,8 +461,8 @@ export class LifeSupportGame {
     drawFittedText(
       ctx,
       mg.ammoniaFlushed
-        ? "✓ КОНТУР ПРОКАЧАНО (360°)"
-        : `Обертай по колу: ${Math.round(mg.ammoniaValveDeg)}° / 360°`,
+        ? "✓ LOOP FLUSHED (360°)"
+        : `Turn wheel: ${Math.round(mg.ammoniaValveDeg)}° / 360°`,
       vCx,
       vCy + 115,
       219,
@@ -483,7 +483,7 @@ export class LifeSupportGame {
     ctx.fill();
     ctx.stroke();
 
-    drawFittedText(ctx, "3. ТИСК O₂ (70–85 кПа)", 671, 92, 174, {
+    drawFittedText(ctx, "3. O₂ PRESSURE (70–85 kPa)", 671, 92, 174, {
       fontSize: 12,
       minFontSize: 9.5,
       align: "center",
@@ -536,7 +536,7 @@ export class LifeSupportGame {
 
     drawFittedText(
       ctx,
-      `${Math.round(mg.pressureKpa)} кПа`,
+      `${Math.round(mg.pressureKpa)} kPa`,
       mCx,
       mCy + 36,
       110,
@@ -565,10 +565,10 @@ export class LifeSupportGame {
     drawFittedText(
       ctx,
       mg.pressureLocked
-        ? "✓ ГОТОВО"
+        ? "✓ DONE"
         : mg.o2ValveHeld
-          ? "ВІДПУСТИ!"
-          : "ТИСНИ O₂",
+          ? "RELEASE!"
+          : "HOLD O₂",
       btnX,
       btnY + 4,
       74,
@@ -578,7 +578,7 @@ export class LifeSupportGame {
     if (mg.reliefValvePoppedTimerS > 0) {
       drawFittedText(
         ctx,
-        "✗ СКИДАННЯ >90 кПа!",
+        "✗ VENTED >90 kPa!",
         btnX,
         btnY + 66,
         174,
@@ -587,7 +587,7 @@ export class LifeSupportGame {
     } else if (!mg.greenFilterInstalled || !mg.ammoniaFlushed) {
       drawFittedText(
         ctx,
-        "Спочатку виконай кроки 1 і 2",
+        "Complete steps 1 & 2 first",
         btnX,
         btnY + 66,
         174,

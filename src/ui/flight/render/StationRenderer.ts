@@ -45,12 +45,12 @@ const STARFIELD: StarPoint[] = Array.from({ length: 170 }, (_, i) => {
 });
 
 const TERMINAL_BADGE_LABELS: Record<string, string> = {
-  SOLAR: "⚡ СОНЯЧНІ ПАНЕЛІ",
-  DOCKING_1: "⚓ ШЛЮЗ ПІВНІЧ",
-  DOCKING_2: "⚓ ШЛЮЗ СХІД",
-  DOCKING_3: "⚓ ШЛЮЗ ПІВДЕНЬ",
-  OXYGEN: "🫧 КИСЕНЬ O₂",
-  THERMAL: "🌡 ТЕРМОКОНТУР",
+  SOLAR: "⚡ SOLAR ARRAYS",
+  DOCKING_1: "⚓ NORTH AIRLOCK",
+  DOCKING_2: "⚓ EAST AIRLOCK",
+  DOCKING_3: "⚓ SOUTH AIRLOCK",
+  OXYGEN: "🫧 OXYGEN O₂",
+  THERMAL: "🌡 THERMAL LOOP",
 };
 
 export function getTerminalBadgeAnchor(term: TerminalNode): {
@@ -1306,12 +1306,12 @@ export class StationRenderer {
     // Єдиний компактний голографічний бейдж (макс. висота 24px, без накладання на ручку/екран)
     const labelTitle = TERMINAL_BADGE_LABELS[term.id] ?? term.id;
     const baseText = isAlarm
-      ? `${labelTitle} · ${Math.ceil(term.urgencyTimer)}с`
+      ? `${labelTitle} · ${Math.ceil(term.urgencyTimer)}s`
       : term.state === "COMPLETED"
         ? `✓ ${labelTitle}`
         : labelTitle;
     const badgeText = isAnchoredAtThisConsole
-      ? `[E/КЛІК] · ${baseText}`
+      ? `[E/CLICK] · ${baseText}`
       : baseText;
 
     const anchor = getTerminalBadgeAnchor(term);
@@ -1636,8 +1636,8 @@ export class StationRenderer {
       ctx.textAlign = "center";
       ctx.fillText(
         preview.requiresActiveGrab
-          ? "⚡ ЗАТИСНИ [SPACE] ПРИ ПІДЛЬОТІ"
-          : "✓ АВТОЗАХВАТ ПОРУЧНЯ",
+          ? "⚡ HOLD [SPACE] ON APPROACH"
+          : "✓ AUTO-GRAB HANDLE",
         tp.x,
         tp.y - 22,
       );
@@ -1945,7 +1945,7 @@ export class StationRenderer {
       ctx.fillStyle = "#ff5c7a";
       ctx.font = "700 11px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("ЗАПАМОРОЧЕННЯ!", 0, -34);
+      ctx.fillText("STUNNED!", 0, -34);
     }
 
     ctx.restore();

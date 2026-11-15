@@ -27,7 +27,7 @@
   "levelConfig": [
     {
       "id": "MOD_HABITAT",
-      "title": "ВІДСІК 01 // ЕНЕРГОБЛОК (HORIZONTAL)",
+      "title": "BAY 01 // POWER MODULE (HORIZONTAL)",
       "orientation": "HORIZONTAL",
       "unlockedAtWave": 0,
       "worldPos": { "x": 0, "y": 0 },
@@ -106,7 +106,7 @@
     },
     {
       "id": "MOD_INTERSECTION",
-      "title": "ВУЗОЛ 02 // ЦЕНТРАЛЬНИЙ ХАБ (INTERSECTION)",
+      "title": "NODE 02 // CENTRAL HUB (INTERSECTION)",
       "orientation": "INTERSECTION",
       "unlockedAtWave": 0,
       "worldPos": { "x": 920, "y": -110 },
@@ -225,7 +225,7 @@
     },
     {
       "id": "MOD_VERTICAL_LAB",
-      "title": "ШАХТА 03 // ЖИТТЄЗАБЕЗПЕЧЕННЯ (VERTICAL)",
+      "title": "SHAFT 03 // LIFE SUPPORT (VERTICAL)",
       "orientation": "VERTICAL",
       "unlockedAtWave": 1,
       "worldPos": { "x": 1010, "y": -930 },
@@ -294,7 +294,7 @@
     },
     {
       "id": "MOD_THERMAL_BAY",
-      "title": "ВІДСІК 04 // ТЕРМОКОНТУР ТА РЕАКТОР (HORIZONTAL)",
+      "title": "BAY 04 // THERMAL & REACTOR (HORIZONTAL)",
       "orientation": "HORIZONTAL",
       "unlockedAtWave": 2,
       "worldPos": { "x": 1620, "y": -20 },
@@ -358,7 +358,7 @@
     },
     {
       "id": "MOD_COMMAND",
-      "title": "МІСТОК 05 // КОМАНДНИЙ МОДУЛЬ (COMMAND)",
+      "title": "BRIDGE 05 // COMMAND MODULE (COMMAND)",
       "orientation": "INTERSECTION",
       "unlockedAtWave": 3,
       "worldPos": { "x": 980, "y": 590 },
