@@ -6,6 +6,9 @@
   filter: url(#hryah-retro);
   image-rendering: pixelated;
 }
+.retro .retro-colors {
+  filter: url(#hryah-retro-colors);
+}
 
 .retro-toggle {
   padding: 4px 10px;

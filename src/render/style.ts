@@ -3,7 +3,11 @@
 // еквівалентним SVG-фільтром (src/ui/style/RetroStyle.tsx). Перемикач — у шапці гри.
 import { pixelate, posterize, type Filter } from './filters';
 
-export const RETRO_PIXEL_PX = 4;   // розмір «пікселя» в пікселях буфера WebGL
+export const RETRO_CELL_CSS = 3;   // розмір «пікселя» в CSS-пікселях, однаковий для WebGL і SVG-фільтра
 export const RETRO_LEVELS = 8;     // відтінків на канал
 
-export const GAME_FILTERS: readonly Filter[] = [pixelate(RETRO_PIXEL_PX), posterize(RETRO_LEVELS)];
+// Буфер WebGL рушія має щільність min(DPR, 2) (stage.ts), тож піксель у буфері множимо на неї.
+export function gameFilters(): readonly Filter[] {
+  const ratio = Math.min(globalThis.devicePixelRatio || 1, 2);
+  return [pixelate(Math.round(RETRO_CELL_CSS * ratio)), posterize(RETRO_LEVELS)];
+}

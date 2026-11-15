@@ -898,7 +898,7 @@ export function CompositeSpacecraftSvg({
 
   return (
     <svg
-      className="retro-surface"
+      className="retro-colors"
       viewBox="0 0 460 250"
       style={{
         width: '100%',

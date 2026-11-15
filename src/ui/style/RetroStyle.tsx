@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { RETRO_LEVELS } from "../../render/style";
+import { RETRO_CELL_CSS, RETRO_LEVELS } from "../../render/style";
 import { load, save } from "../../storage";
 import { t } from "../text";
 import "./retro.css";
 
 // Ретро-стиль на всю гру. WebGL-сцени беруть шейдери з render/style.ts, а canvas і SVG інших частин
 // (політ, каюта, орбіта, превʼю апарата) — SVG-фільтр #hryah-retro з тим самим виглядом.
-// HTML-текст інтерфейсу фільтр не чіпає; те, що частина сама малює на своєму canvas (HUD польоту), стилізується разом зі сценою. Вибір зберігається (src/storage.ts).
+// HTML-текст інтерфейсу фільтр не чіпає. Поверхні з власним дрібним текстом (canvas польоту з HUD, SVG-превʼю з підписами)
+// отримують лише палітру (#hryah-retro-colors), щоб текст лишався читабельним. Вибір зберігається (src/storage.ts).
 
 const KEY = "retroStyle";
 const RetroContext = createContext<{ on: boolean; toggle: () => void }>({ on: true, toggle: () => {} });
@@ -15,13 +16,13 @@ export const useRetro = () => useContext(RetroContext);
 
 // Розмір «пікселя» SVG-фільтра в CSS-пікселях. Беремо центральну точку клітинки й розширюємо на радіус 1:
 // feMorphology дає квадрат (2r + 1) = 3, тобто рівно клітинку без перекриття сусідів.
-const CELL = 3;
+const CELL = RETRO_CELL_CSS;
 const RADIUS = (CELL - 1) / 2;
 // Сходинки відтінків: discrete-таблиця з RETRO_LEVELS + 1 значень, як floor(x·n + 0,5) / n у шейдері.
 const TABLE = Array.from({ length: RETRO_LEVELS + 1 }, (_, i) => (i / RETRO_LEVELS).toFixed(3)).join(" ");
 
 export function RetroProvider({ children }: { children: ReactNode }) {
-  const [on, setOn] = useState(() => load<boolean>(KEY) ?? true);
+  const [on, setOn] = useState(() => load<unknown>(KEY) !== false);
   useEffect(() => {
     document.documentElement.classList.toggle("retro", on);
     save(KEY, on);
@@ -40,6 +41,14 @@ export function RetroProvider({ children }: { children: ReactNode }) {
           <feMorphology in="samples" operator="dilate" radius={RADIUS} result="pixels" />
           {/* Обмежені відтінки на канал. */}
           <feComponentTransfer in="pixels">
+            <feFuncR type="discrete" tableValues={TABLE} />
+            <feFuncG type="discrete" tableValues={TABLE} />
+            <feFuncB type="discrete" tableValues={TABLE} />
+          </feComponentTransfer>
+        </filter>
+        {/* Лише обмежена палітра без пікселізації: для поверхонь із дрібним текстом (HUD польоту, підписи превʼю). Дешевша щокадру. */}
+        <filter id="hryah-retro-colors" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feComponentTransfer>
             <feFuncR type="discrete" tableValues={TABLE} />
             <feFuncG type="discrete" tableValues={TABLE} />
             <feFuncB type="discrete" tableValues={TABLE} />
