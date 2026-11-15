@@ -47,6 +47,7 @@ export function WindowCard({ state, agencyId }: { state: ConsortiumState; agency
   return (
     <PhaseCard
       id="window" step={{ n: 1, total: 4 }} summary={summary} vars={{ turns }}
+      sender={{ name: t("ui.card.director"), role: t("ui.card.directorRole", { agency: t(entry.agency.nameKey) }) }}
       title={t("ui.card.window.title", { n: campaign.round + 1, total: campaign.config.rounds, agency: t(entry.agency.nameKey) })}
       extra={<BriefingPanel state={state} agencyId={agencyId} testId="briefing-card" />}
       onContinue={() => { markSeen(key); rerender((n) => n + 1); }}

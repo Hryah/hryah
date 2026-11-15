@@ -1,5 +1,16 @@
 import type { FlightAction, SolarMinigameState } from "../../../core/flight";
-import { flightAssetCache } from "../render/TemplateAssetCache";
+import { drawFittedText } from "./textFit";
+
+const PANEL_W = 820;
+const PANEL_H = 500;
+const ALPHA_CX = 132;
+const BETA_CX = 364;
+const DIAL_CY = 228;
+const DIAL_R = 84;
+const RIGHT_X = 498;
+const RIGHT_W = 298;
+const ESC_BTN_W = 104;
+const ESC_BTN_X = PANEL_W - ESC_BTN_W - 24;
 
 export class SolarGame {
   private activeWheel: "ALPHA" | "BETA" | null = null;
@@ -10,11 +21,16 @@ export class SolarGame {
   }
 
   public getPanelRect(viewportW: number, viewportH: number) {
-    const w = Math.min(760, viewportW - 40);
-    const h = Math.min(520, viewportH - 110);
+    const scale = Math.min(
+      1,
+      (viewportW - 32) / PANEL_W,
+      (viewportH - 96) / PANEL_H,
+    );
+    const w = PANEL_W * scale;
+    const h = PANEL_H * scale;
     const x = (viewportW - w) * 0.5;
-    const y = (viewportH - h) * 0.5 + 22;
-    return { x, y, w, h };
+    const y = (viewportH - h) * 0.5 + 18;
+    return { x, y, w, h, scale };
   }
 
   public handleKeyDown(
@@ -49,30 +65,27 @@ export class SolarGame {
     dispatch: (action: FlightAction) => void,
   ): void {
     const rect = this.getPanelRect(viewportW, viewportH);
+    const lx = (sx - rect.x) / rect.scale;
+    const ly = (sy - rect.y) / rect.scale;
 
-    // Кнопка закриття [ESC]
+    // Кнопка закриття [ESC] Вихід (відступ >= 24px від правого краю)
     if (
-      sx >= rect.x + rect.w - 96 &&
-      sx <= rect.x + rect.w - 14 &&
-      sy >= rect.y + 12 &&
-      sy <= rect.y + 42
+      lx >= ESC_BTN_X - 2 &&
+      lx <= ESC_BTN_X + ESC_BTN_W + 2 &&
+      ly >= 9 &&
+      ly <= 41
     ) {
       this.resetInput();
       dispatch({ type: "close_minigame" });
       return;
     }
 
-    const alphaCx = rect.x + rect.w * 0.24;
-    const alphaCy = rect.y + rect.h * 0.52;
-    const betaCx = rect.x + rect.w * 0.55;
-    const betaCy = rect.y + rect.h * 0.52;
-
-    if (Math.hypot(sx - alphaCx, sy - alphaCy) <= 105) {
+    if (Math.hypot(lx - ALPHA_CX, ly - DIAL_CY) <= DIAL_R + 18) {
       this.activeWheel = "ALPHA";
-      this.lastPointerAngleRad = Math.atan2(sy - alphaCy, sx - alphaCx);
-    } else if (Math.hypot(sx - betaCx, sy - betaCy) <= 105) {
+      this.lastPointerAngleRad = Math.atan2(ly - DIAL_CY, lx - ALPHA_CX);
+    } else if (Math.hypot(lx - BETA_CX, ly - DIAL_CY) <= DIAL_R + 18) {
       this.activeWheel = "BETA";
-      this.lastPointerAngleRad = Math.atan2(sy - betaCy, sx - betaCx);
+      this.lastPointerAngleRad = Math.atan2(ly - DIAL_CY, lx - BETA_CX);
     }
   }
 
@@ -85,13 +98,12 @@ export class SolarGame {
   ): void {
     if (!this.activeWheel) return;
     const rect = this.getPanelRect(viewportW, viewportH);
-    const cx =
-      this.activeWheel === "ALPHA"
-        ? rect.x + rect.w * 0.24
-        : rect.x + rect.w * 0.55;
-    const cy = rect.y + rect.h * 0.52;
+    const lx = (sx - rect.x) / rect.scale;
+    const ly = (sy - rect.y) / rect.scale;
+    const cx = this.activeWheel === "ALPHA" ? ALPHA_CX : BETA_CX;
+    const cy = DIAL_CY;
 
-    const currentRad = Math.atan2(sy - cy, sx - cx);
+    const currentRad = Math.atan2(ly - cy, lx - cx);
     const deltaRad = Math.atan2(
       Math.sin(currentRad - this.lastPointerAngleRad),
       Math.cos(currentRad - this.lastPointerAngleRad),
@@ -125,118 +137,111 @@ export class SolarGame {
     ctx.fillStyle = "rgba(3, 7, 15, 0.62)";
     ctx.fillRect(0, 0, viewportW, viewportH);
 
+    ctx.translate(rect.x, rect.y);
+    ctx.scale(rect.scale, rect.scale);
+
     // Корпус пульта сервоприводів сонячних батарей
     ctx.fillStyle = "#101829";
     ctx.strokeStyle = mg.jamTimerS > 0 ? "#ff4766" : "#5ca8ff";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 14);
+    ctx.roundRect(0, 0, PANEL_W, PANEL_H, 14);
     ctx.fill();
     ctx.stroke();
+
+    // Обрізання по внутрішній рамці пульта
+    ctx.beginPath();
+    ctx.roundRect(2, 2, PANEL_W - 4, PANEL_H - 4, 12);
+    ctx.clip();
 
     // Шапка
     ctx.fillStyle = "#18243d";
     ctx.beginPath();
-    ctx.roundRect(rect.x + 3, rect.y + 3, rect.w - 6, 46, [12, 12, 0, 0]);
+    ctx.roundRect(3, 3, PANEL_W - 6, 46, [12, 12, 0, 0]);
     ctx.fill();
 
-    ctx.fillStyle = "#ffe066";
-    ctx.font = "700 15px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(
-      "СЕРВОПРИВОДИ СОНЯЧНИХ ПАНЕЛЕЙ · НАВЕДЕННЯ (α, β)",
-      rect.x + 18,
-      rect.y + 31,
+    drawFittedText(
+      ctx,
+      "SOLAR ARRAY SERVOS · TRACKING (α, β)",
+      18,
+      31,
+      ESC_BTN_X - 32,
+      { fontSize: 15, minFontSize: 11, color: "#ffe066" },
     );
 
-    // Кнопка [ESC]
+    // Кнопка [ESC] Вихід з безпечним відступом >= 24px від правого краю
     ctx.fillStyle = "#223152";
     ctx.strokeStyle = "#5ca8ff";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(rect.x + rect.w - 94, rect.y + 11, 78, 30, 6);
+    ctx.roundRect(ESC_BTN_X, 11, ESC_BTN_W, 30, 6);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#e8f3ff";
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("[ESC] Вихід", rect.x + rect.w - 55, rect.y + 30);
+    drawFittedText(
+      ctx,
+      "[ESC] Exit",
+      ESC_BTN_X + ESC_BTN_W * 0.5,
+      30,
+      ESC_BTN_W - 12,
+      { fontSize: 12, minFontSize: 10, align: "center", color: "#e8f3ff" },
+    );
 
-    // Два кругові радари + маховики (Кут Альфа та Кут Бета)
-    const alphaCx = rect.x + rect.w * 0.23;
-    const alphaCy = rect.y + rect.h * 0.48;
-    const betaCx = rect.x + rect.w * 0.52;
-    const betaCy = rect.y + rect.h * 0.48;
-
+    // Два кругові радари + маховики (Кут Альфа та Кут Бета) без зайвого спрайта поверх нижнього прогресу
     this.renderServoRadar(
       ctx,
-      alphaCx,
-      alphaCy,
-      88,
-      "КУТ АЛЬФА (α) [A/D або Миша]",
+      ALPHA_CX,
+      DIAL_CY,
+      DIAL_R,
+      "ALPHA ANGLE (α) [A/D or Mouse]",
       mg.sunAlphaDeg,
       mg.panelAlphaDeg,
       mg.jamTimerS > 0,
     );
     this.renderServoRadar(
       ctx,
-      betaCx,
-      betaCy,
-      88,
-      "КУТ БЕТА (β) [W/S або Миша]",
+      BETA_CX,
+      DIAL_CY,
+      DIAL_R,
+      "BETA ANGLE (β) [W/S or Mouse]",
       mg.sunBetaDeg,
       mg.panelBetaDeg,
       mg.jamTimerS > 0,
     );
 
-    // 2D SVG прев'ю сонячної панелі (assets/templates/design/sol-m.svg) у реальному часі за кутами (α, β)
-    const solarImg = flightAssetCache.getImage("assets/templates/design/sol-m.svg");
-    const previewCx = (alphaCx + betaCx) * 0.5;
-    const previewCy = alphaCy + 144;
-    if (solarImg) {
-      const alphaRad = (mg.panelAlphaDeg * Math.PI) / 180;
-      const betaRad = (mg.panelBetaDeg * Math.PI) / 180;
-      const tiltScaleY = Math.max(0.32, Math.abs(Math.cos(betaRad)));
-      ctx.save();
-      ctx.translate(previewCx, previewCy);
-      ctx.rotate(alphaRad * 0.35);
-      ctx.scale(1, tiltScaleY);
-      ctx.strokeStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-42, -26, 84, 52);
-      ctx.drawImage(solarImg, -40, -24, 80, 48);
-      ctx.restore();
-    }
-
-    // Права колонка: Осцилограф потужності (кВт) та індикатор температури мотора
-    const rightX = rect.x + rect.w * 0.69;
-    const rightW = rect.w * 0.28;
+    // Права колонка з розширеними межами та внутрішніми відступами 18px (без обрізання тексту)
+    const innerPad = 18;
+    const innerMaxW = RIGHT_W - innerPad * 2;
 
     // 1. Осцилограф вихідної потужності (кВт)
-    const oscY = rect.y + 72;
-    const oscH = 120;
+    const oscY = 68;
+    const oscH = 148;
     ctx.fillStyle = "#08121e";
     ctx.strokeStyle = "#2b4c7e";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(rightX, oscY, rightW, oscH, 8);
+    ctx.roundRect(RIGHT_X, oscY, RIGHT_W, oscH, 8);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#8a99b8";
-    ctx.font = "700 10px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText("ОСЦИЛОГРАФ СИНХРОНІЗАЦІЇ ПОТОКУ", rightX + 10, oscY + 18);
+    drawFittedText(
+      ctx,
+      "POWER OSCILLOSCOPE",
+      RIGHT_X + innerPad,
+      oscY + 22,
+      innerMaxW,
+      { fontSize: 11, minFontSize: 9, color: "#8a99b8" },
+    );
 
     // Еталонна сонячна синусоїда (пунктирна золота)
+    const waveSpanW = RIGHT_W - innerPad * 2;
     ctx.strokeStyle = "rgba(255, 224, 102, 0.35)";
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    for (let px = 0; px <= rightW - 20; px += 4) {
-      const refY = oscY + 64 + Math.sin(px * 0.11 + timeElapsedS * 9) * 26;
-      if (px === 0) ctx.moveTo(rightX + 10 + px, refY);
-      else ctx.lineTo(rightX + 10 + px, refY);
+    for (let px = 0; px <= waveSpanW; px += 4) {
+      const refY = oscY + 74 + Math.sin(px * 0.11 + timeElapsedS * 9) * 26;
+      if (px === 0) ctx.moveTo(RIGHT_X + innerPad + px, refY);
+      else ctx.lineTo(RIGHT_X + innerPad + px, refY);
     }
     ctx.stroke();
     ctx.setLineDash([]);
@@ -247,82 +252,120 @@ export class SolarGame {
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     const amp = (mg.powerEfficiencyPct / 100) * 26;
-    for (let px = 0; px <= rightW - 20; px += 4) {
+    for (let px = 0; px <= waveSpanW; px += 4) {
       const waveY =
         oscY +
-        64 +
+        74 +
         Math.sin(px * 0.11 + timeElapsedS * 9 + phaseShift) * amp;
-      if (px === 0) ctx.moveTo(rightX + 10 + px, waveY);
-      else ctx.lineTo(rightX + 10 + px, waveY);
+      if (px === 0) ctx.moveTo(RIGHT_X + innerPad + px, waveY);
+      else ctx.lineTo(RIGHT_X + innerPad + px, waveY);
     }
     ctx.stroke();
 
-    ctx.fillStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#ffe066";
-    ctx.font = "700 13px monospace";
-    ctx.fillText(
-      `ККД: ${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} кВт)`,
-      rightX + 10,
-      oscY + 108,
+    drawFittedText(
+      ctx,
+      `EFF: ${mg.powerEfficiencyPct.toFixed(1)}% (${mg.outputKw.toFixed(1)} kW)`,
+      RIGHT_X + innerPad,
+      oscY + 130,
+      innerMaxW,
+      {
+        fontSize: 13.5,
+        minFontSize: 10,
+        color: mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#ffe066",
+      },
     );
 
     // 2. Шкала «Перегрів приводу» (при > omega_max росте, при 100% клинить на 3с)
-    const heatY = oscY + 138;
+    const heatY = oscY + oscH + 18;
+    const heatH = 148;
     ctx.fillStyle = "#0d1627";
     ctx.strokeStyle = mg.jamTimerS > 0 ? "#ff4766" : "#2b4c7e";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(rightX, heatY, rightW, 96, 8);
+    ctx.roundRect(RIGHT_X, heatY, RIGHT_W, heatH, 8);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#8a99b8";
-    ctx.font = "700 10px monospace";
-    ctx.fillText("ТЕМПЕРАТУРА МОТОРА / РЕДУКТОРА", rightX + 10, heatY + 18);
+    drawFittedText(
+      ctx,
+      "MOTOR TEMPERATURE",
+      RIGHT_X + innerPad,
+      heatY + 24,
+      innerMaxW,
+      { fontSize: 11, minFontSize: 9, color: "#8a99b8" },
+    );
 
     ctx.fillStyle = "rgba(255,255,255,0.1)";
-    ctx.fillRect(rightX + 10, heatY + 28, rightW - 20, 14);
+    ctx.fillRect(RIGHT_X + innerPad, heatY + 38, innerMaxW, 16);
     ctx.fillStyle =
       mg.motorHeatPct > 80 ? "#ff4766" : mg.motorHeatPct > 50 ? "#ffa23d" : "#38bdf8";
     ctx.fillRect(
-      rightX + 10,
-      heatY + 28,
-      ((rightW - 20) * Math.min(100, mg.motorHeatPct)) / 100,
-      14,
+      RIGHT_X + innerPad,
+      heatY + 38,
+      (innerMaxW * Math.min(100, mg.motorHeatPct)) / 100,
+      16,
     );
 
-    ctx.fillStyle = mg.jamTimerS > 0 ? "#ff4766" : "#cbd5e1";
-    ctx.font = "700 11px monospace";
-    ctx.fillText(
-      mg.jamTimerS > 0
-        ? `✗ КЛИН РЕДУКТОРА: ${mg.jamTimerS.toFixed(1)}с!`
-        : `Нагрів: ${Math.round(mg.motorHeatPct)}% (не крути занадто різко)`,
-      rightX + 10,
-      heatY + 62,
-    );
+    if (mg.jamTimerS > 0) {
+      drawFittedText(
+        ctx,
+        `✗ GEARBOX JAM: ${mg.jamTimerS.toFixed(1)} s!`,
+        RIGHT_X + innerPad,
+        heatY + 86,
+        innerMaxW,
+        { fontSize: 13, minFontSize: 10, color: "#ff4766" },
+      );
+      drawFittedText(
+        ctx,
+        "Wait for drive cooldown",
+        RIGHT_X + innerPad,
+        heatY + 110,
+        innerMaxW,
+        { fontSize: 11, minFontSize: 9, color: "#fca5a5" },
+      );
+    } else {
+      drawFittedText(
+        ctx,
+        `Heat: ${Math.round(mg.motorHeatPct)}%`,
+        RIGHT_X + innerPad,
+        heatY + 86,
+        innerMaxW,
+        { fontSize: 13, minFontSize: 10, color: "#e2e8f0" },
+      );
+      drawFittedText(
+        ctx,
+        "(rotate smoothly)",
+        RIGHT_X + innerPad,
+        heatY + 110,
+        innerMaxW,
+        { fontSize: 11.5, minFontSize: 9.5, color: "#94a3b8" },
+      );
+    }
 
     // 3. Таймер стабільного утримання >95% протягом 3.0 с
-    const holdY = rect.y + rect.h - 76;
-    const holdW = rect.w - 36;
+    const holdY = PANEL_H - 76;
+    const holdW = PANEL_W - 42;
     ctx.fillStyle = "#0b1322";
     ctx.strokeStyle = mg.powerEfficiencyPct >= 95 ? "#3ddc84" : "#3a4f76";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(rect.x + 18, holdY, holdW, 54, 8);
+    ctx.roundRect(18, holdY, holdW, 54, 8);
     ctx.fill();
     ctx.stroke();
 
     const holdRatio = Math.min(1, mg.holdTimerS / mg.requiredHoldS);
     ctx.fillStyle = "rgba(61, 220, 132, 0.22)";
     ctx.beginPath();
-    ctx.roundRect(rect.x + 20, holdY + 2, (holdW - 4) * holdRatio, 50, 6);
+    ctx.roundRect(20, holdY + 2, (holdW - 4) * holdRatio, 50, 6);
     ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 13px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(
-      `УТРИМАННЯ ПОТУЖНОСТІ >95%: ${mg.holdTimerS.toFixed(1)} / ${mg.requiredHoldS.toFixed(1)} с`,
-      rect.x + rect.w * 0.5,
+    drawFittedText(
+      ctx,
+      `HOLD >95%: ${mg.holdTimerS.toFixed(1)} / ${mg.requiredHoldS.toFixed(1)} s`,
+      18 + holdW * 0.5,
       holdY + 32,
+      holdW - 28,
+      { fontSize: 13.5, minFontSize: 10.5, align: "center", color: "#ffffff" },
     );
 
     ctx.restore();
@@ -406,15 +449,19 @@ export class SolarGame {
     ctx.stroke();
 
     // Підпис під радаром
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = "700 11px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(label, cx, cy + r + 24);
-    ctx.fillStyle = "#8a99b8";
-    ctx.fillText(
-      `Сонце: ${Math.round(sunDeg)}° · Панель: ${Math.round(panelDeg)}°`,
+    drawFittedText(ctx, label, cx, cy + r + 24, 212, {
+      fontSize: 11.5,
+      minFontSize: 9.5,
+      align: "center",
+      color: "#cbd5e1",
+    });
+    drawFittedText(
+      ctx,
+      `Sun: ${Math.round(sunDeg)}° · Panel: ${Math.round(panelDeg)}°`,
       cx,
       cy + r + 42,
+      212,
+      { fontSize: 11, minFontSize: 9, align: "center", color: "#8a99b8" },
     );
 
     ctx.restore();

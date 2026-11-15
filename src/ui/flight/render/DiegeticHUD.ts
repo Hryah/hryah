@@ -72,7 +72,7 @@ export class DiegeticHUD {
       barX + 16,
       barY + 11,
       125,
-      "O₂ КИСЕНЬ",
+      "O₂ OXYGEN",
       `${Math.round(state.oxygenPct)}%`,
       state.oxygenPct / 100,
       state.oxygenPct < 35
@@ -88,7 +88,7 @@ export class DiegeticHUD {
       barX + 158,
       barY + 11,
       125,
-      "⚡ ЕНЕРГІЯ",
+      "⚡ ENERGY",
       `${Math.round(state.energyPct)}%`,
       state.energyPct / 100,
       state.energyPct < 35
@@ -105,7 +105,7 @@ export class DiegeticHUD {
       barX + 300,
       barY + 11,
       115,
-      "🌡 ТЕМП.",
+      "🌡 TEMP.",
       `${Math.round(state.tempC)}°C`,
       tempRatio,
       state.tempC > 45 ? "#ef4444" : state.tempC > 32 ? "#f59e0b" : "#38bdf8",
@@ -116,7 +116,7 @@ export class DiegeticHUD {
     ctx.fillStyle = "#94a3b8";
     ctx.font = "700 10px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("СТИКУВАННЯ МОДУЛІВ", barX + 432, barY + 21);
+    ctx.fillText("MODULE DOCKING", barX + 432, barY + 21);
 
     ctx.fillStyle = "#e8f3ff";
     ctx.font = "700 12px monospace";
@@ -126,21 +126,21 @@ export class DiegeticHUD {
         0,
         Math.ceil(WAVE_TIMINGS.wave1TimeS - state.waveClockS),
       );
-      waveLabel += rem > 0 ? `Хвиля 1: ${rem}с` : "ШЛЮЗ ПІВНІЧ АКТИВНИЙ!";
+      waveLabel += rem > 0 ? `Wave 1: ${rem}s` : "NORTH AIRLOCK ACTIVE!";
     } else if (dockedCount === 1) {
       const rem = Math.max(
         0,
         Math.ceil(WAVE_TIMINGS.wave2TimeS - state.waveClockS),
       );
-      waveLabel += rem > 0 ? `Хвиля 2: ${rem}с` : "ШЛЮЗ СХІД АКТИВНИЙ!";
+      waveLabel += rem > 0 ? `Wave 2: ${rem}s` : "EAST AIRLOCK ACTIVE!";
     } else if (dockedCount === 2) {
       const rem = Math.max(
         0,
         Math.ceil(WAVE_TIMINGS.wave3TimeS - state.waveClockS),
       );
-      waveLabel += rem > 0 ? `Хвиля 3: ${rem}с` : "ШЛЮЗ ПІВДЕНЬ АКТИВНИЙ!";
+      waveLabel += rem > 0 ? `Wave 3: ${rem}s` : "SOUTH AIRLOCK ACTIVE!";
     } else {
-      waveLabel += "СТАНЦІЮ ЗІБРАНО";
+      waveLabel += "STATION ASSEMBLED";
     }
     ctx.fillText(waveLabel, barX + 432, barY + 39);
 
@@ -151,7 +151,7 @@ export class DiegeticHUD {
     ctx.fillStyle = "#94a3b8";
     ctx.font = "700 10px monospace";
     ctx.textAlign = "right";
-    ctx.fillText("ІМПУЛЬС [Q]", barX + barW - 16, barY + 21);
+    ctx.fillText("THRUST [Q]", barX + barW - 16, barY + 21);
     ctx.fillStyle =
       state.astronaut.thrusterCharges > 0 ? "#fde047" : "#ef4444";
     ctx.font = "700 14px monospace";
@@ -190,7 +190,7 @@ export class DiegeticHUD {
     ctx.fillStyle = "#38bdf8";
     ctx.font = "700 10px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("ТАКТИЧНИЙ РАДАР СТАНЦІЇ", mapX + 10, mapY + 15);
+    ctx.fillText("STATION TACTICAL RADAR", mapX + 10, mapY + 15);
 
     // Обчислюємо світовий bounding box усіх модулів для масштабу ~1:18
     const worldMinX = -80;
@@ -460,14 +460,14 @@ export class DiegeticHUD {
     ctx.font = "700 15px monospace";
     ctx.textAlign = "center";
     ctx.fillText(
-      `✓ ШЛЮЗ ВІДКРИТО · ПРИСТИКОВАНО ${state.cutsceneTargetModuleId ?? ""}`,
+      `✓ AIRLOCK OPENED · DOCKED ${state.cutsceneTargetModuleId ?? ""}`,
       viewportW * 0.5,
       y + 28,
     );
     ctx.fillStyle = "#cbd5e1";
     ctx.font = "12px monospace";
     ctx.fillText(
-      "Новий відсік розгерметизовано та додано на тактичний радар",
+      "New module unsealed and added to tactical radar",
       viewportW * 0.5,
       y + 48,
     );
@@ -482,8 +482,8 @@ export class DiegeticHUD {
     const astro = state.astronaut;
     const hint =
       astro.state === "ANCHORED"
-        ? "ЛКМ (тягни) — рогатка з рикошетом  |  [WASD] — ковзати по поручню  |  [E / Клік] — відкрити пульт"
-        : "У ПОЛЬОТІ: утримуй [SPACE / ЛКМ] для захвату на швидкості  |  [Q / ПКМ] — реактивний імпульс";
+        ? "LMB (drag) — ricochet slingshot  |  [WASD] — slide along handle  |  [E / Click] — open terminal"
+        : "IN FLIGHT: hold [SPACE / LMB] for high-speed grab  |  [Q / RMB] — RCS thrust impulse";
 
     ctx.fillStyle = "rgba(8, 13, 26, 0.8)";
     ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";

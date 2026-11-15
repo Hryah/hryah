@@ -33,4 +33,14 @@ describe('активність сцени проєктування', () => {
       expect(renderToStaticMarkup(screen)).toContain(`data-active="${active}"`);
     }
   });
+
+  it('на пульті апарат видно завжди: сцена активна з будь-якою вкладкою палуби й призупинена лише з неактивним екраном', () => {
+    const consortium = newConsortium({ mission: SAMPLE_MISSION, catalog: SAMPLE_CATALOG }, market as Market, [agencies.borealis as AgencyProfile]);
+    const shown = renderToStaticMarkup(<Turn state={consortium} active={true} initialTab="factory" dispatch={() => {}} />);
+    expect(shown).toContain('id="mc-panel-design"');
+    expect(shown).toContain('data-active="true"');
+    const hidden = renderToStaticMarkup(<Turn state={consortium} active={false} initialTab="factory" dispatch={() => {}} />);
+    expect(hidden).toContain('data-active="false"');
+    expect(hidden).not.toContain('data-active="true"');
+  });
 });

@@ -312,8 +312,8 @@ export class GameLoop {
     ctx.textAlign = "center";
     ctx.fillText(
       isWin
-        ? "✓ ОРБІТАЛЬНУ СТАНЦІЮ ЗІБРАНО!"
-        : "✗ КРИТИЧНЕ ВИСНАЖЕННЯ СИСТЕМ СТАНЦІЇ",
+        ? "✓ ORBITAL STATION ASSEMBLED!"
+        : "✗ CRITICAL STATION SYSTEMS FAILURE",
       viewportW * 0.5,
       y + 48,
     );
@@ -321,21 +321,21 @@ export class GameLoop {
     ctx.fillStyle = "#cbd5e1";
     ctx.font = "14px monospace";
     ctx.fillText(
-      `Пристиковано модулів: ${state.openedSeals.length}/3 · Висота орбіти: ${state.achievedAltKm} км`,
+      `Docked modules: ${state.openedSeals.length}/3 · Orbit altitude: ${state.achievedAltKm} km`,
       viewportW * 0.5,
       y + 92,
     );
     ctx.fillText(
-      `Залишок палива: ${state.fuelLeftKg.toFixed(1)} кг · Кисень: ${Math.round(state.oxygenPct)}% · Енергія: ${Math.round(state.energyPct)}%`,
+      `Fuel remaining: ${state.fuelLeftKg.toFixed(1)} kg · Oxygen: ${Math.round(state.oxygenPct)}% · Energy: ${Math.round(state.energyPct)}%`,
       viewportW * 0.5,
       y + 122,
     );
     const damagedText =
       state.damage.length === 0
-        ? "немає"
+        ? "none"
         : state.damage.map((d) => `${d.system} (${Math.round(d.severity * 100)}%)`).join(", ");
     ctx.fillText(
-      `Пошкоджені підсистеми: ${damagedText}`,
+      `Damaged subsystems: ${damagedText}`,
       viewportW * 0.5,
       y + 152,
     );
@@ -357,7 +357,7 @@ export class GameLoop {
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 15px monospace";
     ctx.fillText(
-      "РОЗГОРНУТИ СУПУТНИК → ФАЗА 3 [ENTER]",
+      "DEPLOY SATELLITE → PHASE 3 [ENTER]",
       viewportW * 0.5,
       btnY + 30,
     );

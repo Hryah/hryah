@@ -1,0 +1,10 @@
+/* Індикатор «вхідне повідомлення» у вікні від директора місії. */
+.phase-card-blink {
+  animation: phase-card-blink 1.2s ease-in-out infinite;
+}
+@keyframes phase-card-blink {
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase-card-blink { animation: none; }
+}
